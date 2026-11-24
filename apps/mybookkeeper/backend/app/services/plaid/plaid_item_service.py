@@ -16,7 +16,11 @@ from collections import Counter
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.plaid_constants import PLAID_ERROR_ITEM_NOT_FOUND
+from app.core.plaid_constants import (
+    PLAID_ADDITIONAL_CONSENTED_PRODUCTS,
+    PLAID_ERROR_INVALID_PRODUCT,
+    PLAID_ERROR_ITEM_NOT_FOUND,
+)
 from app.core.plaid_item_enums import PLAID_ITEM_STATUS_ACTIVE
 from app.db.session import unit_of_work
 from app.mappers import plaid_account_mapper, plaid_item_mapper
@@ -28,6 +32,7 @@ from app.schemas.plaid.plaid_item_create_request import PlaidItemCreateRequest
 from app.schemas.plaid.plaid_item_response import PlaidItemResponse
 from app.schemas.plaid.plaid_link_token_response import PlaidLinkTokenResponse
 from app.schemas.plaid.wire.plaid_wire_account import PlaidWireAccount
+from app.schemas.plaid.wire.plaid_wire_link_token_response import PlaidWireLinkTokenResponse
 from app.services.plaid import plaid_client
 from app.services.plaid.invalid_plaid_connection_error import InvalidPlaidConnectionError
 from app.services.plaid.plaid_api_error import PlaidApiError
@@ -37,17 +42,49 @@ logger = logging.getLogger(__name__)
 
 
 async def create_link_token(
-    *, user_id: uuid.UUID, organization_id: uuid.UUID, item_id: uuid.UUID | None,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    item_id: uuid.UUID | None,
+    add_investments: bool = False,
 ) -> PlaidLinkTokenResponse:
-    access_token: str | None = None
-    if item_id is not None:
-        async with unit_of_work() as db:
-            item = await _get_owned(db, item_id, user_id=user_id, organization_id=organization_id)
-            access_token = item.access_token
+    """A Link token for a new bank, a reconnect (``item_id``), or — with
+    ``add_investments`` — update mode asking an existing item's owner to allow
+    investment holdings."""
+    if item_id is None:
+        token = await _new_connection_link_token(str(user_id))
+        return PlaidLinkTokenResponse(link_token=token.link_token, expiration=token.expiration)
+    async with unit_of_work() as db:
+        item = await _get_owned(db, item_id, user_id=user_id, organization_id=organization_id)
+        access_token = item.access_token
     token = await plaid_client.create_link_token(
-        client_user_id=str(user_id), access_token=access_token,
+        client_user_id=str(user_id),
+        access_token=access_token,
+        additional_consented_products=PLAID_ADDITIONAL_CONSENTED_PRODUCTS if add_investments else (),
     )
     return PlaidLinkTokenResponse(link_token=token.link_token, expiration=token.expiration)
+
+
+async def _new_connection_link_token(client_user_id: str) -> PlaidWireLinkTokenResponse:
+    """New banks ask consent for investments too. If this server's Plaid
+    account isn't enabled for Investments, Plaid refuses the whole token with
+    INVALID_PRODUCT; connecting a bank must not depend on that, so the token
+    is asked again without it and the refusal is logged as an error for the
+    operator (the fix is enabling Investments in the Plaid dashboard)."""
+    try:
+        return await plaid_client.create_link_token(
+            client_user_id=client_user_id,
+            additional_consented_products=PLAID_ADDITIONAL_CONSENTED_PRODUCTS,
+        )
+    except PlaidApiError as exc:
+        if exc.error_code != PLAID_ERROR_INVALID_PRODUCT:
+            raise
+        logger.error(
+            "Plaid refused investments consent on a new Link token: error_type=%s error_code=%s "
+            "request_id=%s. Enable Investments for this Plaid account; connecting banks only.",
+            exc.error_type, exc.error_code, exc.request_id,
+        )
+    return await plaid_client.create_link_token(client_user_id=client_user_id)
 
 
 async def list_items(*, user_id: uuid.UUID, organization_id: uuid.UUID) -> list[PlaidItemResponse]:
@@ -141,12 +178,17 @@ async def _attach_account(
 async def mark_reconnected(
     *, item_id: uuid.UUID, user_id: uuid.UUID, organization_id: uuid.UUID,
 ) -> PlaidItemResponse:
-    """Link update mode finished: the bank accepted the new sign-in."""
+    """Link update mode finished: the bank accepted the new sign-in, or the
+    person allowed investments."""
     async with unit_of_work() as db:
         item = await _get_owned(db, item_id, user_id=user_id, organization_id=organization_id)
         item.status = PLAID_ITEM_STATUS_ACTIVE
         item.error_type = None
         item.error_code = None
+        # The person may have just allowed investments; the sync that follows
+        # asks again instead of trusting the old refusal.
+        item.investments_status = None
+        item.investments_error_code = None
         await db.flush()
         accounts = await financial_account_repo.list_by_plaid_item(db, item.id)
         return plaid_item_mapper.to_response(item, account_count=len(accounts))

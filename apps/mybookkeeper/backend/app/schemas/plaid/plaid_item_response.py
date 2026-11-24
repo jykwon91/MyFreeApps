@@ -16,5 +16,10 @@ class PlaidItemResponse(BaseModel):
     # status itself.
     error_code: str | None = None
     last_synced_at: _dt.datetime | None = None
+    # Where the connection stands on investment holdings; None until the sync
+    # first asks. ``consent_required`` is what the "Add investments" button
+    # answers.
+    investments_status: str | None = None
+    holdings_synced_at: _dt.datetime | None = None
     account_count: int
     created_at: _dt.datetime

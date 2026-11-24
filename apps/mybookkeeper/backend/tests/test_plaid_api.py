@@ -26,6 +26,7 @@ from app.models.organization.organization_member import OrgRole
 from app.schemas.plaid.plaid_item_response import PlaidItemResponse
 from app.schemas.plaid.plaid_link_token_response import PlaidLinkTokenResponse
 from app.schemas.plaid.plaid_sync_result import PlaidSyncResult
+from app.schemas.plaid.plaid_webhook_follow_up import PlaidWebhookFollowUp
 from app.services.plaid.invalid_plaid_connection_error import InvalidPlaidConnectionError
 from app.services.plaid.plaid_api_error import PlaidApiError
 from app.services.plaid.plaid_item_not_found_error import PlaidItemNotFoundError
@@ -34,6 +35,7 @@ from app.services.plaid.plaid_webhook_verification_error import PlaidWebhookVeri
 
 _ITEMS = "app.api.plaid.plaid_item_service"
 _SYNC = "app.api.plaid.plaid_sync_service"
+_HOLDINGS = "app.api.plaid.plaid_holdings_sync_service"
 _VERIFY = "app.api.plaid.plaid_webhook_verifier.verify"
 _HANDLE = "app.api.plaid.plaid_webhook_service.handle"
 _ITEM_ID = uuid.uuid4()
@@ -83,6 +85,36 @@ class TestLinkToken:
             response = client.post("/plaid/link-token", json={})
         assert response.status_code == 502
         assert "INTERNAL_SERVER_ERROR" not in response.text
+
+    def test_add_investments_is_passed_through(self, client: TestClient) -> None:
+        token = PlaidLinkTokenResponse(
+            link_token="link-2", expiration=_dt.datetime(2026, 11, 23, tzinfo=_dt.timezone.utc),
+        )
+        create = AsyncMock(return_value=token)
+        with patch(f"{_ITEMS}.create_link_token", create):
+            response = client.post(
+                "/plaid/link-token", json={"item_id": str(_ITEM_ID), "add_investments": True},
+            )
+        assert response.status_code == 200
+        assert create.await_args.kwargs["add_investments"] is True
+        assert create.await_args.kwargs["item_id"] == _ITEM_ID
+
+    def test_add_investments_without_an_item_is_a_422(self, client: TestClient) -> None:
+        assert client.post("/plaid/link-token", json={"add_investments": True}).status_code == 422
+
+    def test_add_investments_when_this_plaid_account_lacks_it_is_a_plain_503(
+        self, client: TestClient,
+    ) -> None:
+        refused = PlaidApiError(
+            endpoint="/link/token/create", status_code=400, error_type="INVALID_INPUT",
+            error_code="INVALID_PRODUCT", request_id="r",
+        )
+        with patch(f"{_ITEMS}.create_link_token", AsyncMock(side_effect=refused)):
+            response = client.post(
+                "/plaid/link-token", json={"item_id": str(_ITEM_ID), "add_investments": True},
+            )
+        assert response.status_code == 503
+        assert "INVALID_PRODUCT" not in response.text
 
     def test_reconnecting_someone_elses_item_is_a_404(self, client: TestClient) -> None:
         with patch(f"{_ITEMS}.create_link_token", AsyncMock(side_effect=PlaidItemNotFoundError("x"))):
@@ -181,8 +213,21 @@ class TestWebhook:
         sync = AsyncMock()
         with (
             patch(_VERIFY, AsyncMock()),
-            patch(_HANDLE, AsyncMock(return_value=_ITEM_ID)),
+            patch(_HANDLE, AsyncMock(return_value=PlaidWebhookFollowUp(item_id=_ITEM_ID))),
             patch(f"{_SYNC}.sync_item_in_background", sync),
         ):
             assert client.post("/plaid/webhook", content=b"{}", headers={"Plaid-Verification": "x"}).status_code == 200
         sync.assert_awaited_once_with(_ITEM_ID)
+
+    def test_a_holdings_webhook_queues_a_holdings_refresh_only(self, client: TestClient) -> None:
+        sync = AsyncMock()
+        holdings = AsyncMock()
+        with (
+            patch(_VERIFY, AsyncMock()),
+            patch(_HANDLE, AsyncMock(return_value=PlaidWebhookFollowUp(item_id=_ITEM_ID, holdings_only=True))),
+            patch(f"{_SYNC}.sync_item_in_background", sync),
+            patch(f"{_HOLDINGS}.sync_holdings_in_background", holdings),
+        ):
+            assert client.post("/plaid/webhook", content=b"{}", headers={"Plaid-Verification": "x"}).status_code == 200
+        holdings.assert_awaited_once_with(_ITEM_ID)
+        sync.assert_not_awaited()

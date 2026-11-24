@@ -23,7 +23,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 function anItem(overrides: Partial<PlaidItem> = {}): PlaidItem {
   return {
     id: "item-1", institution_name: "Chase", status: "active", error_code: null,
-    last_synced_at: null, account_count: 2, created_at: "2026-11-23T00:00:00Z", ...overrides,
+    last_synced_at: null, investments_status: null, holdings_synced_at: null, account_count: 2,
+    created_at: "2026-11-23T00:00:00Z", ...overrides,
   };
 }
 
@@ -43,13 +44,13 @@ afterEach(cleanup);
 describe("ConnectedBanksSection", () => {
   it("shows nothing until a bank is connected, so the manual page looks as before", () => {
     loaded([]);
-    const { container } = render(<ConnectedBanksSection onReconnect={vi.fn()} reconnectingItemId={undefined} />);
+    const { container } = render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("shows a skeleton while loading", () => {
     listQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false, isFetching: true, refetch: vi.fn() });
-    render(<ConnectedBanksSection onReconnect={vi.fn()} reconnectingItemId={undefined} />);
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
     expect(screen.getByTestId("connected-banks-skeleton")).toBeInTheDocument();
   });
 
@@ -58,7 +59,7 @@ describe("ConnectedBanksSection", () => {
     syncItem.mockReturnValue({
       unwrap: () => Promise.resolve({ added: 3, modified: 0, removed: 1, matched_existing: 0, transfers_matched: 0, status: "active" }),
     });
-    render(<ConnectedBanksSection onReconnect={vi.fn()} reconnectingItemId={undefined} />);
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
 
     expect(screen.getByText("2 accounts")).toBeInTheDocument();
     await userEvent.click(screen.getByTestId("connected-bank-sync"));
@@ -69,7 +70,7 @@ describe("ConnectedBanksSection", () => {
   it("a sync the bank refuses for a sign-in says so", async () => {
     loaded([anItem()]);
     syncItem.mockReturnValue({ unwrap: () => Promise.reject({ status: 409, data: { detail: "login_required" } }) });
-    render(<ConnectedBanksSection onReconnect={vi.fn()} reconnectingItemId={undefined} />);
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
     await userEvent.click(screen.getByTestId("connected-bank-sync"));
     await waitFor(() => expect(showError).toHaveBeenCalledWith(MSG.needsSignIn));
   });
@@ -77,7 +78,7 @@ describe("ConnectedBanksSection", () => {
   it("a connection needing a sign-in offers Reconnect instead of Sync now", async () => {
     loaded([anItem({ status: "login_required", error_code: "ITEM_LOGIN_REQUIRED" })]);
     const onReconnect = vi.fn();
-    render(<ConnectedBanksSection onReconnect={onReconnect} reconnectingItemId={undefined} />);
+    render(<ConnectedBanksSection onReconnect={onReconnect} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
 
     expect(screen.getByTestId("connected-bank-status")).toHaveTextContent(MSG.needsSignIn);
     expect(screen.queryByTestId("connected-bank-sync")).not.toBeInTheDocument();
@@ -88,7 +89,7 @@ describe("ConnectedBanksSection", () => {
   it("disconnects only after confirming, and says the data stays", async () => {
     loaded([anItem()]);
     disconnectItem.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
-    render(<ConnectedBanksSection onReconnect={vi.fn()} reconnectingItemId={undefined} />);
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
 
     await userEvent.click(screen.getByTestId("connected-bank-disconnect"));
     const dialog = await screen.findByRole("dialog");
@@ -97,5 +98,23 @@ describe("ConnectedBanksSection", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: MSG.disconnect }));
     expect(disconnectItem).toHaveBeenCalledWith("item-1");
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MSG.disconnected));
+  });
+
+  it("a bank holding investments it hasn't shared offers Add investments", async () => {
+    loaded([anItem({ investments_status: "consent_required" })]);
+    const onAddInvestments = vi.fn();
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={onAddInvestments} reconnectingItemId={undefined} />);
+
+    expect(screen.getByTestId("connected-bank-investments")).toHaveTextContent(MSG.investmentsConsentNeeded);
+    expect(screen.getByTestId("connected-bank-sync")).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("connected-bank-add-investments"));
+    expect(onAddInvestments).toHaveBeenCalledWith("item-1");
+  });
+
+  it("a bank with no investments looks exactly as before", () => {
+    loaded([anItem({ investments_status: "unavailable" })]);
+    render(<ConnectedBanksSection onReconnect={vi.fn()} onAddInvestments={vi.fn()} reconnectingItemId={undefined} />);
+    expect(screen.queryByTestId("connected-bank-investments")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("connected-bank-add-investments")).not.toBeInTheDocument();
   });
 });

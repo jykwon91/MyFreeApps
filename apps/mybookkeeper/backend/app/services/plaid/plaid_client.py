@@ -38,6 +38,7 @@ from app.schemas.plaid.wire.plaid_wire_account import PlaidWireAccount
 from app.schemas.plaid.wire.plaid_wire_accounts_response import PlaidWireAccountsResponse
 from app.schemas.plaid.wire.plaid_wire_error import PlaidWireError
 from app.schemas.plaid.wire.plaid_wire_exchange_response import PlaidWireExchangeResponse
+from app.schemas.plaid.wire.plaid_wire_holdings_response import PlaidWireHoldingsResponse
 from app.schemas.plaid.wire.plaid_wire_link_token_response import PlaidWireLinkTokenResponse
 from app.schemas.plaid.wire.plaid_wire_sync_page import PlaidWireSyncPage
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
@@ -109,10 +110,19 @@ def _parse[T: BaseModel](model: type[T], endpoint: str, data: dict[str, Any]) ->
 
 
 async def create_link_token(
-    *, client_user_id: str, access_token: str | None = None,
+    *,
+    client_user_id: str,
+    access_token: str | None = None,
+    additional_consented_products: tuple[str, ...] = (),
 ) -> PlaidWireLinkTokenResponse:
     """A Link token. With ``access_token`` it opens Link in update mode
-    (reconnect an existing item) and asks for no products."""
+    (reconnect an existing item) and asks for no products.
+
+    ``additional_consented_products`` asks the person's consent to products
+    the app may call later without pulling or billing them now; in update
+    mode it is how an existing item gains consent to a new product
+    (https://plaid.com/docs/link/update-mode/).
+    """
     body: dict[str, Any] = {
         "client_name": PLAID_CLIENT_NAME,
         "country_codes": list(PLAID_COUNTRY_CODES),
@@ -124,6 +134,8 @@ async def create_link_token(
         body["transactions"] = {"days_requested": PLAID_TRANSACTIONS_DAYS_REQUESTED}
     else:
         body["access_token"] = access_token
+    if additional_consented_products:
+        body["additional_consented_products"] = list(additional_consented_products)
     webhook = _public_url(PLAID_WEBHOOK_PATH)
     if webhook:
         body["webhook"] = webhook
@@ -144,6 +156,15 @@ async def get_accounts(access_token: str) -> list[PlaidWireAccount]:
     endpoint = "/accounts/get"
     data = await _post(endpoint, {"access_token": access_token})
     return _parse(PlaidWireAccountsResponse, endpoint, data).accounts
+
+
+async def get_holdings(access_token: str) -> PlaidWireHoldingsResponse:
+    """Every investment account's holdings and the securities they refer to.
+    The first call on an item adds the Investments product to it (billed from
+    then on), so callers ask only for items with an investment account."""
+    endpoint = "/investments/holdings/get"
+    data = await _post(endpoint, {"access_token": access_token})
+    return _parse(PlaidWireHoldingsResponse, endpoint, data)
 
 
 async def remove_item(access_token: str) -> None:

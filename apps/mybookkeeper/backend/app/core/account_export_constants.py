@@ -188,6 +188,8 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "mortgages": {"key_version": _KEY_VERSION},
     "financial_accounts": {},
     "balance_snapshots": {},
+    "securities": {},
+    "holdings": {},
     "plaid_items": {
         "access_token_encrypted": "Ciphertext of the Plaid access token; a credential to the bank data.",
         "key_version": "Encryption key bookkeeping for the access token ciphertext.",

@@ -45,6 +45,9 @@ export const FINANCIAL_ACCOUNT_CLASSIFICATION: Record<FinancialAccountType, Fina
   other_liability: "liability",
 };
 
+/** Mirrors ``INVESTMENT_ACCOUNT_TYPES``: the accounts that can hold securities. */
+export const INVESTMENT_ACCOUNT_TYPES: readonly FinancialAccountType[] = ["brokerage", "retirement", "hsa"];
+
 /** Only a mortgage account can be tied to a recorded mortgage. */
 export const MORTGAGE_ACCOUNT_TYPE: FinancialAccountType = "mortgage";
 

@@ -14,6 +14,7 @@ export const APP_PAGES = [
   "/inquiries",
   "/insurance-policies",
   "/integrations",
+  "/investments",
   "/lease-templates",
   "/leases",
   "/leases/new",

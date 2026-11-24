@@ -9,7 +9,8 @@ function isSession(value: unknown): value is PlaidLinkSession {
   const candidate = value as Record<string, unknown>;
   return typeof candidate.linkToken === "string"
     && candidate.linkToken.length > 0
-    && (candidate.itemId === null || typeof candidate.itemId === "string");
+    && (candidate.itemId === null || typeof candidate.itemId === "string")
+    && (candidate.addInvestments === undefined || typeof candidate.addInvestments === "boolean");
 }
 
 export function readPlaidLinkSession(): PlaidLinkSession | null {

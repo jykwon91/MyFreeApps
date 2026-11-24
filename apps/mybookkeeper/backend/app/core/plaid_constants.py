@@ -13,6 +13,14 @@ PLAID_ENVIRONMENT_URLS: Final[dict[str, str]] = {
 
 PLAID_CLIENT_NAME: Final = "MyBookkeeper"
 PLAID_PRODUCTS: Final[tuple[str, ...]] = ("transactions",)
+# Consent asked for at Link but no data pulled, so a bank without investment
+# accounts still links and nothing is billed until ``/investments/holdings/get``
+# is called — which the sync does only for an item with an investment account.
+# Plaid's recommendation for personal finance:
+# https://plaid.com/docs/link/initializing-products/ ("Transactions with
+# Liabilities and/or Investments"). Not ``optional_products``: that bills
+# Investments at item creation on every item it can be added to.
+PLAID_ADDITIONAL_CONSENTED_PRODUCTS: Final[tuple[str, ...]] = ("investments",)
 PLAID_COUNTRY_CODES: Final[tuple[str, ...]] = ("US",)
 PLAID_LANGUAGE: Final = "en"
 
@@ -57,6 +65,24 @@ PLAID_TRANSFER_MATCH_WINDOW_DAYS: Final = 5
 PLAID_ERROR_ITEM_LOGIN_REQUIRED: Final = "ITEM_LOGIN_REQUIRED"
 PLAID_ERROR_ITEM_NOT_FOUND: Final = "ITEM_NOT_FOUND"
 PLAID_ERROR_MUTATION_DURING_PAGINATION: Final = "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION"
+# The client's Plaid account isn't enabled for a product it asked for
+# (https://plaid.com/docs/errors/invalid-input/#invalid_product).
+PLAID_ERROR_INVALID_PRODUCT: Final = "INVALID_PRODUCT"
+
+# What ``/investments/holdings/get`` can answer with that means "no holdings
+# from this item right now", by what the app does about it
+# (https://plaid.com/docs/errors/item/, /errors/invalid-input/).
+# The person has to grant consent in Link update mode.
+PLAID_ERROR_ADDITIONAL_CONSENT_REQUIRED: Final = "ADDITIONAL_CONSENT_REQUIRED"
+# Plaid is still preparing the data; the HOLDINGS webhook or the next sync
+# picks it up.
+PLAID_ERROR_PRODUCT_NOT_READY: Final = "PRODUCT_NOT_READY"
+# The item can never give holdings as it stands.
+PLAID_HOLDINGS_UNAVAILABLE_CODES: Final[frozenset[str]] = frozenset({
+    "PRODUCTS_NOT_SUPPORTED",
+    "NO_INVESTMENT_ACCOUNTS",
+    PLAID_ERROR_INVALID_PRODUCT,
+})
 # Item states that need the person to sign in to their bank again.
 PLAID_REAUTH_ERROR_CODES: Final[frozenset[str]] = frozenset({
     PLAID_ERROR_ITEM_LOGIN_REQUIRED,
@@ -75,6 +101,9 @@ PLAID_WEBHOOK_ITEM_REAUTH_CODES: Final[frozenset[str]] = frozenset({
     "PENDING_DISCONNECT",
 })
 PLAID_WEBHOOK_USER_PERMISSION_REVOKED: Final = "USER_PERMISSION_REVOKED"
+# https://plaid.com/docs/api/products/investments/ (HOLDINGS: DEFAULT_UPDATE)
+PLAID_WEBHOOK_TYPE_HOLDINGS: Final = "HOLDINGS"
+PLAID_WEBHOOK_HOLDINGS_DEFAULT_UPDATE: Final = "DEFAULT_UPDATE"
 
 # Longest values accepted from the Link front end for display-only fields.
 PLAID_INSTITUTION_ID_MAX_LENGTH: Final = 50

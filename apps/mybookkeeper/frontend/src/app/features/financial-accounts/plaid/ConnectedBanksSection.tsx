@@ -6,12 +6,13 @@ import ConnectedBanksSkeleton from "./ConnectedBanksSkeleton";
 
 export interface ConnectedBanksSectionProps {
   onReconnect: (itemId: string) => void;
+  onAddInvestments: (itemId: string) => void;
   /** The connection Link is being opened for, if any. */
   reconnectingItemId: string | null | undefined;
 }
 
 /** The person's bank connections; nothing at all until they have one, so the manual flow looks as before. */
-export default function ConnectedBanksSection({ onReconnect, reconnectingItemId }: ConnectedBanksSectionProps) {
+export default function ConnectedBanksSection({ onReconnect, onAddInvestments, reconnectingItemId }: ConnectedBanksSectionProps) {
   const query = useListPlaidItemsQuery();
 
   if (query.isLoading) return <ConnectedBanksSkeleton />;
@@ -31,6 +32,7 @@ export default function ConnectedBanksSection({ onReconnect, reconnectingItemId 
             key={item.id}
             item={item}
             onReconnect={onReconnect}
+            onAddInvestments={onAddInvestments}
             isReconnecting={reconnectingItemId === item.id}
           />
         ))}

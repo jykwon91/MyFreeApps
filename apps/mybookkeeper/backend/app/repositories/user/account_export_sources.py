@@ -49,6 +49,8 @@ from app.models.insurance.insurance_policy import InsurancePolicy
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
 from app.models.integrations.integration import Integration
 from app.models.integrations.plaid_item import PlaidItem
+from app.models.investments.holding import Holding
+from app.models.investments.security import Security
 from app.models.leases.lease_template import LeaseTemplate
 from app.models.leases.lease_template_file import LeaseTemplateFile
 from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholder
@@ -200,6 +202,8 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(FinancialAccount, Scope.WORKSPACE_MEMBER),
     Source(PlaidItem, Scope.WORKSPACE_MEMBER),
     Source(BalanceSnapshot, Scope.WORKSPACE_MEMBER),
+    Source(Security, Scope.WORKSPACE_MEMBER),
+    Source(Holding, Scope.WORKSPACE_MEMBER),
     Source(SpendingCategory, Scope.WORKSPACE),
     Source(SpendingBudget, Scope.WORKSPACE),
     # Welcome manuals

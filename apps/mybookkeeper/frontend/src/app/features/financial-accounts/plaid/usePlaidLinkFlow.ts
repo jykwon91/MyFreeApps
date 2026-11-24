@@ -8,6 +8,7 @@ import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { PLAID_MESSAGES as MSG } from "@/shared/lib/plaid-messages";
 import { forgetPlaidLinkSession, persistPlaidLinkSession } from "@/shared/lib/plaidLinkSessionStorage";
 import { toPendingConnection } from "@/shared/lib/plaidPendingConnection";
+import type { PlaidLinkBeginOptions } from "@/shared/types/plaid/plaid-link-begin-options";
 import type { PlaidLinkFlow } from "@/shared/types/plaid/plaid-link-flow";
 import type { PlaidLinkFlowOptions } from "@/shared/types/plaid/plaid-link-flow-options";
 import type { PlaidLinkSession } from "@/shared/types/plaid/plaid-link-session";
@@ -15,7 +16,7 @@ import type { PlaidLinkSession } from "@/shared/types/plaid/plaid-link-session";
 const SERVICE_UNAVAILABLE = 503;
 
 /**
- * Plaid Link from "Connect a bank" or "Reconnect" to its result.
+ * Plaid Link from "Connect a bank", "Reconnect" or "Add investments" to its result.
  *
  * The Link token is kept in localStorage while Link is open: an OAuth bank
  * (Chase) sends the person away and back to /plaid-oauth, which resumes the
@@ -40,10 +41,11 @@ export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled
 
   const onSuccess = useCallback((publicToken: string | null, metadata: PlaidLinkOnSuccessMetadata) => {
     const itemId = sessionRef.current?.itemId ?? null;
+    const addedInvestments = sessionRef.current?.addInvestments === true;
     finish();
     if (itemId !== null) {
       markReconnected(itemId).unwrap().then(
-        () => showSuccess(MSG.reconnected),
+        () => showSuccess(addedInvestments ? MSG.investmentsAdded : MSG.reconnected),
         () => showError(MSG.reconnectFailed),
       ).finally(() => onSettled?.());
       return;
@@ -80,16 +82,20 @@ export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled
     open();
   }, [session, ready, open]);
 
-  const begin = useCallback(async (itemId: string | null) => {
+  const begin = useCallback(async (itemId: string | null, { addInvestments = false }: PlaidLinkBeginOptions = {}) => {
     setStarting(itemId);
     try {
-      const token = await createLinkToken({ item_id: itemId }).unwrap();
-      const next = { linkToken: token.link_token, itemId };
+      const request = addInvestments ? { item_id: itemId, add_investments: true } : { item_id: itemId };
+      const token = await createLinkToken(request).unwrap();
+      const next: PlaidLinkSession = addInvestments
+        ? { linkToken: token.link_token, itemId, addInvestments: true }
+        : { linkToken: token.link_token, itemId };
       persistPlaidLinkSession(next);
       setSession(next);
     } catch (err) {
       setStarting(undefined);
-      showError(httpStatus(err) === SERVICE_UNAVAILABLE ? MSG.notConfigured : MSG.startFailed);
+      if (httpStatus(err) !== SERVICE_UNAVAILABLE) showError(MSG.startFailed);
+      else showError(addInvestments ? MSG.investmentsNotEnabled : MSG.notConfigured);
     }
   }, [createLinkToken]);
 
