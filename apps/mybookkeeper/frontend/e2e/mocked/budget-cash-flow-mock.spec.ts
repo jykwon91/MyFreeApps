@@ -22,6 +22,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { toast } from "@platform/ui/test-support/toast";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { DESKTOP_VIEWPORT, expectFullWidthPage } from "./fixtures/fullWidthPage";
 
 const GROCERIES = "11111111-1111-1111-1111-111111111111";
 const DINING = "22222222-2222-2222-2222-222222222222";
@@ -174,6 +175,14 @@ test.describe("Budget", () => {
     await expect(page.getByTestId("budget-skeleton-row")).not.toHaveCount(0);
   });
 
+  test("uses the full width on a desktop screen", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page);
+    await page.goto("/budget?month=2026-11");
+    await expect(page.getByTestId(`budget-line-${DINING}`)).toBeVisible();
+    await expectFullWidthPage(page);
+  });
+
   test("fits a phone screen, with the budget editor open", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await stubApi(page);
@@ -181,6 +190,18 @@ test.describe("Budget", () => {
     await page.getByTestId(`budget-line-${DINING}`).getByTestId("budget-edit").click();
     await expect(page.getByTestId("budget-input")).toBeVisible();
     await expectNoSideScroll(page);
+  });
+});
+
+test.describe("Spending categories", () => {
+  test("uses the full width on a desktop screen", async ({ page }) => {
+    await plantAuth(page);
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page);
+    await page.route(/\/api\/spending-categories(\?.*)?$/, (route) => route.fulfill(json({ items: [] })));
+    await page.goto("/spending-categories");
+    await expect(page.getByTestId("spending-categories-skeleton")).toBeHidden();
+    await expectFullWidthPage(page);
   });
 });
 
@@ -221,6 +242,14 @@ test.describe("Cash flow", () => {
     await expect(page.getByTestId("cash-flow-skeleton")).toBeVisible();
     await expect(page.getByTestId("cash-flow-skeleton-tile")).toHaveCount(3);
     await expect(page.getByTestId("cash-flow-skeleton-chart")).toHaveCount(1);
+  });
+
+  test("uses the full width on a desktop screen", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page);
+    await page.goto("/cash-flow");
+    await expect(page.getByTestId("cash-flow-chart")).toBeVisible();
+    await expectFullWidthPage(page);
   });
 
   test("fits a phone screen", async ({ page }) => {

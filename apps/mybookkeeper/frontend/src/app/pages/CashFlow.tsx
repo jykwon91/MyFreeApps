@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { useLiveSearchParams } from "@platform/ui";
 import { useGetCashFlowQuery } from "@mybookkeeper/api-client/store/budgetApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import CashFlowBody from "@/app/features/cash-flow/CashFlowBody";
@@ -8,19 +8,25 @@ import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
 
 /**
  * Money in against money out per month. Range, scope and account live in the
- * URL so a reload keeps them; a change replaces the history entry.
+ * URL so a reload keeps them; a change replaces the history entry. Each change
+ * starts from the live address, so two quick picks never undo each other.
  */
 export default function CashFlow() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const cashFlowQuery = cashFlowQueryFrom(searchParams);
   const query = useGetCashFlowQuery(cashFlowQuery);
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader title={MSG.pageTitle} subtitle={MSG.pageSubtitle} />
       <CashFlowControls
         value={cashFlowQuery}
-        onChange={(next) => setSearchParams(cashFlowSearchParams(next), { replace: true })}
+        onChange={(change) =>
+          setSearchParams(
+            (live) => new URLSearchParams(cashFlowSearchParams({ ...cashFlowQueryFrom(live), ...change })),
+            { replace: true },
+          )
+        }
       />
       <CashFlowBody
         data={query.currentData}

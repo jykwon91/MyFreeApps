@@ -20,6 +20,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { toast } from "@platform/ui/test-support/toast";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { DESKTOP_VIEWPORT, expectFullWidthPage } from "./fixtures/fullWidthPage";
 
 const HOUSE_ID = "33333333-3333-3333-3333-333333333333";
 
@@ -153,6 +154,14 @@ test.describe("Net worth", () => {
     await expect(page.getByTestId("net-worth-skeleton-tile")).toHaveCount(3);
     await expect(page.getByTestId("net-worth-skeleton-history")).toHaveCount(1);
     await expect(page.getByTestId("net-worth-skeleton-group")).not.toHaveCount(0);
+  });
+
+  test("uses the full width on a desktop screen", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page);
+    await page.goto("/net-worth");
+    await expect(page.getByTestId("net-worth-chart")).toBeVisible();
+    await expectFullWidthPage(page);
   });
 
   test("fits a phone screen, with the value editor open", async ({ page }) => {

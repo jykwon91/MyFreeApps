@@ -8,7 +8,8 @@ import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
 
 export interface CashFlowControlsProps {
   value: CashFlowQuery;
-  onChange: (next: CashFlowQuery) => void;
+  /** Only the picked field, so a change can't carry stale values for the others. */
+  onChange: (change: Partial<CashFlowQuery>) => void;
 }
 
 const ALL_ACCOUNTS = "";
@@ -23,14 +24,14 @@ export default function CashFlowControls({ value, onChange }: CashFlowControlsPr
       <SegmentedControl
         options={CASH_FLOW_RANGES}
         value={value.range}
-        onChange={(range) => onChange({ ...value, range })}
+        onChange={(range) => onChange({ range })}
         label={MSG.rangeLabel}
         testIdPrefix="cash-flow-range"
       />
       <SegmentedControl
         options={CASH_FLOW_SCOPES}
         value={value.scope}
-        onChange={(scope) => onChange({ ...value, scope })}
+        onChange={(scope) => onChange({ scope })}
         label={MSG.scopeLabel}
         testIdPrefix="cash-flow-scope"
       />
@@ -40,7 +41,7 @@ export default function CashFlowControls({ value, onChange }: CashFlowControlsPr
           <Select
             id={accountSelectId}
             value={value.accountId ?? ALL_ACCOUNTS}
-            onChange={(e) => onChange({ ...value, accountId: e.target.value === ALL_ACCOUNTS ? null : e.target.value })}
+            onChange={(e) => onChange({ accountId: e.target.value === ALL_ACCOUNTS ? null : e.target.value })}
             className="min-h-[44px] w-full sm:w-56 bg-background"
             data-testid="cash-flow-account"
           >

@@ -20,6 +20,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { toast } from "@platform/ui/test-support/toast";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { DESKTOP_VIEWPORT, expectFullWidthPage } from "./fixtures/fullWidthPage";
 
 const ACTIVE_ITEM = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -120,6 +121,21 @@ test.describe("Connected banks", () => {
     await stubApi(page, [], { holdList: true });
     await page.goto("/financial-accounts");
     await expect(page.getByTestId("connected-banks-skeleton")).toBeVisible();
+  });
+
+  test("on a desktop screen it uses the full width, with both buttons on the title's row", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page, [ACTIVE_ITEM]);
+    await page.goto("/financial-accounts");
+    await expect(page.getByTestId(`connected-bank-row-${ACTIVE_ITEM.id}`)).toBeVisible();
+    await expectFullWidthPage(page);
+
+    const connect = await page.getByTestId("connect-bank-button").boundingBox();
+    const add = await page.getByTestId("add-financial-account-button").boundingBox();
+    const title = await page.getByRole("heading", { level: 1 }).boundingBox();
+    expect(Math.abs(connect!.y - add!.y), "the two buttons should share a row").toBeLessThanOrEqual(2);
+    expect(add!.x).toBeGreaterThanOrEqual(connect!.x + connect!.width);
+    expect(connect!.y, "the buttons should sit on the title's row").toBeLessThan(title!.y + title!.height);
   });
 
   test("the OAuth return page with no Link session points back to accounts", async ({ page }) => {

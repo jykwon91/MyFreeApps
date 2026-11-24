@@ -30,12 +30,12 @@ export default function FinancialAccounts() {
   const plaid = usePlaidLinkFlow();
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title={MSG.pageTitle}
         subtitle={MSG.pageSubtitle}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             <LoadingButton
               type="button" variant="secondary" size="md" className="min-h-[44px]"
               isLoading={plaid.starting === null} loadingText={PLAID_MESSAGES.connecting}
@@ -46,7 +46,7 @@ export default function FinancialAccounts() {
             <Button type="button" variant="primary" size="md" className="min-h-[44px]" onClick={() => setAdding(true)} data-testid="add-financial-account-button">
               {MSG.add}
             </Button>
-          </div>
+          </>
         }
       />
 
