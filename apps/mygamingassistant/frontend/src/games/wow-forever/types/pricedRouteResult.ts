@@ -27,6 +27,8 @@ export interface PricedRouteResult {
   priceBook: PriceBook | null;
   items: { main: PriceItem[]; more: PriceItem[] };
   formulas: CraftRecipe[];
+  /** Patterns the guide's own route uses: the cheapest route may pick them without a tick. */
+  assumedFormulas: ReadonlySet<number>;
   /** The enchant slots that count for this profession (none unless it has the slot list). */
   excludedSlots: ReadonlySet<EnchantSlot>;
   /** Each of this guide's materials that has a price nobody typed: its auction price, else one worked out. */

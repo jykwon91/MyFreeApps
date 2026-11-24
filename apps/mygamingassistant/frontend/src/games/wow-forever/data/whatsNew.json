@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-24",
+    "title": "Tailoring and Enchanting routes now use the guide's own patterns when picking the cheapest",
+    "summary": "The cheapest route used to skip any recipe you had to buy a pattern for unless you ticked it, so stretches like Runecloth Cloak versus Boots were never priced from the auction house. The patterns the guide's own route already sends you to get now count without a tick, so those stretches are picked from today's prices. Other patterns still need a tick.",
+    "to": "/wow-forever/professions"
+  },
+  {
     "date": "2026-11-23",
     "title": "New MGA Professions addon: the profession guides in your game",
     "summary": "Open Professions from the MGA minimap menu, the key binding, or the MGA guide button on a profession window. It starts from your own professions and skill and lists the next rows of the route with the mats you carry against what each needs, where to learn each recipe, the trainers for your next rank, and the best gathering zones. Click a trainer to point the MGA Waypoints arrow at them; with MGA Prices installed it adds what the mats cost. Download it from the Professions page.",

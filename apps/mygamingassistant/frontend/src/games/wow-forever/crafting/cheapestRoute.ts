@@ -54,6 +54,26 @@ export interface RouteChoices {
   excludedSlots: ReadonlySet<EnchantSlot>;
 }
 
+/**
+ * Patterns the hand-written route itself tells you to get (its craft rows).
+ * The guide already sends you for them, so the cheapest route may use them
+ * without a tick. The options row is left out on purpose: it lists what you
+ * *might* have, not what the guide expects you to buy.
+ */
+export function routePatterns(ctx: Pick<CraftContext, "route" | "recipes">): ReadonlySet<number> {
+  const spells = new Set<number>();
+  for (const entry of ctx.route) {
+    const recipe = entry.kind === "craft" ? ctx.recipes.get(entry.spell) : undefined;
+    if (recipe && mustAcquire(recipe)) spells.add(recipe.spell);
+  }
+  return spells;
+}
+
+/** What you ticked plus the route's own patterns — the formulas the cheapest route may use. */
+export function withRoutePatterns(ctx: Pick<CraftContext, "route" | "recipes">, choices: RouteChoices): RouteChoices {
+  return { ...choices, knownFormulas: new Set([...choices.knownFormulas, ...routePatterns(ctx)]) };
+}
+
 /** The fixed inputs for one profession. */
 export interface CraftContext {
   file: Pick<CraftingFile, "madeBy" | "recipes">;
