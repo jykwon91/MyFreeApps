@@ -314,8 +314,8 @@ export default function TransactionForm({
         )}
       </FormField>
 
-      {/* A transfer never reaches a tax report; the server forces it off. */}
-      {!isTransfer && (
+      {/* Transfers and personal spending never reach a tax report; the server forces it off. */}
+      {!isTransfer && !isPersonal && (
         <FormField label="Tax Relevant" group dirty={!!dirtyFields.tax_relevant}>
           <label className={`flex items-center gap-2 text-sm ${dirtyFields.tax_relevant ? "text-primary font-medium" : ""}`}>
             <input
@@ -328,7 +328,7 @@ export default function TransactionForm({
         </FormField>
       )}
 
-      {transactionType === "expense" && (
+      {transactionType === "expense" && !isPersonal && (
         <FormField label={MSG.capitalImprovement} group dirty={!!dirtyFields.is_capital_improvement}>
           <label className={`flex items-center gap-2 text-sm min-h-[44px] ${dirtyFields.is_capital_improvement ? "text-primary font-medium" : ""}`}>
             <input

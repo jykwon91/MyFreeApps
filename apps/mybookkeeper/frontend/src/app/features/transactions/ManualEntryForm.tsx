@@ -83,7 +83,7 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
         transaction_type: data.transaction_type,
         category: data.category,
         property_id: data.property_id || null,
-        tax_relevant: isTransfer ? false : data.tax_relevant,
+        tax_relevant: isTransfer || isPersonal ? false : data.tax_relevant,
         account_id: data.account_id || null,
         transfer_to_account_id: isTransfer ? data.transfer_to_account_id || null : null,
         channel: data.channel || null,
@@ -247,7 +247,8 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
           )}
         </FormField>
 
-        {!isTransfer && (
+        {/* Transfers and personal spending never reach a tax report. */}
+        {!isTransfer && !isPersonal && (
           <FormField label="Tax Relevant" group>
             <label className="flex items-center gap-2 text-sm">
               <input
