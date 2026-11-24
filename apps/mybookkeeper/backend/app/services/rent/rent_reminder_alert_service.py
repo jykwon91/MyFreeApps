@@ -1,4 +1,5 @@
-"""Tell the operator, once per try, when a rent reminder didn't go out.
+"""Tell the operator, once per try, when a rent reminder didn't go out, or may
+have gone out with nothing to confirm it.
 
 The alert is claimed on the row before the email is sent, so the sender, the
 watchdog and the webhook can't each email about the same failed try. A retry
@@ -15,16 +16,22 @@ import logging
 import uuid
 
 from app.core.rent_reminder_constants import (
+    ERROR_EMAIL_NOT_CONFIGURED,
     ERROR_EMAIL_OUTCOME_UNKNOWN,
+    ERROR_EMAIL_SEND_FAILED,
     ERROR_INVALID_PHONE,
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
+    ERROR_SEND_INTERRUPTED,
     ERROR_SMS_EXPIRED,
     ERROR_SMS_NETWORK,
     ERROR_SMS_NOT_CONFIGURED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
+    PHONE_FAILED_CODE_PREFIX,
+    SMS_CONFIRMATION_TIMEOUT_MINUTES,
+    SMS_RELAY_CODE_PREFIX,
 )
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
@@ -37,28 +44,41 @@ logger = logging.getLogger(__name__)
 
 _SMS = "sms"
 
-# Failures that mean "the phone never got it out", where the fix is on the
-# phone itself rather than in the tenant's contact details.
-PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
-    ERROR_SMS_EXPIRED,
-})
-_OUTCOME_UNKNOWN_ERRORS: frozenset[str] = frozenset({
-    ERROR_SMS_OUTCOME_UNKNOWN,
-    ERROR_EMAIL_OUTCOME_UNKNOWN,
-})
-_CHECK_PROVIDER_LOG = (
-    "It may already have been sent, so check the message log on httpsms.com "
-    "(or the phone's Messages app) before sending it again."
+# Where to check whether a reminder that may have gone out did. Only texts
+# leave a log (httpSMS's); an email can only be checked with the tenant.
+_CHECK_TEXT = "check the message log on httpsms.com (or the phone's Messages app)"
+_CHECK_EMAIL = "ask the tenant whether it arrived"
+_RETRY = (
+    "If nothing else went out for this due date, you can retry from the "
+    "tenant's Rent reminders card with Send now. If the other channel did go "
+    "out, Send now won't resend this one, so contact the tenant yourself if "
+    "they still need it."
 )
-_ASK_TENANT = (
-    "It may already be in their inbox, and an email can't be looked up "
-    "anywhere, so ask the tenant whether it arrived before sending it again."
-)
+# What to fix when the phone let a text down. It is never the tenant's contact
+# details then.
 _PHONE_CHECKLIST = (
-    "Check the Android phone is on, online, and that httpSMS isn't "
+    "Make sure the Android phone is on, online, and that httpSMS isn't "
     "battery-optimized (Settings > Apps > httpSMS > Battery > Unrestricted)."
 )
+# Why a reminder failed, as the operator would put it, for each code with a
+# fixed spelling but ``no_recipient``, whose words depend on the channel.
+_WHAT_HAPPENED: dict[str, str] = {
+    ERROR_NO_PHONE_CONFIRMATION: (
+        "The phone didn't confirm it sent the text within "
+        f"{SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes. {_PHONE_CHECKLIST}"
+    ),
+    ERROR_SMS_EXPIRED: f"The phone didn't send the text in time, so httpSMS gave up on it. {_PHONE_CHECKLIST}",
+    ERROR_SEND_INTERRUPTED: "Sending was interrupted before it was confirmed.",
+    ERROR_INVALID_PHONE: "The tenant's phone number couldn't be read. Re-enter it with the area code.",
+    ERROR_SMS_NOT_CONFIGURED: "Text reminders are switched on but httpSMS isn't configured on the server.",
+    ERROR_SMS_NETWORK: "The server couldn't reach httpSMS, so the text wasn't sent.",
+    ERROR_SMS_OUTCOME_UNKNOWN: "httpSMS didn't confirm it took the text.",
+    ERROR_EMAIL_NOT_CONFIGURED: "Email isn't set up on the server.",
+    ERROR_EMAIL_SEND_FAILED: "The mail server didn't take it.",
+    ERROR_EMAIL_OUTCOME_UNKNOWN: "The mail server didn't confirm it took the email.",
+    ERROR_UNEXPECTED: "Something went wrong sending it.",
+}
+_MISSING_CONTACT: dict[str, str] = {"sms": "phone number", "email": "email address"}
 
 
 async def operator_email(db, user_id: uuid.UUID) -> str | None:
@@ -73,47 +93,38 @@ def email_html(body: str) -> str:
 def _settled_text(*, tenant: str, code: str) -> tuple[str, str]:
     subject = f"{tenant}'s rent text definitely didn't go out"
     body = (
-        f"{subject}. Earlier it looked like it might have reached them, but the "
-        f"phone has now reported it failed (reason: {code}). It definitely didn't "
-        "go out, so you can send it again with Send now on the tenant's Rent "
-        "reminders card."
+        f"{subject}. Earlier it looked like it might have reached them. "
+        f"{_what_happened(channel=_SMS, code=code)} It definitely didn't go out, "
+        "so you can send it again with Send now on the tenant's Rent reminders card."
     )
     return subject, body
 
 
+def _what_happened(*, channel: str, code: str) -> str:
+    """Why the reminder failed, as the operator would put it, and what to fix
+    when the phone let it down."""
+    if code == ERROR_NO_RECIPIENT:
+        return f"The tenant record has no {_MISSING_CONTACT[channel]}."
+    if code in _WHAT_HAPPENED:
+        return _WHAT_HAPPENED[code]
+    if code.startswith(PHONE_FAILED_CODE_PREFIX):
+        detail = code.removeprefix(PHONE_FAILED_CODE_PREFIX)
+        return f"The phone reported a problem sending the text ({detail}). Check the httpSMS app on the phone."
+    if code.startswith(SMS_RELAY_CODE_PREFIX):
+        return f"httpSMS refused the text ({code.removeprefix(SMS_RELAY_CODE_PREFIX)})."
+    return f"Reason: {code}."
+
+
 def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
     what = "rent text" if channel == _SMS else "rent reminder email"
-    outcome = "may already have been sent" if code in _OUTCOME_UNKNOWN_ERRORS else "didn't go out"
-    subject = f"{tenant}'s {what} {outcome}"
-    if code in PHONE_SIDE_ERRORS:
-        detail = _PHONE_CHECKLIST
-    elif code == ERROR_NO_RECIPIENT:
-        detail = f"The tenant record has no {'phone number' if channel == _SMS else 'email address'}."
-    elif code == ERROR_INVALID_PHONE:
-        detail = "The tenant's phone number couldn't be read. Re-enter it with the area code."
-    elif code == ERROR_SMS_NOT_CONFIGURED:
-        detail = "Text reminders are switched on but httpSMS isn't configured on the server."
-    elif code == ERROR_SMS_NETWORK:
-        detail = "The server couldn't reach httpSMS, so the text wasn't sent."
-    elif code == ERROR_SMS_OUTCOME_UNKNOWN:
-        detail = "httpSMS didn't confirm it took the text."
-    elif code == ERROR_EMAIL_OUTCOME_UNKNOWN:
-        detail = "The mail server didn't confirm it took the email."
+    if code in MAY_STILL_ARRIVE_ERRORS:
+        subject = f"{tenant}'s {what} may already have been sent"
+        check = _CHECK_TEXT if channel == _SMS else _CHECK_EMAIL
+        next_step = f"It may already have reached them, so {check} before sending it again. {_RETRY}"
     else:
-        detail = f"Reason: {code}."
-    retry = (
-        "If nothing else went out for this due date, you can retry from the "
-        "tenant's Rent reminders card with Send now. If the other channel did go "
-        "out, Send now won't resend this one, so contact the tenant yourself if "
-        "they still need it."
-    )
-    if code == ERROR_SMS_OUTCOME_UNKNOWN:
-        retry = f"{_CHECK_PROVIDER_LOG} {retry}"
-    elif code == ERROR_EMAIL_OUTCOME_UNKNOWN:
-        retry = f"{_ASK_TENANT} {retry}"
-    elif code in MAY_STILL_ARRIVE_ERRORS:
-        retry = f"It may still reach them, so check before sending again. {retry}"
-    body = f"{subject}. {detail} {retry}"
+        subject = f"{tenant}'s {what} didn't go out"
+        next_step = _RETRY
+    body = f"{subject}. {_what_happened(channel=channel, code=code)} {next_step}"
     return subject, body
 
 

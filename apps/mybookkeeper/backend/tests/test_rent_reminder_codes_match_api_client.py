@@ -1,16 +1,21 @@
 """The website and phone describe every reminder failure code the server records.
 
 The codes are decided on the server (``app/core/rent_reminder_constants.py``);
-the api-client repeats the words for each one, the "may still arrive" set it
-warns about, and the code Send now refuses a possible duplicate with.
+the api-client repeats the words for each one, the prefixes of the codes that
+carry their own detail, the "may still arrive" set it warns about, and the code
+Send now refuses a possible duplicate with.
 """
 import re
 from pathlib import Path
 
+import pytest
+
 from app.core.rent_reminder_constants import (
     MAY_STILL_ARRIVE_ERRORS,
+    PHONE_FAILED_CODE_PREFIX,
     REMINDER_ERROR_CODES,
     REMINDER_MAY_HAVE_BEEN_SENT_CODE,
+    SMS_RELAY_CODE_PREFIX,
 )
 
 API_CLIENT = Path(__file__).parents[2] / "api-client" / "src"
@@ -27,9 +32,12 @@ def _between(source: str, start: str, end: str, *, file: str) -> str:
     return body
 
 
+def _error_words_file() -> str:
+    return (API_CLIENT / "utils" / "rentReminderError.ts").read_text(encoding="utf-8")
+
+
 def _labelled_codes() -> set[str]:
-    source = (API_CLIENT / "utils" / "rentReminderError.ts").read_text(encoding="utf-8")
-    labels = _between(source, "Object.entries({", "}));", file="rentReminderError.ts")
+    labels = _between(_error_words_file(), "Object.entries({", "}));", file="rentReminderError.ts")
     return set(re.findall(r"^\s{2}(\w+):", labels, flags=re.MULTILINE))
 
 
@@ -43,6 +51,15 @@ def test_every_reminder_error_code_has_words() -> None:
 
 def test_no_words_for_a_code_the_server_never_records() -> None:
     assert _labelled_codes() <= REMINDER_ERROR_CODES
+
+
+@pytest.mark.parametrize(
+    ("name", "prefix"),
+    [("PHONE_FAILED_PREFIX", PHONE_FAILED_CODE_PREFIX), ("RELAY_PREFIX", SMS_RELAY_CODE_PREFIX)],
+)
+def test_prefixed_codes_are_spelled_the_same(name: str, prefix: str) -> None:
+    literal = _between(_error_words_file(), f"const {name} =", ";", file="rentReminderError.ts")
+    assert re.findall(r'"([^"]*)"', literal) == [prefix]
 
 
 def test_may_still_arrive_codes_match() -> None:

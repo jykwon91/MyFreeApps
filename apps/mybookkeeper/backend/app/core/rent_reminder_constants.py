@@ -36,22 +36,28 @@ ERROR_NO_RECIPIENT = "no_recipient"
 ERROR_INVALID_PHONE = "invalid_phone"
 ERROR_SMS_NOT_CONFIGURED = "sms_not_configured"
 ERROR_SMS_EXPIRED = "expired"
+# A relay refusal is stored as ``sms_<provider code>`` (e.g. ``sms_http_422``),
+# and the phone's own error as ``phone_failed: <its words>``.
+SMS_RELAY_CODE_PREFIX = "sms_"
+PHONE_FAILED_CODE_PREFIX = "phone_failed: "
 # The server couldn't reach httpSMS at all, so the text was not sent.
-ERROR_SMS_NETWORK = f"sms_{SMS_PROVIDER_CODE_NETWORK_ERROR}"
+ERROR_SMS_NETWORK = f"{SMS_RELAY_CODE_PREFIX}{SMS_PROVIDER_CODE_NETWORK_ERROR}"
 # httpSMS may have taken the text but never confirmed it (a timeout or broken
 # connection after the request went out, a 5xx, an unreadable reply). It may
 # already be on its way, so it is never retried automatically.
 ERROR_SMS_OUTCOME_UNKNOWN = "sms_outcome_unknown"
 ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 ERROR_EMAIL_SEND_FAILED = "email_send_failed"
-# The mail server may have taken the email before the connection dropped or
-# timed out (no SMTP reply code), so it may already be in the tenant's inbox.
-# Never retried automatically.
+# Sending failed while the email was being handed over, and the mail server
+# never answered to say how it went (``EmailSendError.delivery_unconfirmed``),
+# so it may already be in the tenant's inbox. A failure while connecting,
+# starting TLS or logging in is ``email_send_failed``: the server never had the
+# email then. Never retried automatically.
 ERROR_EMAIL_OUTCOME_UNKNOWN = "email_outcome_unknown"
 ERROR_UNEXPECTED = "unexpected_error"
 # Codes with a fixed spelling, each of which the apps describe in words
-# (api-client ``rentReminderError.ts``). The others are prefixed: ``sms_<code>``
-# for a relay refusal and ``phone_failed: <detail>`` for the phone's own error.
+# (api-client ``rentReminderError.ts``). The others carry one of the two
+# prefixes above.
 REMINDER_ERROR_CODES: frozenset[str] = frozenset({
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
@@ -76,11 +82,12 @@ MAY_STILL_ARRIVE_ERRORS: frozenset[str] = frozenset({
     ERROR_EMAIL_OUTCOME_UNKNOWN,
 })
 # Send now's 409 when the last attempt may have gone out and the operator
-# didn't confirm sending again.
+# didn't confirm sending again. It covers texts and emails, so it doesn't say
+# where to check: the card's warning does, for each channel.
 REMINDER_MAY_HAVE_BEEN_SENT_CODE = "REMINDER_MAY_HAVE_BEEN_SENT"
 REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE = (
     "The last try may already have reached the tenant, so nothing was sent. "
-    "Check the message log first, then confirm to send it again."
+    "Check first, then confirm to send it again."
 )
 MAX_ERROR_CODE_LENGTH = 120
 

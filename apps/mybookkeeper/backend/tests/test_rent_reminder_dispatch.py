@@ -3,18 +3,23 @@
 Runs against the in-memory database with ``unit_of_work`` patched to yield the
 test session (the pattern in ``test_rent_ledger_service``). Email and the
 httpSMS relay are mocked at the ``app.services.system`` seam; ``now`` is
-injected, so nothing depends on the real clock except the repository's own
-``sent_at`` stamps, which the watchdog test accounts for.
+injected, so nothing depends on the real clock except a row's own ``sent_at``
+and ``updated_at`` stamps. The watchdog test judges relative to ``sent_at``.
+The sweep reads ``updated_at`` as when a try failed, so tests of a try that
+failed before its scheduled moment set ``updated_at`` themselves
+(``_failed_row``).
 """
 from __future__ import annotations
 
 import datetime as _dt
+import html
 import io
+import logging
 import smtplib
 import uuid
 from contextlib import ExitStack, asynccontextmanager
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 import pytest
@@ -24,6 +29,13 @@ from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rent_reminder_constants import (
+    ERROR_NO_RECIPIENT,
+    MAY_STILL_ARRIVE_ERRORS,
+    REMINDER_ERROR_CODES,
+    SMS_CONFIRMATION_TIMEOUT_MINUTES,
+)
+from app.core.rent_reminder_enums import RENT_REMINDER_CHANNELS
 from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_charge import RentCharge
 from app.models.rent.rent_reminder_plan import RentReminderPlan
@@ -142,6 +154,12 @@ async def _sends(db: AsyncSession) -> list[RentReminderSend]:
     return list((await db.execute(select(RentReminderSend))).scalars().all())
 
 
+def _last_alert(wired: dict[str, Mock]) -> tuple[str, str]:
+    """The last operator alert's subject and body, unescaped as the operator reads it."""
+    _to, subject, body_html = wired["alert"].call_args.args
+    return subject, html.unescape(body_html)
+
+
 
 class TestProjectionMatchesGenerator:
     @pytest.mark.asyncio
@@ -184,7 +202,12 @@ class TestProjectionMatchesGenerator:
 
 
 class _OfflineSmtp(smtplib.SMTP):
-    """Real smtplib command encoding over a fake socket that answers 250."""
+    """Real smtplib command encoding over a fake socket that answers 250.
+
+    It can't finish a send: smtplib wants a 354 after DATA, so a real
+    ``sendmail`` through it raises ``SMTPDataError(250)``. Tests use it to fail
+    a step before that.
+    """
 
     def __init__(self, *_args: object, **_kwargs: object) -> None:
         super().__init__()
@@ -300,23 +323,33 @@ class TestScheduledSend:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "code", ["sms_outcome_unknown", "send_interrupted", "no_phone_confirmation"],
+        ("channel", "code"),
+        [
+            ("sms", "sms_outcome_unknown"),
+            ("sms", "send_interrupted"),
+            ("sms", "no_phone_confirmation"),
+            ("email", "email_outcome_unknown"),
+            ("email", "send_interrupted"),
+        ],
     )
-    async def test_early_text_that_may_still_arrive_is_not_retried(
-        self, db: AsyncSession, wired, code: str,
+    async def test_early_send_now_that_may_still_arrive_is_not_retried(
+        self, db: AsyncSession, wired, channel: str, code: str,
     ) -> None:
-        """An early "Send now" text the relay never confirmed may already be on
-        the tenant's phone, so the scheduled sweep must not send it again."""
+        """An early "Send now" try nobody confirmed (the relay, the phone or the
+        mail server) may already have reached the tenant, so the scheduled
+        sweep must not send it again."""
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
-        plan = await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        plan = await _plan(
+            db, applicant_id, email_enabled=channel == "email", sms_enabled=channel == "sms",
+        )
         await self._failed_row(
             db, plan, failed_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
-            channel="sms", error_code=code,
+            channel=channel, error_code=code,
         )
 
         assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
-        wired["sms"].assert_not_called()
+        wired[channel].assert_not_called()
         [row] = await _sends(db)
         assert (row.status, row.error_code) == ("failed", code)
 
@@ -480,7 +513,7 @@ class TestSms:
         wired["alert"].assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_unknown_outcome_is_never_resent_and_the_operator_is_told_to_check(
+    async def test_unknown_outcome_tells_the_operator_to_check_the_message_log(
         self, db: AsyncSession, wired,
     ) -> None:
         applicant_id = await _tenant(db)
@@ -489,18 +522,14 @@ class TestSms:
         wired["sms"].side_effect = self._real_httpsms_failing_with(httpx.ReadTimeout("timed out"))
 
         assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
-        for hours in (1, 2, 3):
-            assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=hours)) == 0
-        await watchdog.run_watchdog(SATURDAY_EVENING + _dt.timedelta(hours=3))
-        wired["sms"].assert_called_once()
 
         [row] = await _sends(db)
         assert (row.status, row.error_code) == ("failed", "sms_outcome_unknown")
         wired["alert"].assert_called_once()
-        subject, body = wired["alert"].call_args.args[1], wired["alert"].call_args.args[2]
+        subject, body = _last_alert(wired)
         assert subject == "Sonu's rent text may already have been sent"
-        assert "may already have been sent" in body
-        assert "httpsms.com" in body
+        assert "so check the message log on httpsms.com" in body
+        assert "didn't go out" not in body
 
     @pytest.mark.asyncio
     async def test_phone_reported_failure(self, db: AsyncSession, wired) -> None:
@@ -536,10 +565,10 @@ class TestWatchdog:
 
         assert (row.status, row.error_code) == ("failed", "no_phone_confirmation")
         wired["alert"].assert_called_once()
-        subject = wired["alert"].call_args.args[1]
-        body = wired["alert"].call_args.args[2]
-        assert subject == "Sonu's rent text didn't go out"
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent text may already have been sent"
         assert "battery-optimized" in body
+        assert "so check the message log on httpsms.com" in body
 
     @pytest.mark.asyncio
     async def test_late_confirmation_overrides_the_watchdog(self, db: AsyncSession, wired) -> None:
@@ -922,9 +951,9 @@ class TestSendNow:
         assert (row.status, row.error_code) == ("failed", "phone_failed: RESULT_ERROR_NO_SERVICE")
         # The operator was told it may have gone out; now they hear it didn't, once.
         assert wired["alert"].call_count == 2
-        subject = wired["alert"].call_args.args[1]
+        subject, body = _last_alert(wired)
         assert subject == "Sonu's rent text definitely didn't go out"
-        assert "you can send it again" in wired["alert"].call_args.args[2]
+        assert "you can send it again" in body
         assert row.operator_alerted_at is not None
         assert not await webhook.handle_event(
             {"type": "message.send.failed", "data": {"request_id": str(row.id), "error_message": "AGAIN"}},
@@ -1147,7 +1176,7 @@ class TestWebhookTries:
             event_type_header=None,
         )
         assert row.error_code == "phone_failed: cannot send to [phone number]"
-        assert "5550100" not in wired["alert"].call_args.args[2]
+        assert "5550100" not in _last_alert(wired)[1]
 
 
 class TestSendNowConfirmation:
@@ -1413,14 +1442,20 @@ class TestOperatorAlertClaim:
 
 
 class TestEmailThatMayHaveBeenDelivered:
-    """A timeout or dropped connection with no SMTP reply code can strike after
-    the server took the email, so it is never recorded as a definite failure."""
+    """A timeout or dropped connection while the email is being handed over can
+    strike after the server took it, so it is recorded as unknown, never as a
+    definite failure. One before that (connecting, STARTTLS, logging in) is
+    definite: the server never had the email."""
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("error", "code"),
         [
             (EmailSendError("timed out", kind="transient"), "email_outcome_unknown"),
+            (
+                EmailSendError("connect timed out", kind="transient", failed_before_handover=True),
+                "email_send_failed",
+            ),
             (EmailSendError("server busy", kind="transient", smtp_code=421), "email_send_failed"),
             (EmailSendError("bad address", kind="recipient_rejected", smtp_code=550), "email_send_failed"),
             (EmailSendError("auth refused", kind="misconfigured", smtp_code=535), "email_send_failed"),
@@ -1439,61 +1474,83 @@ class TestEmailThatMayHaveBeenDelivered:
         assert (row.status, row.error_code) == ("failed", code)
 
     @pytest.mark.asyncio
-    async def test_unknown_outcome_is_never_resent_and_the_operator_is_told_to_ask(
-        self, db: AsyncSession, wired,
+    async def test_unknown_outcome_tells_the_operator_to_ask_the_tenant(
+        self, db: AsyncSession, wired, caplog: pytest.LogCaptureFixture,
     ) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         wired["email"].side_effect = EmailSendError("timed out", kind="transient")
 
-        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
-        for hours in (1, 2, 3):
-            assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=hours)) == 0
-        await watchdog.run_watchdog(SATURDAY_EVENING + _dt.timedelta(hours=3))
-        wired["email"].assert_called_once()
+        with caplog.at_level(logging.WARNING):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        assert "Rent reminder not confirmed, it may have gone out" in caplog.text
+        assert "Rent reminder not sent" not in caplog.text
 
         [row] = await _sends(db)
         assert (row.status, row.error_code) == ("failed", "email_outcome_unknown")
         wired["alert"].assert_called_once()
-        subject, body = wired["alert"].call_args.args[1], wired["alert"].call_args.args[2]
+        subject, body = _last_alert(wired)
         assert subject == "Sonu's rent reminder email may already have been sent"
+        assert "so ask the tenant whether it arrived before sending it again" in body
         assert "didn't go out" not in body
-        assert "ask the tenant whether it arrived before sending it again" in body
+        assert "httpsms.com" not in body
 
     @pytest.mark.asyncio
     async def test_a_definite_email_failure_still_says_it_didnt_go_out(
-        self, db: AsyncSession, wired,
+        self, db: AsyncSession, wired, caplog: pytest.LogCaptureFixture,
     ) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
         wired["email"].side_effect = EmailSendError("busy", kind="transient", smtp_code=421)
 
-        await dispatch.run_due_reminders(SATURDAY_EVENING)
-        assert wired["alert"].call_args.args[1] == "Sonu's rent reminder email didn't go out"
+        with caplog.at_level(logging.WARNING):
+            await dispatch.run_due_reminders(SATURDAY_EVENING)
+        assert "Rent reminder not sent" in caplog.text
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent reminder email didn't go out"
+        assert "The mail server didn't take it." in body
+        assert "Reason:" not in body
 
     @pytest.mark.asyncio
-    async def test_an_early_send_now_email_that_may_have_arrived_is_not_retried_by_the_sweep(
+    @pytest.mark.parametrize(
+        ("step", "code"),
+        [
+            ("starttls", "email_send_failed"),
+            ("login", "email_send_failed"),
+            ("sendmail", "email_outcome_unknown"),
+        ],
+    )
+    async def test_a_timeout_is_unknown_only_once_the_email_was_handed_over(
+        self, db: AsyncSession, wired, step: str, code: str,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        real = EmailService(smtp_host="smtp.example.com", smtp_user="u@example.com", smtp_password="p")
+        wired["email"].side_effect = real.send_or_raise_async
+
+        with patch("smtplib.SMTP", _OfflineSmtp), \
+                patch.object(_OfflineSmtp, step, side_effect=TimeoutError("timed out")):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", code)
+
+    @pytest.mark.asyncio
+    async def test_a_mail_server_that_refused_the_connection_is_a_definite_failure(
         self, db: AsyncSession, wired,
     ) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
-        plan = await _plan(db, applicant_id)
-        db.add(
-            RentReminderSend(
-                id=uuid.uuid4(), plan_id=plan.id, applicant_id=applicant_id,
-                organization_id=ORG, user_id=USER, due_date=_dt.date(2026, 11, 1),
-                channel="email", status="failed", amount=Decimal("300.00"),
-                message_body="early attempt", error_code="email_outcome_unknown",
-                created_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
-                updated_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC),
-            ),
-        )
-        await db.flush()
+        await _plan(db, applicant_id)
+        real = EmailService(smtp_host="smtp.example.com", smtp_user="u@example.com", smtp_password="p")
+        wired["email"].side_effect = real.send_or_raise_async
 
-        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
-        wired["email"].assert_not_called()
+        with patch("smtplib.SMTP", side_effect=ConnectionRefusedError("refused")):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "email_send_failed")
 
     @pytest.mark.asyncio
     async def test_send_now_resends_only_when_the_landlord_confirms(
@@ -1511,10 +1568,113 @@ class TestEmailThatMayHaveBeenDelivered:
         )
         assert preview.possibly_sent == [RentReminderPossiblySent(channel="email", attempt=1)]
 
-        with pytest.raises(dispatch.ReminderMayHaveBeenSentError):
+        with pytest.raises(dispatch.ReminderMayHaveBeenSentError) as refused:
             await _send_now(applicant_id)
         assert wired["email"].call_count == 1
+        # Texts and emails share this message, so it names neither's check.
+        assert "Check first, then confirm to send it again." in str(refused.value)
 
         [retry] = await _send_now(applicant_id, confirmed_possibly_sent=preview.possibly_sent)
         assert retry.status == "sent"
         assert wired["email"].call_count == 2
+
+
+class TestAlertWording:
+    """What the operator's alert says for each way a reminder can fail. Where
+    to check before sending again follows the channel, never the code: only a
+    text leaves a log to look at."""
+
+    @pytest.mark.parametrize("code", ["no_phone_confirmation", "send_interrupted", "sms_outcome_unknown"])
+    def test_a_text_that_may_have_gone_out_says_to_check_the_log_first(self, code: str) -> None:
+        subject, body = alerts._alert_text(tenant="Sonu", channel="sms", code=code)
+        assert subject == "Sonu's rent text may already have been sent"
+        assert "so check the message log on httpsms.com" in body
+        assert "ask the tenant" not in body
+
+    @pytest.mark.parametrize("code", ["send_interrupted", "email_outcome_unknown"])
+    def test_an_email_that_may_have_gone_out_says_to_ask_the_tenant_first(self, code: str) -> None:
+        subject, body = alerts._alert_text(tenant="Sonu", channel="email", code=code)
+        assert subject == "Sonu's rent reminder email may already have been sent"
+        assert "so ask the tenant whether it arrived before sending it again" in body
+        assert "httpsms.com" not in body
+
+    @pytest.mark.parametrize("channel", ["sms", "email"])
+    @pytest.mark.parametrize("code", sorted(REMINDER_ERROR_CODES - MAY_STILL_ARRIVE_ERRORS))
+    def test_a_definite_failure_says_it_didnt_go_out(self, code: str, channel: str) -> None:
+        subject, body = alerts._alert_text(tenant="Sonu", channel=channel, code=code)
+        assert subject.endswith("didn't go out")
+        assert "before sending it again" not in body
+
+    @pytest.mark.parametrize("channel", ["sms", "email"])
+    @pytest.mark.parametrize("code", sorted(REMINDER_ERROR_CODES))
+    def test_every_known_failure_is_explained_in_words(self, code: str, channel: str) -> None:
+        _subject, body = alerts._alert_text(tenant="Sonu", channel=channel, code=code)
+        assert "Reason:" not in body
+
+    def test_a_text_the_phone_never_confirmed_says_so_before_what_to_fix(self) -> None:
+        _subject, body = alerts._alert_text(tenant="Sonu", channel="sms", code="no_phone_confirmation")
+        said = f"The phone didn't confirm it sent the text within {SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes."
+        assert body.index(said) < body.index("battery-optimized")
+
+    def test_an_expired_text_says_httpsms_gave_up_on_it(self) -> None:
+        subject, body = alerts._alert_text(tenant="Sonu", channel="sms", code="expired")
+        assert subject == "Sonu's rent text didn't go out"
+        assert body.index("so httpSMS gave up on it.") < body.index("battery-optimized")
+
+    def test_every_code_with_a_fixed_spelling_has_its_own_words(self) -> None:
+        assert set(alerts._WHAT_HAPPENED) | {ERROR_NO_RECIPIENT} == REMINDER_ERROR_CODES
+        assert set(alerts._MISSING_CONTACT) == set(RENT_REMINDER_CHANNELS)
+
+    @pytest.mark.parametrize(
+        ("channel", "code", "said"),
+        [
+            ("sms", "no_phone_confirmation", f"The phone didn't confirm it sent the text within {SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes."),
+            ("sms", "expired", "The phone didn't send the text in time, so httpSMS gave up on it."),
+            ("sms", "send_interrupted", "Sending was interrupted before it was confirmed."),
+            ("sms", "no_recipient", "The tenant record has no phone number."),
+            ("sms", "invalid_phone", "The tenant's phone number couldn't be read. Re-enter it with the area code."),
+            ("sms", "sms_not_configured", "Text reminders are switched on but httpSMS isn't configured on the server."),
+            ("sms", "sms_network_error", "The server couldn't reach httpSMS, so the text wasn't sent."),
+            ("sms", "sms_outcome_unknown", "httpSMS didn't confirm it took the text."),
+            ("sms", "sms_http_422", "httpSMS refused the text (http_422)."),
+            ("sms", "sms_send_failed", "httpSMS refused the text (send_failed)."),
+            (
+                "sms",
+                "phone_failed: RESULT_ERROR_NO_SERVICE",
+                "The phone reported a problem sending the text (RESULT_ERROR_NO_SERVICE). Check the httpSMS app on the phone.",
+            ),
+            ("sms", "unexpected_error", "Something went wrong sending it."),
+            ("email", "send_interrupted", "Sending was interrupted before it was confirmed."),
+            ("email", "no_recipient", "The tenant record has no email address."),
+            ("email", "email_not_configured", "Email isn't set up on the server."),
+            ("email", "email_send_failed", "The mail server didn't take it."),
+            ("email", "email_outcome_unknown", "The mail server didn't confirm it took the email."),
+            ("email", "unexpected_error", "Something went wrong sending it."),
+        ],
+    )
+    def test_each_failure_says_what_happened_right_after_the_subject(
+        self, channel: str, code: str, said: str,
+    ) -> None:
+        subject, body = alerts._alert_text(tenant="Sonu", channel=channel, code=code)
+        assert body.startswith(f"{subject}. {said} ")
+
+    def test_a_code_with_no_words_is_still_shown(self) -> None:
+        _subject, body = alerts._alert_text(tenant="Sonu", channel="email", code="retired_code")
+        assert "Reason: retired_code." in body
+
+    @pytest.mark.parametrize(
+        ("code", "said"),
+        [
+            (
+                "phone_failed: RESULT_ERROR_NO_SERVICE",
+                "The phone reported a problem sending the text (RESULT_ERROR_NO_SERVICE).",
+            ),
+            ("expired", "The phone didn't send the text in time, so httpSMS gave up on it."),
+        ],
+    )
+    def test_a_text_that_turned_out_to_have_failed_says_why_in_words(self, code: str, said: str) -> None:
+        subject, body = alerts._settled_text(tenant="Sonu", code=code)
+        assert subject == "Sonu's rent text definitely didn't go out"
+        assert body.startswith(f"{subject}. Earlier it looked like it might have reached them. {said}")
+        assert "phone_failed" not in body
+        assert body.endswith("so you can send it again with Send now on the tenant's Rent reminders card.")

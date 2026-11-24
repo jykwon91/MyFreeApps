@@ -50,6 +50,7 @@ from app.core.rent_reminder_constants import (
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
+    SMS_RELAY_CODE_PREFIX,
 )
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
@@ -153,7 +154,7 @@ def _failure_code(exc: Exception) -> str:
     if isinstance(exc, SmsSendError):
         if exc.outcome_unknown:
             return ERROR_SMS_OUTCOME_UNKNOWN
-        return f"sms_{exc.provider_code or 'send_failed'}"
+        return f"{SMS_RELAY_CODE_PREFIX}{exc.provider_code or 'send_failed'}"
     if isinstance(exc, SmsNotConfiguredError):
         return ERROR_SMS_NOT_CONFIGURED
     if isinstance(exc, EmailNotConfiguredError):
@@ -175,6 +176,11 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
         error_code = _failure_code(exc)
         if error_code == ERROR_UNEXPECTED:
             logger.exception("Rent reminder %s crashed while sending", outbound.send_id)
+        elif error_code in MAY_STILL_ARRIVE_ERRORS:
+            logger.warning(
+                "Rent reminder not confirmed, it may have gone out: send_id=%s channel=%s code=%s",
+                outbound.send_id, outbound.channel, error_code,
+            )
         else:
             logger.warning(
                 "Rent reminder not sent: send_id=%s channel=%s code=%s",

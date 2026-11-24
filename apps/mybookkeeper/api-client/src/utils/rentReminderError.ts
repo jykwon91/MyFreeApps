@@ -8,7 +8,7 @@ const ERROR_LABEL = new Map<string, string>(Object.entries({
   sms_not_configured: "Texts aren't set up on the server",
   expired: "The phone didn't send it in time",
   email_not_configured: "Email isn't set up on the server",
-  email_send_failed: "The mail server refused it",
+  email_send_failed: "The mail server didn't take it",
   email_outcome_unknown:
     "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again",
   sms_network_error: "The server couldn't reach the text relay, so it wasn't sent",
