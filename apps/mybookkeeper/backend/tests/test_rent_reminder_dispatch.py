@@ -113,7 +113,7 @@ def wired(db: AsyncSession):
     mock the outside world. Yields the email/SMS mocks, and ``may_text``:
     whether the plan's owner may send texts (yes unless a test says not)."""
     fake = _fake_uow(db)
-    may_text = AsyncMock(return_value=True)
+    may_text = Mock(return_value=True)
     send_email_or_raise = AsyncMock()
     send_email = AsyncMock(return_value=True)
     sms_send = MagicMock(return_value=SID_1)
@@ -135,8 +135,8 @@ def wired(db: AsyncSession):
         stack.enter_context(patch.object(sms_service, "is_configured", lambda: True))
         stack.enter_context(patch.object(sms_service, "send_or_raise", sms_send))
         for target in (
-            "app.services.rent.rent_reminder_dispatch_service.owner_may_send_texts",
-            "app.services.rent.rent_reminder_service.owner_may_send_texts",
+            "app.services.rent.rent_reminder_dispatch_service.may_send_texts",
+            "app.services.rent.rent_reminder_service.may_send_texts",
         ):
             stack.enter_context(patch(target, may_text))
         yield {"email": send_email_or_raise, "alert": send_email, "sms": sms_send, "may_text": may_text}
@@ -773,7 +773,7 @@ class TestOwnerWhoMayNotText:
         assert (rows["email"].status, rows["sms"].status, rows["sms"].error_code) == (
             "sent", "failed", "sms_not_allowed",
         )
-        wired["may_text"].assert_awaited_with(db, USER)
+        wired["may_text"].assert_called_with(USER)
         held = [r for r in caplog.records if "held back" in r.getMessage()]
         assert [r.getMessage() for r in held] == [
             f"Rent reminder text held back: the owner may not send texts: plan_id={plan.id} owner_id={USER}",
@@ -861,7 +861,7 @@ class TestSavingTextsForAnOwnerWhoMayNotText:
         with pytest.raises(rent_reminder_service.SmsNotAllowedError):
             await _save(applicant_id, create=True, sms_enabled=True)
         assert (await db.execute(select(RentReminderPlan))).scalars().all() == []
-        wired["may_text"].assert_awaited_with(db, USER)
+        wired["may_text"].assert_called_with(USER)
 
     @pytest.mark.asyncio
     async def test_a_new_email_plan_saves(self, db: AsyncSession, wired) -> None:
@@ -880,7 +880,7 @@ class TestSavingTextsForAnOwnerWhoMayNotText:
         with pytest.raises(rent_reminder_service.SmsNotAllowedError):
             await _save(applicant_id, create=False, sms_enabled=True)
         assert plan.sms_enabled is False
-        wired["may_text"].assert_awaited_with(db, plan.user_id)
+        wired["may_text"].assert_called_with(plan.user_id)
 
     @pytest.mark.asyncio
     async def test_a_plan_that_already_texts_still_saves_its_other_settings(

@@ -138,6 +138,14 @@ class Settings(BaseAppSettings):
     plaid_secret: str = ""
 
     # ------------------------------------------------------------------
+    # Rent reminder texts go out from the operator's own number, so only
+    # this one account may send them (``rent_reminder_sms_permission``).
+    # Empty means nobody may. A string, not a UUID, so an empty env value
+    # parses; ``app/core/sms_sender_boot_guard.py`` checks it at boot.
+    # ------------------------------------------------------------------
+    sms_sender_user_id: str = ""
+
+    # ------------------------------------------------------------------
     # Analytics
     # ------------------------------------------------------------------
     posthog_api_key: str = ""

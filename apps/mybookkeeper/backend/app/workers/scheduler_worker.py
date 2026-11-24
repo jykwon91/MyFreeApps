@@ -84,6 +84,7 @@ from platform_shared.workers.wait_or_stop import wait_or_stop
 from app.core.config import settings
 from app.core.observability import init_sentry
 from app.core.plaid_boot_guard import check_plaid_configured
+from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
 from app.core.scheduler_worker_constants import (
     GMAIL_SYNC_CANCEL_GRACE_SECONDS,
@@ -383,6 +384,10 @@ async def run_scheduler(stop: asyncio.Event) -> None:
         plaid_client_id=settings.plaid_client_id,
         plaid_secret=settings.plaid_secret,
         frontend_url=settings.frontend_url,
+    )
+    check_sms_sender_configured(
+        sms_backend=settings.sms_backend,
+        sms_sender_user_id=settings.sms_sender_user_id,
     )
     full_interval = settings.gmail_poll_interval_minutes * 60
     tick = min(REMINDER_TICK_MINUTES * 60, full_interval)

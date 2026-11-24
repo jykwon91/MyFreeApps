@@ -62,7 +62,7 @@ from app.services.rent import rent_reminder_send_state as send_state
 from app.services.rent import rent_reminder_watchdog_service as watchdog
 from app.services.rent.rent_reminder_failure_code import ReminderUndeliverable, failure_code
 from app.services.rent.rent_reminder_outbound import ReminderOutbound
-from app.services.rent.rent_reminder_sms_permission import owner_may_send_texts
+from app.services.rent.rent_reminder_sms_permission import may_send_texts
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
     SMS_NOT_ALLOWED_MESSAGE,
@@ -276,7 +276,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
             "tenant_email": applicant.contact_email,
             "tenant_phone": applicant.contact_phone,
             "operator_email": await alerts.operator_email(db, plan.user_id),
-            "owner_may_text": await owner_may_send_texts(db, plan.user_id),
+            "owner_may_text": may_send_texts(plan.user_id),
         }
         if RENT_REMINDER_CHANNEL_SMS in pending and not snapshot["owner_may_text"]:
             # The text fails as ``sms_not_allowed`` below; the email still goes.
@@ -428,7 +428,7 @@ async def send_now(
             raise TenancyEndedError("This tenancy has ended, so reminders don't go out.")
         if RENT_REMINDER_CHANNEL_SMS in channels and not sms_service.is_configured():
             raise SmsUnavailableError(SMS_UNAVAILABLE_MESSAGE)
-        owner_may_text = await owner_may_send_texts(db, plan.user_id)
+        owner_may_text = may_send_texts(plan.user_id)
         if RENT_REMINDER_CHANNEL_SMS in channels and not owner_may_text:
             logger.warning(
                 "Send now refused: texts on but the owner may not send them: plan_id=%s owner_id=%s",
