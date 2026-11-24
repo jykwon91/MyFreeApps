@@ -19,6 +19,7 @@ from twilio.request_validator import RequestValidator
 from app.core.config import settings
 from app.core.rent_reminder_request_id import parse_reminder_request_id
 from app.services.rent import rent_reminder_webhook_service as webhook
+from app.services.rent.rent_reminder_failure_code import delivery_failure_code
 from app.services.system import sms_service
 
 _AUTH_TOKEN = "test-twilio-auth-token-0123456789"
@@ -98,7 +99,7 @@ class TestFailureCode:
     def test_only_a_twilio_error_number_is_kept(
         self, twilio_error_code: str | None, expected: str,
     ) -> None:
-        assert webhook.failure_code(twilio_error_code) == expected
+        assert delivery_failure_code(twilio_error_code) == expected
 
 
 class TestIgnoredStatuses:

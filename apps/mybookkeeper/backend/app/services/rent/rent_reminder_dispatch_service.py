@@ -137,8 +137,6 @@ async def _send(outbound: ReminderOutbound) -> str | None:
     )
 
 
-
-
 async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
     """Send a claimed row and record the outcome. Never raises on send failure."""
     provider_id: str | None = None

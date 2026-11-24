@@ -1,3 +1,5 @@
+import { SMS_FROM_NUMBER_FALLBACK } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+
 export const REMINDER_SETUP_MESSAGES = {
   setUp: "Set up reminders",
   edit: "Edit reminders",
@@ -43,5 +45,5 @@ export function daysHintBad(max: number): string {
 }
 
 export function smsFrom(number: string | null): string {
-  return `From ${number ?? "your Twilio number"}.`;
+  return `From ${number ?? SMS_FROM_NUMBER_FALLBACK}.`;
 }

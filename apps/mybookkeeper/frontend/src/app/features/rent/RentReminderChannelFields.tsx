@@ -1,3 +1,4 @@
+import { SMS_FROM_NUMBER_FALLBACK } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 
 export interface RentReminderChannelFieldsProps {
@@ -63,7 +64,7 @@ export default function RentReminderChannelFields({
             data-testid="rent-reminder-sms-status"
           >
             {sms.available
-              ? `From ${sms.from_number ?? "your Twilio number"}.`
+              ? `From ${sms.from_number ?? SMS_FROM_NUMBER_FALLBACK}.`
               : "Not set up on this server yet — texts need a Twilio number."}
           </span>
           {sms.available && !overview.tenant_has_phone ? (

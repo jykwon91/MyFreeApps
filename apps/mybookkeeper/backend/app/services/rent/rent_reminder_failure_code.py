@@ -1,7 +1,9 @@
 """Name why a rent reminder didn't go out, as the short code stored on its row.
 
 The code is what the operator's alert and the app's labels are keyed on, so
-every way a send can fail maps to exactly one of them here.
+every way a send can fail maps to exactly one of them here: ``failure_code``
+when the send itself raised, ``delivery_failure_code`` when Twilio reports
+afterwards that it couldn't deliver the text.
 """
 from __future__ import annotations
 
@@ -15,8 +17,11 @@ from app.core.rent_reminder_constants import (
     ERROR_SMS_NOT_CONFIGURED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
+    SMS_FAILED_CODE_PREFIX,
+    SMS_FAILED_UNKNOWN_DETAIL,
     SMS_REFUSED_CODE_PREFIX,
 )
+from app.core.twilio_error_code import is_twilio_error_code
 
 
 class ReminderUndeliverable(Exception):
@@ -44,3 +49,11 @@ def failure_code(exc: Exception) -> str:
             return ERROR_EMAIL_OUTCOME_UNKNOWN
         return ERROR_EMAIL_SEND_FAILED
     return ERROR_UNEXPECTED
+
+
+def delivery_failure_code(twilio_error_code: str | None) -> str:
+    """The row's code for a text Twilio couldn't deliver: ``sms_failed: 30007``."""
+    detail = (twilio_error_code or "").strip()
+    if not is_twilio_error_code(detail):
+        detail = SMS_FAILED_UNKNOWN_DETAIL
+    return f"{SMS_FAILED_CODE_PREFIX}{detail}"

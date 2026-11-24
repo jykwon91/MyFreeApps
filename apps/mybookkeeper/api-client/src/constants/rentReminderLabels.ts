@@ -21,6 +21,9 @@ export const RENT_REMINDER_CHANNEL_LABEL: Record<RentReminderChannel, string> = 
  *  (see `isTextHandedOff`). Each app writes its own sentence around it. */
 export const TEXT_HANDOFF_HOLDER = "Twilio";
 
+/** What texts are said to come from when the server doesn't say which number. */
+export const SMS_FROM_NUMBER_FALLBACK = "your Twilio number";
+
 export const RENT_REMINDER_STATUS_LABEL: Record<RentReminderSendStatus, string> = {
   queued: "Sending",
   sent_to_provider: "With Twilio",

@@ -55,16 +55,14 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_SMS_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     ERROR_SMS_OUTCOME_UNKNOWN,
-    SMS_FAILED_CODE_PREFIX,
-    SMS_FAILED_UNKNOWN_DETAIL,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_SMS
 from app.core.rent_reminder_request_id import parse_reminder_request_id
-from app.core.twilio_error_code import is_twilio_error_code
 from app.db.session import unit_of_work
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.repositories.rent import rent_reminder_send_repo
 from app.services.rent import rent_reminder_alert_service as alerts
+from app.services.rent.rent_reminder_failure_code import delivery_failure_code
 from app.services.system import sms_service
 
 logger = logging.getLogger(__name__)
@@ -92,14 +90,6 @@ def verify(*, query_string: str, params: Mapping[str, str], signature: str | Non
     sms_service.verify_status_callback(
         query_string=query_string, params=params, signature=signature,
     )
-
-
-def failure_code(twilio_error_code: str | None) -> str:
-    """The row's code for a text Twilio couldn't deliver: ``sms_failed: 30007``."""
-    detail = (twilio_error_code or "").strip()
-    if not is_twilio_error_code(detail):
-        detail = SMS_FAILED_UNKNOWN_DETAIL
-    return f"{SMS_FAILED_CODE_PREFIX}{detail}"
 
 
 async def _find_row(
@@ -180,7 +170,7 @@ async def _apply(
             return "raced", False
         return "confirmed", False
 
-    code = failure_code(event.error_code)
+    code = delivery_failure_code(event.error_code)
     if not _can_fail(row):
         return "ignored", False
     settled_unsure = row.status == "failed"
