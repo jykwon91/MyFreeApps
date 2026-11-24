@@ -1,3 +1,4 @@
+import type { TransactionScope } from "../transaction/TransactionScope";
 import type { FinancialAccountType } from "./financial-account-type";
 
 export interface FinancialAccountCreateRequest {
@@ -9,4 +10,5 @@ export interface FinancialAccountCreateRequest {
   current_balance_cents?: number | null;
   balance_as_of?: string | null;
   mortgage_id?: string | null;
+  default_transaction_scope?: TransactionScope;
 }

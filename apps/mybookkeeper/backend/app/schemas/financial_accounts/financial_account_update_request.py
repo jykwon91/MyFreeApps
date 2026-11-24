@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.core.financial_account_enums import INSTITUTION_MAX_LENGTH, NAME_MAX_LENGTH
 from app.schemas.financial_accounts.financial_account_field_rules import (
     check_account_type,
+    check_transaction_scope,
     clean_currency,
     clean_mask,
     clean_name,
@@ -31,6 +32,7 @@ class FinancialAccountUpdateRequest(BaseModel):
     balance_as_of: _dt.date | None = None
     closed_on: _dt.date | None = None
     mortgage_id: uuid.UUID | None = None
+    default_transaction_scope: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -41,6 +43,11 @@ class FinancialAccountUpdateRequest(BaseModel):
     @classmethod
     def _type(cls, value: str | None) -> str | None:
         return None if value is None else check_account_type(value)
+
+    @field_validator("default_transaction_scope")
+    @classmethod
+    def _scope(cls, value: str | None) -> str | None:
+        return None if value is None else check_transaction_scope(value)
 
     @field_validator("currency")
     @classmethod

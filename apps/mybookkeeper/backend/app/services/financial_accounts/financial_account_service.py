@@ -35,9 +35,10 @@ UPDATABLE_FIELDS = frozenset({
     "balance_as_of",
     "closed_on",
     "mortgage_id",
+    "default_transaction_scope",
 })
 # Clearing these to null would break a NOT NULL column.
-_NOT_NULLABLE_FIELDS = frozenset({"name", "account_type", "currency"})
+_NOT_NULLABLE_FIELDS = frozenset({"name", "account_type", "currency", "default_transaction_scope"})
 
 
 class FinancialAccountNotFoundError(LookupError):

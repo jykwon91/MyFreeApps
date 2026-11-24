@@ -186,6 +186,11 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "insurance_benchmarks": {},
     "mortgages": {"key_version": _KEY_VERSION},
     "financial_accounts": {},
+    "plaid_items": {
+        "access_token_encrypted": "Ciphertext of the Plaid access token; a credential to the bank data.",
+        "key_version": "Encryption key bookkeeping for the access token ciphertext.",
+        "transactions_cursor": "Plaid's opaque sync position; sync internals, meaningless outside Plaid.",
+    },
     "welcome_manuals": {
         "share_token": "Bearer secret of the guest share link; a credential.",
         "share_pin": "PIN that unlocks the guest share link; a credential.",

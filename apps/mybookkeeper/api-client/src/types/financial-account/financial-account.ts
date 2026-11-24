@@ -1,4 +1,5 @@
 import type { FinancialAccountClassification } from "./financial-account-classification";
+import type { TransactionScope } from "../transaction/TransactionScope";
 import type { FinancialAccountType } from "./financial-account-type";
 
 /**
@@ -25,6 +26,10 @@ export interface FinancialAccount {
   balance_as_of: string | null;
   closed_on: string | null;
   mortgage_id: string | null;
+  /** Where transactions synced from the bank are filed until changed one by one. */
+  default_transaction_scope: TransactionScope;
+  /** The bank connection this account syncs from; null when entered by hand. */
+  plaid_item_id: string | null;
   created_at: string;
   updated_at: string;
 }

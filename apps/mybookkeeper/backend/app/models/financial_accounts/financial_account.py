@@ -45,6 +45,11 @@ from app.core.financial_account_enums import (
     MASK_MAX_LENGTH,
     NAME_MAX_LENGTH,
 )
+from app.core.plaid_constants import PLAID_ID_MAX_LENGTH
+from app.core.spending_category_enums import (
+    TRANSACTION_SCOPE_PERSONAL,
+    TRANSACTION_SCOPES_SQL,
+)
 from app.db.base import Base
 
 
@@ -105,6 +110,28 @@ class FinancialAccount(Base):
         nullable=True,
     )
 
+    # The scope every transaction the bank sync brings in for this account
+    # starts with: a rental's checking account files its rows as rental, an
+    # everyday card as personal. The person can still re-scope any one row.
+    default_transaction_scope: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        default=TRANSACTION_SCOPE_PERSONAL,
+        server_default=TRANSACTION_SCOPE_PERSONAL,
+    )
+
+    # The Plaid connection this account is synced from, and Plaid's id for it
+    # within that connection. Both NULL for an account kept by hand. SET NULL:
+    # disconnecting the bank keeps the account and its history.
+    plaid_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("plaid_items.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    plaid_account_id: Mapped[str | None] = mapped_column(
+        String(PLAID_ID_MAX_LENGTH), nullable=True,
+    )
+
     deleted_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
@@ -147,6 +174,18 @@ class FinancialAccount(Base):
         CheckConstraint(
             f"mortgage_id IS NULL OR account_type = '{ACCOUNT_TYPE_MORTGAGE}'",
             name="chk_fin_account_mortgage_link_type",
+        ),
+        CheckConstraint(
+            f"default_transaction_scope IN {TRANSACTION_SCOPES_SQL}",
+            name="chk_fin_account_default_scope",
+        ),
+        # One account per Plaid account within a connection. Deleted rows
+        # count too, so restoring one can never collide with a re-link.
+        Index(
+            "uq_fin_accounts_plaid_account",
+            "plaid_item_id", "plaid_account_id",
+            unique=True,
+            postgresql_where=text("plaid_item_id IS NOT NULL"),
         ),
         # The Accounts page lists every live account for one person.
         Index(

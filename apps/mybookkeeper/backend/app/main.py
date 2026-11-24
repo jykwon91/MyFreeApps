@@ -27,12 +27,13 @@ from app.core.observability import init_sentry
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
+from app.core.plaid_boot_guard import check_plaid_configured
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, exports, financial_accounts, frontend_errors, health_dashboard, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, organizations, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, spending_categories, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
+from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, exports, financial_accounts, frontend_errors, health_dashboard, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, organizations, plaid, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, spending_categories, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
 from app.services.system.admin_service import shared_admin_user_service
 from app.services.user import account_deletion_service
 
@@ -51,7 +52,8 @@ _worker_task: asyncio.Task[None] | None = None
 
 
 async def _on_startup() -> None:
-    """MBK-specific startup: spawn the upload-processor worker.
+    """MBK-specific startup: refuse to boot without Plaid outside dev, then
+    spawn the upload-processor worker.
 
     The worker pulls Document rows in status=processing and runs the
     extraction pipeline; if RUN_UPLOAD_WORKER is False (e.g. running
@@ -63,6 +65,12 @@ async def _on_startup() -> None:
     in exactly one. It runs in ``app.workers.scheduler_worker`` instead.
     """
     global _worker_task
+    check_plaid_configured(
+        environment=settings.environment,
+        plaid_client_id=settings.plaid_client_id,
+        plaid_secret=settings.plaid_secret,
+        plaid_redirect_uri=settings.plaid_redirect_uri,
+    )
     if settings.run_upload_worker:
         async def _run_worker() -> None:
             try:
@@ -197,6 +205,7 @@ app.include_router(insurance_benchmarks.router)
 app.include_router(insurance_market.router)
 app.include_router(mortgages.router)
 app.include_router(financial_accounts.router)
+app.include_router(plaid.router)
 app.include_router(spending_categories.router)
 app.include_router(mortgage_market.router)
 app.include_router(utility_plans.router)

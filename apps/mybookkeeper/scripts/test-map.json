@@ -2405,6 +2405,63 @@
         "financial-accounts-layout.spec.ts"
       ]
     },
+    "plaid": {
+      "source_paths": [
+        "backend/app/api/plaid.py",
+        "backend/app/core/plaid_boot_guard.py",
+        "backend/app/core/plaid_category_constants.py",
+        "backend/app/core/plaid_constants.py",
+        "backend/app/core/plaid_environment.py",
+        "backend/app/core/plaid_item_enums.py",
+        "backend/app/core/plaid_not_configured_error.py",
+        "backend/app/mappers/plaid_account_mapper.py",
+        "backend/app/mappers/plaid_item_mapper.py",
+        "backend/app/mappers/plaid_transaction_mapper.py",
+        "backend/app/models/integrations/plaid_item.py",
+        "backend/app/repositories/plaid/",
+        "backend/app/repositories/transactions/plaid_transaction_repo.py",
+        "backend/app/schemas/plaid/",
+        "backend/app/schemas/transactions/bank_row_classification.py",
+        "backend/app/services/plaid/",
+        "backend/app/services/transactions/bank_row_classifier.py",
+        "backend/alembic/versions/plaidsync261123_plaid_bank_sync.py",
+        "frontend/src/app/features/financial-accounts/plaid/",
+        "frontend/src/app/pages/PlaidOAuthReturn.tsx",
+        "frontend/src/shared/lib/plaid-messages.ts",
+        "frontend/src/shared/lib/plaidItemStatusNote.ts",
+        "frontend/src/shared/lib/plaidLinkSessionStorage.ts",
+        "frontend/src/shared/lib/plaidPendingConnection.ts",
+        "frontend/src/shared/types/plaid/",
+        "api-client/src/store/plaidApi.ts",
+        "api-client/src/types/plaid/",
+        "api-client/src/constants/plaidAccountClassification.ts",
+        "api-client/src/constants/plaidItemStatuses.ts",
+        "api-client/src/constants/transactionScopes.ts",
+        "api-client/src/utils/plaidItemFormat.ts",
+        "api-client/src/utils/suggestPlaidAccountMatch.ts"
+      ],
+      "backend_tests": [
+        "test_plaid_api.py",
+        "test_plaid_boot_guard.py",
+        "test_plaid_client.py",
+        "test_plaid_item_service.py",
+        "test_plaid_mappers.py",
+        "test_plaid_sync_service.py",
+        "test_plaid_webhook_service.py",
+        "test_plaid_webhook_verifier.py",
+        "test_bank_csv_account_import.py"
+      ],
+      "frontend_tests": [
+        "ConnectedBanksSection.test.tsx",
+        "PlaidAccountMatchDialog.test.tsx",
+        "usePlaidLinkFlow.test.tsx",
+        "FinancialAccountsBody.test.tsx"
+      ],
+      "e2e_specs": [
+        "mocked/plaid-connect-mock.spec.ts",
+        "financial-accounts.spec.ts"
+      ]
+    },
     "spending_categories": {
       "source_paths": [
         "backend/app/models/transactions/spending_category.py",

@@ -8,8 +8,7 @@ from decimal import Decimal, InvalidOperation
 
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.models.transactions.transaction import Transaction
-from app.services.extraction.sender_category_service import match_sender_category
-from app.core.tags import CATEGORY_TO_SCHEDULE_E, REVENUE_TAGS, EXPENSE_TAGS
+from app.services.transactions.bank_row_classifier import classify_bank_row
 
 
 def detect_bank_format(content: str) -> str:
@@ -99,30 +98,12 @@ def _build_transaction(
     transaction_scope: str = "rental",
     spending_category_id: uuid.UUID | None = None,
 ) -> Transaction:
-    if amount > 0:
-        transaction_type = "expense"
-    else:
-        transaction_type = "income"
-        amount = abs(amount)
-
-    category = match_sender_category(description) or "uncategorized"
-
-    if category in REVENUE_TAGS:
-        transaction_type = "income"
-    elif category in EXPENSE_TAGS:
-        transaction_type = "expense"
-
-    # Personal-scope transactions are never tax-relevant — the user is tracking
-    # personal spending, not rental/business activity.
-    if transaction_scope == TRANSACTION_SCOPE_PERSONAL:
-        category = "other_expense" if transaction_type == "expense" else "uncategorized"
-        tax_relevant = False
-        schedule_e_line = None
-    else:
-        schedule_e_line = CATEGORY_TO_SCHEDULE_E.get(category)
-        tax_relevant = category != "uncategorized"
+    classification = classify_bank_row(description, amount, transaction_scope)
+    if transaction_scope != TRANSACTION_SCOPE_PERSONAL:
         # A spending category only means something on a personal row.
         spending_category_id = None
+    amount = classification.amount
+    category = classification.category
 
     return Transaction(
         id=uuid.uuid4(),
@@ -134,11 +115,11 @@ def _build_transaction(
         vendor=description.strip()[:255] if description else None,
         description=description.strip() if description else None,
         amount=amount,
-        transaction_type=transaction_type,
+        transaction_type=classification.transaction_type,
         category=category,
         tags=[category],
-        tax_relevant=tax_relevant,
-        schedule_e_line=schedule_e_line,
+        tax_relevant=classification.tax_relevant,
+        schedule_e_line=classification.schedule_e_line,
         payment_method=payment_method,
         status="approved",
         is_manual=False,

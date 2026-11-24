@@ -1,6 +1,5 @@
 """What MyBookkeeper has to clear before a user's row can be deleted."""
-from collections.abc import Callable
-from functools import partial
+from collections.abc import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +12,7 @@ from app.models.user.user import User
 from app.repositories import organization_repo, user_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.user import account_files_repo
+from app.services.plaid import plaid_item_service
 from platform_shared.services.account_deletion import AccountDeletionBlockedError
 from platform_shared.services.stored_file_removal import remove_stored_files as platform_remove_stored_files
 
@@ -22,7 +22,14 @@ def remove_stored_files(storage_keys: list[str]) -> None:
     platform_remove_stored_files(get_storage, storage_keys)
 
 
-async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], None]:
+def _after_deletion(storage_keys: list[str], plaid_access_tokens: list[str]) -> Callable[[], Awaitable[None]]:
+    async def run() -> None:
+        remove_stored_files(storage_keys)
+        await plaid_item_service.revoke_access_tokens(plaid_access_tokens)
+    return run
+
+
+async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], Awaitable[None]]:
     """Delete this user's own workspaces; refuse if that would cost anyone else.
 
     Deleting a user cascades through every row they wrote, and nothing can hand
@@ -36,11 +43,15 @@ async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], None]:
     is RESTRICT, which Postgres checks at once: a cascade reaching an applicant
     before its lease would fail even though the lease was about to go too.
 
-    Returns what to run once that commits: removing stored files can't be undone
-    by a rollback, so it can't happen before the refusals are behind us.
+    Returns what to run once that commits: removing stored files and revoking
+    the person's bank connections at Plaid can't be undone by a rollback, so
+    neither can happen before the refusals are behind us. The connections'
+    access tokens are read first, while their rows (which the workspace and
+    user deletes cascade away) still exist.
     """
     if await organization_repo.created_workspace_has_other_members(db, user.id):
         raise AccountDeletionBlockedError(OWNS_SHARED_WORKSPACE_MESSAGE)
+    plaid_access_tokens = await plaid_item_service.list_access_tokens_for_user(db, user.id)
     workspaces = await organization_repo.list_created_by(db, user.id)
     storage_keys = await account_files_repo.list_storage_keys(db, [workspace.id for workspace in workspaces])
     for workspace in workspaces:
@@ -48,4 +59,4 @@ async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], None]:
         await organization_repo.delete(db, workspace)
     if await user_repo.holds_shared_records(db, user.id):
         raise AccountDeletionBlockedError(HOLDS_SHARED_RECORDS_MESSAGE)
-    return partial(remove_stored_files, storage_keys)
+    return _after_deletion(storage_keys, plaid_access_tokens)

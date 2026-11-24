@@ -76,6 +76,7 @@ from app.models.tax.cost_basis_lot import CostBasisLot  # noqa: F401
 from app.models.tax.estimated_tax_payment import EstimatedTaxPayment  # noqa: F401
 from app.models.tax.tax_carryforward import TaxCarryforward  # noqa: F401
 from app.models.integrations.integration import Integration  # noqa: F401
+from app.models.integrations.plaid_item import PlaidItem  # noqa: F401
 from app.models.email.processed_email import ProcessedEmail  # noqa: F401
 from app.models.email.email_filter_log import EmailFilterLog  # noqa: F401
 from app.models.email.gmail_skipped_message import GmailSkippedMessage  # noqa: F401

@@ -21,6 +21,8 @@ routes:
     screen: (app)/(tabs)/money
   /financial-accounts:
     not_on_mobile: New in this release; the phone screen follows once accounts sync from the bank.
+  /plaid-oauth:
+    not_on_mobile: The return page of the website's bank-connect flow; bank linking is web-only for now.
   /spending-categories:
     not_on_mobile: Category management is a one-time setup done on the web; the phone uses the categories when labelling transactions.
   /forbidden:

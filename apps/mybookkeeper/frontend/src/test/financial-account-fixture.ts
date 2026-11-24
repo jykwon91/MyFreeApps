@@ -18,6 +18,8 @@ export function aFinancialAccount(overrides: Partial<FinancialAccount> = {}): Fi
     balance_as_of: "2026-11-01",
     closed_on: null,
     mortgage_id: null,
+    default_transaction_scope: "personal",
+    plaid_item_id: null,
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",
     ...overrides,

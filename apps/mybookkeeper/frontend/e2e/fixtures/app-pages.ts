@@ -19,6 +19,7 @@ export const APP_PAGES = [
   "/members",
   "/mortgages",
   "/payment-review",
+  "/plaid-oauth",
   "/properties",
   "/receipts",
   "/reconciliation",

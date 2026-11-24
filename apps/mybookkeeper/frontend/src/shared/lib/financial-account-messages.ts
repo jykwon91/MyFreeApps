@@ -42,6 +42,7 @@ export const FINANCIAL_ACCOUNT_MESSAGES = {
   mortgageNone: "Not linked",
   mortgagesLoading: "Loading mortgages…",
   maskHint: "Only the last 2 to 4 characters — never the full account number.",
+  syncedFromBank: "Synced from your bank",
 } as const;
 
 export const FINANCIAL_ACCOUNT_PROBLEM_MESSAGES: Record<FinancialAccountFormProblem, string> = {

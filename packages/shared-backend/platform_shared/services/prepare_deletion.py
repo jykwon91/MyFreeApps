@@ -4,7 +4,10 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-AfterCommit = Callable[[], None]
+# Run by FastAPI ``BackgroundTasks`` once the response is sent, which awaits a
+# coroutine function and runs a plain one in a thread — so either works, and
+# work that calls an external API (revoking a bank connection) can be async.
+AfterCommit = Callable[[], None] | Callable[[], Awaitable[None]]
 
 # Runs in the deletion's transaction, before the user row goes. Raises
 # ``AccountDeletionBlockedError`` to refuse. Returns work to run after the

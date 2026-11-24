@@ -10,6 +10,8 @@ inquiry filters, etc.) live here.
 from platform_shared.core.settings import BaseAppSettings
 from platform_shared.services.email_backend import EmailBackend
 
+from app.core.plaid_environment import PlaidEnvironment
+
 
 class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
@@ -124,6 +126,17 @@ class Settings(BaseAppSettings):
     demo_max_uploads_per_day: int = 5
     max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB
     max_lease_template_file_size_bytes: int = 25 * 1024 * 1024  # 25 MB; the mobile app mirrors this
+
+    # ------------------------------------------------------------------
+    # Plaid bank sync. Required outside development and test
+    # (``app/core/plaid_boot_guard.py``). PLAID_REDIRECT_URI is the web
+    # route Plaid sends OAuth banks (Chase) back to; it must be registered
+    # in the Plaid dashboard as well.
+    # ------------------------------------------------------------------
+    plaid_env: PlaidEnvironment = "sandbox"
+    plaid_client_id: str = ""
+    plaid_secret: str = ""
+    plaid_redirect_uri: str = ""
 
     # ------------------------------------------------------------------
     # Analytics
