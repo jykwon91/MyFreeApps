@@ -30,6 +30,12 @@ traceback appended by ``Formatter.format``. Tracebacks are multi-line by
 nature and are produced by the interpreter, not by user input. Only
 ``record.getMessage()`` is rewritten.
 
+What is NOT changed
+===================
+The record itself. A protected handler writes an escaped copy, so the
+record keeps its message template and arguments for whatever reads it
+next, such as Sentry's logging integration.
+
 Usage
 =====
 Call once at boot, immediately after ``logging.basicConfig``::
@@ -37,10 +43,13 @@ Call once at boot, immediately after ``logging.basicConfig``::
     logging.basicConfig(level=logging.INFO, format=...)
     install_crlf_safe_logging()
 
-Idempotent — calling it twice neither double-escapes nor double-installs.
+Only the handlers attached when it runs are protected, so call it again
+after adding one. Idempotent — calling it twice neither double-escapes nor
+double-installs.
 """
 from __future__ import annotations
 
+import copy
 import logging
 
 __all__ = [
@@ -88,20 +97,30 @@ def escape_log_controls(message: str) -> str:
 
 
 class CRLFSafeLogFilter(logging.Filter):
-    """Rewrite a record's interpolated message so it cannot break a line.
+    """Escape the control characters in a record's message for one handler.
 
     Installed on handlers rather than loggers: a logger-level filter does not
     see records that propagate up from child loggers, which is exactly where
     app log calls originate.
 
-    The record is mutated in place (``msg`` replaced with the escaped,
-    fully-interpolated text and ``args`` cleared) so that *every* handler and
-    the Sentry logging integration observe the sanitised form, not just the
-    handler this filter happens to be attached to. Escaping is idempotent, so
-    several handlers each running the filter is harmless.
+    When the interpolated message holds a control character other than tab,
+    this returns a copy of the record whose ``msg`` is the escaped text and
+    whose ``args`` are empty. Since Python 3.12 a filter may return a
+    replacement record, and ``logging.Handler.handle`` emits it in the
+    record's place; a handler that overrides ``handle`` and emits the record
+    it was given would write the original.
+
+    The record itself is left as it was. Sentry's logging integration reads
+    it after every handler has run, and sends its template and arguments: an
+    event's ``logentry.message`` and ``params``, and a Sentry log's template
+    and parameters. Escaping the record in place left Sentry only the
+    formatted text. Sentry also sends the formatted text unescaped, as an
+    event's ``logentry.formatted``, a breadcrumb's ``message`` and a Sentry
+    log's body. Its events, breadcrumbs and logs are structured, so a
+    control character can't split one.
     """
 
-    def filter(self, record: logging.LogRecord) -> bool:  # noqa: A003
+    def filter(self, record: logging.LogRecord) -> bool | logging.LogRecord:  # noqa: A003
         try:
             message = record.getMessage()
         except Exception:  # pragma: no cover - malformed %-args
@@ -109,10 +128,12 @@ class CRLFSafeLogFilter(logging.Filter):
             # report; never let sanitisation swallow the record.
             return True
         safe = escape_log_controls(message)
-        if safe != message:
-            record.msg = safe
-            record.args = ()
-        return True
+        if safe == message:
+            return True
+        escaped = copy.copy(record)
+        escaped.msg = safe
+        escaped.args = ()
+        return escaped
 
 
 def install_crlf_safe_logging(logger: logging.Logger | None = None) -> None:
@@ -120,6 +141,9 @@ def install_crlf_safe_logging(logger: logging.Logger | None = None) -> None:
 
     Defaults to the root logger, which is where ``logging.basicConfig``
     installs the process-wide handler that app loggers propagate to.
+
+    Only the handlers attached now are protected. A handler added later
+    writes control characters as they are until this runs again.
 
     Args:
         logger: Logger whose handlers get the filter. Defaults to root.
