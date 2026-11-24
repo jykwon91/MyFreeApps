@@ -35,6 +35,7 @@ from datetime import datetime
 from platform_shared.core import async_storage
 from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
+from platform_shared.workers.entrypoint import run_worker
 
 from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
 from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
@@ -49,10 +50,10 @@ from app.db.session import AsyncSessionLocal
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
 from app.repositories.profile import skill_repository
+from app.services.discovery import discovery_embedding_service
 from app.services.extraction.ai_failure import user_failure_message
 from app.services.extraction.claude_service import MAX_TEXT_CHARS, extract_resume
 from app.services.jobs.parse_provenance import build_parse_provenance
-from app.services.discovery import discovery_embedding_service
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
@@ -297,8 +298,7 @@ async def main() -> None:
 
 
 def run() -> None:
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+    run_worker(main)
 
 
 if __name__ == "__main__":
