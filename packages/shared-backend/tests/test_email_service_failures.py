@@ -20,7 +20,10 @@ from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
 from platform_shared.services.email_failure_kind import EmailFailureKind
 from platform_shared.services.email_send_error import EmailSendError
 from platform_shared.services.email_service import EmailService
-from platform_shared.services.smtp_failure import error_from_refused_recipients
+from platform_shared.services.smtp_failure import (
+    error_from_refused_recipients,
+    error_from_smtp_exception,
+)
 
 
 def _service() -> EmailService:
@@ -673,10 +676,36 @@ class _OfflineSmtp(smtplib.SMTP):
         return 235, b"ok"
 
 
-def _scripted_server(replies: bytes) -> tuple[_OfflineSmtp, MagicMock]:
-    """An ``_OfflineSmtp`` whose server answers with ``replies``, in order, and
+class _SmtplibLogin(_OfflineSmtp):
+    """``_OfflineSmtp`` running smtplib's own login, with AUTH PLAIN on offer."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.esmtp_features = {"auth": "PLAIN"}
+
+    def login(self, user: str, password: str, **kwargs: bool) -> tuple[int, bytes]:
+        # Through the class, not ``smtplib.SMTP``, which the tests patch.
+        return super(_OfflineSmtp, self).login(user, password, **kwargs)
+
+
+class _SmtplibStarttls(_OfflineSmtp):
+    """``_OfflineSmtp`` running smtplib's own STARTTLS, which the server offers."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.esmtp_features = {"starttls": ""}
+
+    def starttls(self, *args: object, **kwargs: object) -> tuple[int, bytes]:
+        # Through the class, not ``smtplib.SMTP``, which the tests patch.
+        return super(_OfflineSmtp, self).starttls(*args, **kwargs)
+
+
+def _scripted_server(
+    replies: bytes, server_class: type[_OfflineSmtp] = _OfflineSmtp,
+) -> tuple[_OfflineSmtp, MagicMock]:
+    """A ``server_class`` whose server answers with ``replies``, in order, and
     its fake socket, which smtplib lets go of when it closes the connection."""
-    server = _OfflineSmtp()
+    server = server_class()
     sock = MagicMock()
     server.sock = sock
     server.file = io.BytesIO(replies)
@@ -729,6 +758,16 @@ class TestUnsendableMessages:
         assert exc.value.__cause__ is None
         assert "HeaderParseError" in str(exc.value)
 
+    def test_a_unicode_error_writing_the_message_out_is_the_messages_fault(self) -> None:
+        # Only while the session is opening is a UnicodeError our setup's fault.
+        bad = UnicodeEncodeError("ascii", "subj\u00e9", 4, 5, "ordinal not in range(128)")
+        with patch.object(MIMEMultipart, "as_string", side_effect=bad), \
+                patch("smtplib.SMTP", return_value=_server()) as smtp_cls, \
+                pytest.raises(EmailSendError) as exc:
+            _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert (exc.value.kind, exc.value.failed_before_handover) == ("message_rejected", True)
+        smtp_cls.assert_not_called()
+
     def test_non_ascii_recipient_is_a_send_error(self) -> None:
         with patch("smtplib.SMTP", _OfflineSmtp), pytest.raises(EmailSendError) as exc:
             _service().send_or_raise(["jos\u00e9@example.com"], "subj", "<p>b</p>")
@@ -780,6 +819,95 @@ class TestConfigFaults:
         assert any(
             r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
         )
+
+    @pytest.mark.parametrize(
+        ("reply", "kind"),
+        [
+            pytest.param(b"554 5.7.0 TLS not available\r\n", "misconfigured", id="refused"),
+            pytest.param(b"454 4.7.0 TLS not available right now\r\n", "transient", id="refused-for-now"),
+        ],
+    )
+    def test_starttls_refused_is_a_setup_fault_not_the_message(
+        self, reply: bytes, kind: EmailFailureKind,
+    ) -> None:
+        # The server offers STARTTLS, then answers it with a refusal.
+        server, sock = _scripted_server(reply, _SmtplibStarttls)
+        error = _send_failure(server)
+        assert _sent(sock) == b"STARTTLS\r\n"
+        assert (error.kind, error.smtp_code) == (kind, int(reply[:3]))
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
+
+    def test_a_login_smtplib_cannot_encode_is_misconfigured(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # With only PLAIN on offer, smtplib raises before it sends AUTH: it
+        # sends the login as ASCII.
+        server, sock = _scripted_server(b"", _SmtplibLogin)
+        service = _service()
+        service.smtp_password = "p\u00e4ssword-not-real"
+        with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING), \
+                pytest.raises(EmailSendError) as exc:
+            service.send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert _sent(sock) == b""
+        assert (exc.value.kind, exc.value.smtp_code) == ("misconfigured", None)
+        assert exc.value.failed_before_handover
+        assert not exc.value.delivery_unconfirmed
+        assert exc.value.__cause__ is None
+        assert "SMTP_USER and SMTP_PASSWORD must be ASCII" in str(exc.value)
+        # UnicodeEncodeError's text quotes a character of the password, as an
+        # escape, and its position.
+        for text in (str(exc.value), caplog.text):
+            assert "ssword-not-real" not in text
+            assert "\\xe4" not in text and "position" not in text
+        assert any(
+            r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
+        )
+
+    def test_a_host_smtplib_cannot_encode_is_misconfigured(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # Looking the host up encodes it as an IDNA name, which can't have an
+        # empty part; this fails before any network call.
+        service = _service()
+        service.smtp_host = "smtp..example.com"
+        with caplog.at_level(logging.WARNING), pytest.raises(EmailSendError) as exc:
+            service.send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert (exc.value.kind, exc.value.failed_before_handover) == ("misconfigured", True)
+        assert not exc.value.delivery_unconfirmed
+        assert "SMTP_HOST isn't a valid host name" in str(exc.value)
+        assert any(
+            r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
+        )
+
+    @pytest.mark.parametrize(
+        ("exc", "setting"),
+        [
+            pytest.param(
+                UnicodeEncodeError("ascii", "p\u00e4ss", 1, 2, "ordinal not in range(128)"),
+                "SMTP_USER and SMTP_PASSWORD must be ASCII",
+                id="login",
+            ),
+            # Python 3.12's IDNA codec raises a plain UnicodeError; a later one
+            # may raise UnicodeEncodeError, still with "idna" as its encoding.
+            pytest.param(
+                UnicodeError("label empty or too long"),
+                "SMTP_HOST isn't a valid host name",
+                id="host",
+            ),
+            pytest.param(
+                UnicodeEncodeError("idna", "smtp..example.com", 5, 5, "label empty or too long"),
+                "SMTP_HOST isn't a valid host name",
+                id="host-as-encode-error",
+            ),
+        ],
+    )
+    def test_an_encoding_failure_while_opening_names_the_setting(
+        self, exc: UnicodeError, setting: str,
+    ) -> None:
+        error = error_from_smtp_exception(exc, recipient_count=1, stage="opening")
+        assert error.kind == "misconfigured"
+        assert setting in str(error)
 
     def test_unknown_host_is_misconfigured(self, caplog: pytest.LogCaptureFixture) -> None:
         unknown_host = socket.gaierror(8, "nodename nor servname provided")

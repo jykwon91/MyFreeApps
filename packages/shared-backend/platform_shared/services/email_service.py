@@ -70,6 +70,7 @@ from platform_shared.services.smtp_failure import (
     error_from_refused_recipients,
     error_from_smtp_exception,
 )
+from platform_shared.services.smtp_send_stage import SmtpSendStage
 
 logger = logging.getLogger(__name__)
 
@@ -220,16 +221,15 @@ class EmailService:
         if reply_to:
             msg["Reply-To"] = strip_line_breaks(reply_to)
 
-        handing_over = False
+        stage: SmtpSendStage = "building"
         try:
             payload = msg.as_string()
+            stage = "opening"
             server = self._open_session()
-            handing_over = True
+            stage = "handing_over"
             refused = _hand_over(server, sender, to, payload)
         except (smtplib.SMTPException, OSError, email.errors.MessageError, UnicodeError) as e:
-            error = error_from_smtp_exception(
-                e, recipient_count=len(to), failed_before_handover=not handing_over,
-            )
+            error = error_from_smtp_exception(e, recipient_count=len(to), stage=stage)
             _log_send_failure(error, to)
             # Not chained: the smtplib exception's text quotes the recipient, and
             # a cause is printed in full in the ERROR traceback Sentry receives.
