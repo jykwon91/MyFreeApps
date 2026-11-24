@@ -21,6 +21,9 @@ regexes = [
   '''hashed_password='fakehash''',
   # Browser localStorage keys ("mga.wowForever.professions.skill.v1") — names, never secrets.
   '''mga\.[A-Za-z0-9]+(\.[A-Za-z0-9]+)*\.v[0-9]+''',
+  # RTK Query hook names ("useSyncPlaidItemMutation") — 24 letters after
+  # "plaid" trips the plaid-client-id rule; real client ids are hex.
+  '''\buse[A-Z][A-Za-z]*(Mutation|Query)\b''',
 ]
 
 paths = [
