@@ -853,14 +853,16 @@ class TestConfigFaults:
         assert error.failed_before_handover
         assert not error.delivery_unconfirmed
 
-    def test_a_login_smtplib_cannot_encode_is_misconfigured(
+    def test_an_ehlo_name_smtplib_cannot_encode_is_misconfigured(
         self, caplog: pytest.LogCaptureFixture,
     ) -> None:
-        # With only PLAIN on offer, smtplib raises before it sends AUTH: it
-        # sends the login as ASCII.
+        # smtplib sends EHLO, with this machine's host name, before it logs in,
+        # and sends every command as ASCII. (A non-ASCII login never gets this
+        # far: EmailService refuses it before it connects.)
         server, sock = _scripted_server(b"", _SmtplibLogin)
+        server.ehlo_resp = None
+        server.local_hostname = "h\u00f6st-not-real"
         service = _service()
-        service.smtp_password = "p\u00e4ssword-not-real"
         with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING), \
                 pytest.raises(EmailSendError) as exc:
             service.send_or_raise(["x@example.com"], "subj", "<p>b</p>")
@@ -869,12 +871,11 @@ class TestConfigFaults:
         assert exc.value.failed_before_handover
         assert not exc.value.delivery_unconfirmed
         assert exc.value.__cause__ is None
-        assert "SMTP_USER and SMTP_PASSWORD must be ASCII" in str(exc.value)
-        # UnicodeEncodeError's text quotes a character of the password, as an
-        # escape, and its position.
+        assert "host name, which it sends in EHLO, must be ASCII" in str(exc.value)
+        # UnicodeEncodeError's text quotes the character, as an escape, and its position.
         for text in (str(exc.value), caplog.text):
-            assert "ssword-not-real" not in text
-            assert "\\xe4" not in text and "position" not in text
+            assert "st-not-real" not in text
+            assert "\\xf6" not in text and "position" not in text
         assert any(
             r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
         )
@@ -899,9 +900,9 @@ class TestConfigFaults:
         ("exc", "setting"),
         [
             pytest.param(
-                UnicodeEncodeError("ascii", "p\u00e4ss", 1, 2, "ordinal not in range(128)"),
-                "SMTP_USER and SMTP_PASSWORD must be ASCII",
-                id="login",
+                UnicodeEncodeError("ascii", "EHLO h\u00f6st", 6, 7, "ordinal not in range(128)"),
+                "host name, which it sends in EHLO, must be ASCII",
+                id="ehlo-name",
             ),
             # Python 3.12's IDNA codec raises a plain UnicodeError; a later one
             # may raise UnicodeEncodeError, still with "idna" as its encoding.

@@ -3,8 +3,8 @@ from typing import Literal
 # Why an SMTP send failed, so callers can react differently:
 #   "misconfigured"      — our side is wrong (bad credentials, sender not allowed,
 #                          STARTTLS/AUTH unsupported or STARTTLS permanently
-#                          refused, TLS certificate rejected, a host or login
-#                          smtplib can't encode, an SMTP host that doesn't
+#                          refused, TLS certificate rejected, a host or EHLO
+#                          name smtplib can't encode, an SMTP host that doesn't
 #                          resolve). Retrying won't help; an operator must fix
 #                          the config.
 #   "recipient_rejected" — the server permanently refused one or more recipients.
