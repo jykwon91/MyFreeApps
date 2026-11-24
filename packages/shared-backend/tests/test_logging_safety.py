@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import io
 import logging
+import sys
 from collections.abc import Iterator
 
 import pytest
 
+from platform_shared.core import logging_safety
 from platform_shared.core.logging_safety import (
     CRLFSafeLogFilter,
     escape_log_controls,
@@ -106,8 +108,7 @@ class TestFilterAtHandlerBoundary:
         assert "INFO vendor=ACME count=3" in stream.getvalue()
 
     def test_exception_traceback_keeps_its_newlines(self, captured: CapturedLogger) -> None:
-        # Tracebacks are interpreter-generated and multi-line by nature; only
-        # the interpolated message is sanitised.
+        # The stack frames come from source files and keep their line breaks.
         logger, stream, _ = captured
         install_crlf_safe_logging(logger)
         try:
@@ -118,6 +119,70 @@ class TestFilterAtHandlerBoundary:
         assert "vendor=ACME\\nfake" in out
         assert "Traceback (most recent call last):" in out
         assert out.count("\n") > 1
+
+    def test_the_exception_text_is_escaped(self, captured: CapturedLogger) -> None:
+        # An exception's message often carries request data.
+        logger, stream, _ = captured
+        install_crlf_safe_logging(logger)
+        try:
+            raise ValueError("bad vendor ACME\nERROR forged record")
+        except ValueError:
+            logger.exception("import failed")
+        out = stream.getvalue()
+        assert "ValueError: bad vendor ACME\\nERROR forged record" in out
+        assert not any(line.startswith("ERROR forged") for line in out.splitlines())
+
+    def test_the_record_keeps_its_exception_for_sentry(self) -> None:
+        try:
+            raise ValueError("bad\nvalue")
+        except ValueError:
+            record = logging.LogRecord(
+                "t", logging.ERROR, __file__, 1, "failed", (), sys.exc_info(),
+            )
+        escaped = CRLFSafeLogFilter().filter(record)
+        assert isinstance(escaped, logging.LogRecord) and escaped is not record
+        assert record.exc_text is None
+        assert escaped.exc_info is record.exc_info
+        assert "bad\\nvalue" in (escaped.exc_text or "")
+
+    def test_exception_logged_outside_an_except_block(self, captured: CapturedLogger) -> None:
+        # exc_info is (None, None, None) here; the formatter's own text stands.
+        logger, stream, _ = captured
+        install_crlf_safe_logging(logger)
+        logger.exception("no active exception")
+        assert stream.getvalue() == "ERROR no active exception\nNoneType: None\n"
+
+    def test_a_traceback_that_cannot_be_formatted_never_raises_into_the_caller(
+        self, captured: CapturedLogger, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def _broken(*_args: object) -> str:
+            raise RecursionError("too deep")
+
+        monkeypatch.setattr(logging_safety, "format_exception_escaped", _broken)
+        logger, stream, _ = captured
+        install_crlf_safe_logging(logger)
+        try:
+            raise ValueError("boom\nFAKE")
+        except ValueError:
+            logger.exception("failed")
+        assert stream.getvalue() == (
+            "ERROR failed\nValueError: <traceback could not be formatted>\n"
+        )
+
+    def test_every_handler_writes_the_escaped_traceback(self, captured: CapturedLogger) -> None:
+        logger, stream, _ = captured
+        second = io.StringIO()
+        extra = logging.StreamHandler(second)
+        extra.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(extra)
+        install_crlf_safe_logging(logger)
+        try:
+            raise ValueError("a\nFAKE")
+        except ValueError:
+            logger.exception("failed")
+        for out in (stream.getvalue(), second.getvalue()):
+            assert "ValueError: a\\nFAKE" in out
+            assert not any(line.startswith("FAKE") for line in out.splitlines())
 
     def test_install_is_idempotent(self, captured: CapturedLogger) -> None:
         logger, stream, handler = captured
