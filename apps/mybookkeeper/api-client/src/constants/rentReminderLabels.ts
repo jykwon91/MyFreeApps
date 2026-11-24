@@ -17,6 +17,10 @@ export const RENT_REMINDER_CHANNEL_LABEL: Record<RentReminderChannel, string> = 
   sms: "Text",
 };
 
+/** Who has a text that's been handed off but hasn't been reported on yet
+ *  (see `isTextHandedOff`). Each app writes its own sentence around it. */
+export const TEXT_HANDOFF_HOLDER = "your phone";
+
 export const RENT_REMINDER_STATUS_LABEL: Record<RentReminderSendStatus, string> = {
   queued: "Sending",
   sent_to_phone: "Sent to phone",

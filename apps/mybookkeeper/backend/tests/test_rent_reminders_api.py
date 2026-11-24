@@ -219,7 +219,7 @@ class TestSendNow:
         try:
             with patch(
                 "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
-                AsyncMock(side_effect=rent_reminder_dispatch_service.ReminderAlreadySentError("went out")),
+                AsyncMock(side_effect=rent_reminder_dispatch_service.ReminderAlreadySentError("already sent")),
             ):
                 response = TestClient(app).post(
                     f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",

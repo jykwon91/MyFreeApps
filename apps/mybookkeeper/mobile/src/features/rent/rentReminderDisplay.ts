@@ -2,6 +2,8 @@ import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/r
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
+import type { RentReminderSendOutcome } from "@mybookkeeper/api-client/types/rent/rent-reminder-send-outcome";
+import { isTextHandedOff } from "@mybookkeeper/api-client/utils/isTextHandedOff";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
 import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
 import { rentReminderChannelWord } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
@@ -22,10 +24,10 @@ import {
   noEmailWontGo,
   noPhoneWontGo,
   oneFailed,
+  onlyEmailFailed,
   REMINDER_MESSAGES,
   sentBoth,
   sentEmail,
-  textOnlyWent,
 } from "../../constants/rentReminders";
 
 export function firstNameOf(name: string | null | undefined): string | null {
@@ -66,24 +68,25 @@ export function sendReadiness(overview: RentReminderOverview, plan: RentReminder
   };
 }
 
-export interface SendOutcome {
-  message: string;
-  /** Something didn't go out, so the note stays on screen. */
-  isProblem: boolean;
+/** A send that didn't fail: a text the phone hasn't reported on yet is still
+ *  with the phone, so only the rest are said to have gone out. */
+function wentOrHandedOff(row: RentReminderSend): string {
+  if (isTextHandedOff(row)) return REMINDER_MESSAGES.textHandedOff;
+  return channelWent(rentReminderChannelWord(row.channel));
 }
 
 /** Each channel in its own words, once one may have gone out without our knowing. */
-function unsureOutcome(rows: readonly RentReminderSend[]): SendOutcome {
+function unsureOutcome(rows: readonly RentReminderSend[]): RentReminderSendOutcome {
   const lines = rows.map((row) => {
+    if (row.status !== "failed") return wentOrHandedOff(row);
     const channel = rentReminderChannelWord(row.channel);
-    if (row.status !== "failed") return channelWent(channel);
     const reason = describeReminderError(row.error_code);
     return reminderMayStillArrive(row.error_code) ? channelMayHaveGone(channel, reason) : channelDidntGo(channel, reason);
   });
   return { message: lines.join(" "), isProblem: true };
 }
 
-export function sendOutcome(rows: readonly RentReminderSend[], name: string | null): SendOutcome {
+export function sendOutcome(rows: readonly RentReminderSend[], name: string | null): RentReminderSendOutcome {
   const email = rows.find((row) => row.channel === "email");
   const text = rows.find((row) => row.channel === "sms");
   const reason = (row: RentReminderSend) => describeReminderError(row.error_code);
@@ -97,9 +100,10 @@ export function sendOutcome(rows: readonly RentReminderSend[], name: string | nu
     return { message: neitherWentEach(reason(email), reason(text)), isProblem: true };
   }
   if (email && failed(text)) return { message: emailOnlyWent(reason(text), name), isProblem: true };
-  if (text && failed(email)) return { message: textOnlyWent(reason(email)), isProblem: true };
+  if (text && failed(email)) return { message: onlyEmailFailed(reason(email), wentOrHandedOff(text)), isProblem: true };
   if (failed(email)) return { message: oneFailed(rentReminderChannelWord("email"), reason(email)), isProblem: true };
   if (failed(text)) return { message: oneFailed(rentReminderChannelWord("sms"), reason(text)), isProblem: true };
-  if (email && text) return { message: sentBoth(), isProblem: false };
-  return { message: text ? REMINDER_MESSAGES.textWithPhone : sentEmail(name), isProblem: false };
+  if (email && text) return { message: sentBoth(wentOrHandedOff(text)), isProblem: false };
+  if (text) return { message: wentOrHandedOff(text), isProblem: false };
+  return { message: sentEmail(name), isProblem: false };
 }

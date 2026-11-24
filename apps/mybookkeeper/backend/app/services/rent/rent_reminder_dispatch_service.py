@@ -77,7 +77,7 @@ from app.services.system import email_service, sms_service
 logger = logging.getLogger(__name__)
 
 _ALREADY_SENT_MESSAGE = (
-    "This reminder already went out. Email and text always go together, "
+    "This reminder was already sent. Email and text always go together, "
     "so nothing more is sent until the next due date."
 )
 _CHANGED_MESSAGE = (

@@ -22,9 +22,7 @@ import {
   neitherWentEach,
   noEmailWontGo,
   REMINDER_MESSAGES,
-  sentBoth,
   sentEmail,
-  textOnlyWent,
 } from "../src/constants/rentReminders";
 import { REMINDER_SETUP_MESSAGES } from "../src/constants/rentReminderSetup";
 import { dueLine, sendMoment, sendOutcome, sendReadiness } from "../src/features/rent/rentReminderDisplay";
@@ -41,6 +39,8 @@ jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({
 
 const originalAdapter = api.defaults.adapter;
 const SEND_BUTTON = "Send now to Dana";
+const TEXT_WITH_PHONE = "The text is with your phone, and I'll show in the history whether it went out.";
+const SENT_EMAIL_TEXT_WITH_PHONE = "I sent the email. The text is with your phone, and I'll show in the history whether it went out.";
 
 interface ServerState {
   role: string;
@@ -288,7 +288,7 @@ describe("Send now", () => {
     await waitFor(() =>
       expect(server.sendBodies).toEqual([{ due_date: "2030-11-03", amount: "300.00", message: "Hi Dana, rent of $300 is due on Sunday, Nov 3.", channels: ["email", "sms"], confirmed_possibly_sent: [] }]),
     );
-    expect(await screen.findByText(sentBoth())).toBeTruthy();
+    expect(await screen.findByText(SENT_EMAIL_TEXT_WITH_PHONE)).toBeTruthy();
   });
 
   it("sends only the email when the plan's texts are off", async () => {
@@ -334,7 +334,7 @@ describe("Send now", () => {
 
     await sendAndConfirm();
 
-    await screen.findByText(sentBoth());
+    await screen.findByText(SENT_EMAIL_TEXT_WITH_PHONE);
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: true })).toBeTruthy();
   });
@@ -406,13 +406,13 @@ describe("Send now", () => {
     await sendAndConfirm();
 
     expect(await screen.findByText(REMINDER_MESSAGES.possiblySentRefused)).toBeTruthy();
-    expect(screen.queryByText(REMINDER_MESSAGES.alreadyWent)).toBeNull();
+    expect(screen.queryByText(REMINDER_MESSAGES.alreadySent)).toBeNull();
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
 
   it.each([
     [412, REMINDER_MESSAGES.changed],
-    [409, REMINDER_MESSAGES.alreadyWent],
+    [409, REMINDER_MESSAGES.alreadySent],
     [429, REMINDER_MESSAGES.tooMany],
     [404, REMINDER_MESSAGES.gone],
     [422, REMINDER_MESSAGES.cantGoOut],
@@ -523,10 +523,28 @@ describe("reminder wording", () => {
     const failed = { status: "failed" as const, error_code: "email_send_failed" };
     const reason = "The mail server didn't take it";
 
-    expect(sendOutcome([email], "Dana")).toEqual({ message: sentEmail("Dana"), isProblem: false });
-    expect(sendOutcome([text], "Dana")).toEqual({ message: REMINDER_MESSAGES.textWithPhone, isProblem: false });
-    expect(sendOutcome([email, text], "Dana")).toEqual({ message: sentBoth(), isProblem: false });
-    expect(sendOutcome([{ ...email, ...failed }, text], "Dana")).toEqual({ message: textOnlyWent(reason), isProblem: true });
+    expect(sendOutcome([email], "Dana")).toEqual({ message: "I sent the email to Dana.", isProblem: false });
+    expect(sendOutcome([text], "Dana")).toEqual({ message: TEXT_WITH_PHONE, isProblem: false });
+    expect(sendOutcome([email, text], "Dana")).toEqual({ message: SENT_EMAIL_TEXT_WITH_PHONE, isProblem: false });
+    expect(sendOutcome([{ ...email, ...failed }, text], "Dana")).toEqual({
+      message: `The email didn't go out. ${reason}. ${TEXT_WITH_PHONE} I can't resend just the email.`,
+      isProblem: true,
+    });
+  });
+
+  it("says a text the phone has reported on went out, not that the phone still has it", () => {
+    const email = aReminderSend();
+    const failedEmail = aReminderSend({ status: "failed", error_code: "email_send_failed" });
+    for (const status of ["sent", "delivered"] as const) {
+      const text = aReminderSend({ id: "s2", channel: "sms", status });
+
+      expect(sendOutcome([text], "Dana")).toEqual({ message: "The text went out.", isProblem: false });
+      expect(sendOutcome([email, text], "Dana")).toEqual({ message: "I sent the email. The text went out.", isProblem: false });
+      expect(sendOutcome([failedEmail, text], "Dana")).toEqual({
+        message: "The email didn't go out. The mail server didn't take it. The text went out. I can't resend just the email.",
+        isProblem: true,
+      });
+    }
   });
 
   it("gives each channel's reason when both failed for different ones", () => {
@@ -593,5 +611,16 @@ describe("reminder wording", () => {
     expect(outcome.message).toBe(`${channelMayHaveGone("email", reason)} ${channelWent("text")}`);
     expect(outcome.message).not.toContain("didn't go out");
     expect(outcome.message).not.toContain("try again");
+  });
+
+  it("says a text the phone hasn't reported on is with the phone, beside an email that may have gone out", () => {
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_phone" });
+    const unsure = aReminderSend({ channel: "email", status: "failed", error_code: "email_outcome_unknown" });
+    const reason = "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again";
+
+    expect(sendOutcome([unsure, text], "Dana")).toEqual({
+      message: `I can't tell if the email went out. ${reason}. ${TEXT_WITH_PHONE}`,
+      isProblem: true,
+    });
   });
 });

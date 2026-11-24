@@ -82,6 +82,9 @@ const SENT_STATUS = { sms: "sent_to_phone", email: "sent" } as const satisfies R
   RentReminderChannel,
   RentReminderSendStatus
 >;
+// So the toast says the email was sent and the text is only with the phone.
+const SENT_TOAST =
+  "Reminder sent by email. The text is with your phone, and the history below will show whether it went out.";
 
 const TEXT_SENDS = [
   failedText("send-unknown", "2026-11-22", "sms_outcome_unknown"),
@@ -175,7 +178,7 @@ test("Send now waits for the host to confirm they checked a text that may have g
   await send.click();
 
   await expect.poll(() => sendBodies).toEqual([expect.objectContaining({ confirmed_possibly_sent: [{ channel: "sms", attempt: 2 }] })]);
-  await expect(toast(page, "Reminder sent by email and text.")).toBeVisible();
+  await expect(toast(page, SENT_TOAST)).toBeVisible();
 });
 
 test("an email the mail server never confirmed says to ask the tenant, not to check httpSMS", async ({ page }) => {
@@ -207,5 +210,5 @@ test("Send now waits for the host to confirm they asked the tenant about an emai
   await send.click();
 
   await expect.poll(() => sendBodies).toEqual([expect.objectContaining({ confirmed_possibly_sent: [{ channel: "email", attempt: 2 }] })]);
-  await expect(toast(page, "Reminder sent by email and text.")).toBeVisible();
+  await expect(toast(page, SENT_TOAST)).toBeVisible();
 });

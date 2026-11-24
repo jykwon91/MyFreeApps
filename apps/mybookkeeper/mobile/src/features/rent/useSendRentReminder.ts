@@ -19,7 +19,7 @@ function refusal(error: unknown): string | null {
     case 404:
       return REMINDER_MESSAGES.gone;
     case 409:
-      return REMINDER_MESSAGES.alreadyWent;
+      return REMINDER_MESSAGES.alreadySent;
     case 412:
       return REMINDER_MESSAGES.changed;
     case 422:
