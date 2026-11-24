@@ -382,6 +382,12 @@ class TestConsoleBackend:
         assert "1 recipient(s) at example.com" in caplog.text
         assert "Jane Doe" not in caplog.text
 
+    def test_a_repeated_address_is_logged_once(self, caplog: pytest.LogCaptureFixture) -> None:
+        # The count it would send to over SMTP.
+        with caplog.at_level("INFO"):
+            self._console_service().send_or_raise(["a@example.com", "a@example.com"], "S", "<p>B</p>")
+        assert "to=1 recipient(s) at example.com" in caplog.text
+
     def test_send_returns_true(self) -> None:
         with patch("smtplib.SMTP") as mock_smtp_cls:
             assert self._console_service().send(["a@example.com"], "S", "<p>B</p>") is True

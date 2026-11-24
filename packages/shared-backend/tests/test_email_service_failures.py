@@ -344,6 +344,72 @@ class TestRefusedRecipients:
         assert "@example.com" not in failure.replace("at example.com", "")
         assert "b@example.com" not in str(error)
 
+    def test_a_repeated_address_gets_the_email_once(self) -> None:
+        server = _server()
+        with patch("smtplib.SMTP", return_value=server):
+            # The last one repeats the first once its line break is stripped.
+            _service().send_or_raise(
+                ["a@example.com", "b@example.com", "a@example.com", "a@example.com\r\n"],
+                "subj", "<p>b</p>",
+            )
+        _sender, recipients, payload = server.sendmail.call_args.args
+        assert recipients == ["a@example.com", "b@example.com"]
+        assert "To: a@example.com, b@example.com\n" in payload
+
+    def test_a_repeated_address_refused_is_counted_once(self) -> None:
+        # smtplib lists a refused address once, however often it was sent to.
+        # Sent twice, every copy refused, smtplib went on to DATA, and the
+        # server's refusal of that read as the message being refused.
+        server, sock = _scripted_server(
+            b"250 sender ok\r\n550 5.1.1 no such user\r\n550 5.1.1 no such user\r\n"
+            b"554 5.5.1 no valid recipients\r\n",
+        )
+        error = _send_failure(server, ["a@example.com", "a@example.com"])
+        assert _sent(sock).count(b"rcpt TO:<a@example.com>") == 1
+        assert b"data\r\n" not in _sent(sock)
+        # smtplib's "all refused" branch resets the session.
+        assert _sent(sock).endswith(b"rset\r\n")
+        assert (error.kind, error.smtp_code) == ("recipient_rejected", 550)
+        assert error.failed_before_handover
+        assert "refused 1 of 1 recipient(s)" in str(error)
+        assert "nobody got the email" in str(error)
+
+    def test_a_repeated_address_refused_beside_one_accepted(self) -> None:
+        server = _server()
+        server.sendmail.return_value = {"b@example.com": (550, b"no such user")}
+        error = _send_failure(server, ["a@example.com", "b@example.com", "b@example.com"])
+        assert server.sendmail.call_args.args[1] == ["a@example.com", "b@example.com"]
+        assert "refused 1 of 2 recipient(s)" in str(error)
+        assert "delivered to the other 1" in str(error)
+
+    def test_addresses_that_differ_only_in_case_are_both_sent(self) -> None:
+        server = _server()
+        with patch("smtplib.SMTP", return_value=server):
+            _service().send_or_raise(["a@example.com", "A@example.com"], "subj", "<p>b</p>")
+        assert server.sendmail.call_args.args[1] == ["a@example.com", "A@example.com"]
+
+    def test_a_best_effort_send_counts_recipients_as_sent(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        server = _server()
+        server.sendmail.return_value = {"b@example.com": (550, b"no such user")}
+        with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING):
+            sent = _service().send(["a@example.com", "a@example.com", "b@example.com"], "subj", "<p>b</p>")
+        assert sent is False
+        warning = next(r.getMessage() for r in caplog.records if "Best-effort" in r.getMessage())
+        assert "failed to 2 recipient(s) at example.com" in warning
+        assert "refused 1 of 2 recipient(s)" in warning
+
+    def test_a_line_break_in_an_address_cannot_start_a_log_line(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        server = _server()
+        server.sendmail.side_effect = smtplib.SMTPServerDisconnected("gone")
+        with patch("smtplib.SMTP", return_value=server), caplog.at_level(logging.WARNING):
+            _service().send(["a@example.com\r\nCRITICAL forged line"], "subj", "<p>b</p>")
+        assert caplog.records
+        assert not any("\n" in r.getMessage() or "\r" in r.getMessage() for r in caplog.records)
+
     def test_partial_refusal_fails_a_best_effort_send(self) -> None:
         server = _server()
         server.sendmail.return_value = {"b@example.com": (550, b"no such user")}
