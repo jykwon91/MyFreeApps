@@ -1,4 +1,3 @@
-import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
@@ -31,10 +30,6 @@ import {
 
 export function firstNameOf(name: string | null | undefined): string | null {
   return name?.trim().split(/\s+/)[0] || null;
-}
-
-export function planChannels(plan: RentReminderPlan): RentReminderChannel[] {
-  return [...(plan.email_enabled ? (["email"] as const) : []), ...(plan.sms_enabled ? (["sms"] as const) : [])];
 }
 
 export function dueLine(preview: Pick<RentReminderPreview, "amount" | "due_date">): string {

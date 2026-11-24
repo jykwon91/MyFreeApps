@@ -291,6 +291,20 @@ describe("Send now", () => {
     expect(await screen.findByText(sentBoth())).toBeTruthy();
   });
 
+  it("sends only the email when the plan's texts are off", async () => {
+    const server = startServer({
+      overview: aReminderOverview({ plan: aReminderPlan({ sms_enabled: false }) }),
+      sendAnswer: [aReminderSend()],
+    });
+    await renderReminders(server);
+    expect(await screen.findByText("Goes by email.")).toBeTruthy();
+
+    await sendAndConfirm();
+
+    await waitFor(() => expect(server.sendBodies).toEqual([expect.objectContaining({ channels: ["email"] })]));
+    expect(await screen.findByText(sentEmail("Dana Reed"))).toBeTruthy();
+  });
+
   it("leaves a lasting note when one channel fails", async () => {
     const server = startServer({ sendAnswer: [aReminderSend(), aReminderSend({ id: "send2", channel: "sms", status: "failed", error_code: "invalid_phone" })] });
     await renderReminders(server);
