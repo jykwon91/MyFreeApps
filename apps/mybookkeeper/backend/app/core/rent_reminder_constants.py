@@ -53,11 +53,9 @@ ERROR_SMS_KEY_REJECTED = f"{SMS_RELAY_CODE_PREFIX}http_401"
 ERROR_SMS_OUTCOME_UNKNOWN = "sms_outcome_unknown"
 ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 ERROR_EMAIL_SEND_FAILED = "email_send_failed"
-# Sending failed while the email was being handed over, and the mail server
-# never answered to say how it went (``EmailSendError.delivery_unconfirmed``),
-# so it may already be in the tenant's inbox. A failure while connecting,
-# starting TLS or logging in is ``email_send_failed``: the server never had the
-# email then. Never retried automatically.
+# The send failed, but the email may already be in the tenant's inbox (see
+# ``EmailSendError.delivery_unconfirmed``). A send that definitely failed is
+# ``email_send_failed``. Never retried automatically.
 ERROR_EMAIL_OUTCOME_UNKNOWN = "email_outcome_unknown"
 ERROR_UNEXPECTED = "unexpected_error"
 # Codes with a fixed spelling, each of which the apps describe in words

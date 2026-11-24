@@ -17,8 +17,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
+from platform_shared.services.email_failure_kind import EmailFailureKind
 from platform_shared.services.email_send_error import EmailSendError
 from platform_shared.services.email_service import EmailService
+from platform_shared.services.smtp_failure import error_from_refused_recipients
 
 
 def _service() -> EmailService:
@@ -85,6 +87,7 @@ class TestClassification:
         )
         error = _send_failure(server)
         assert (error.kind, error.smtp_code) == ("misconfigured", 553)
+        assert error.failed_before_handover
 
     def test_starttls_unsupported_is_misconfigured(self) -> None:
         server = _server()
@@ -125,8 +128,9 @@ class TestClassification:
 
 
 class TestDeliveryUnconfirmed:
-    """Only a timeout or dropped connection while the message is being handed
-    over can leave the recipient holding it: before that, the server never had it."""
+    """Only a timeout, a dropped connection or a reply that isn't a clear refusal
+    while the message is being handed over can leave the recipient holding it:
+    before that, the server never had it."""
 
     @pytest.mark.parametrize("exc", [ConnectionRefusedError("refused"), TimeoutError("timed out")])
     def test_a_failed_connect_is_a_definite_failure(self, exc: Exception) -> None:
@@ -173,6 +177,34 @@ class TestDeliveryUnconfirmed:
         server = _server()
         server.sendmail.side_effect = smtplib.SMTPDataError(421, b"try again later")
         assert not _send_failure(server).delivery_unconfirmed
+
+    def test_a_final_reply_that_isnt_a_clear_refusal_leaves_delivery_unconfirmed(self) -> None:
+        # RFC 5321 defines no 6xx, so the server may have taken the message.
+        server, sock = _scripted_server(
+            b"250 sender ok\r\n250 recipient ok\r\n354 go ahead\r\n650 what\r\n250 reset\r\n",
+        )
+        error = _send_failure(server)
+        assert b"Subject: subj" in _sent(sock)
+        assert (error.kind, error.smtp_code) == ("transient", None)
+        assert not error.failed_before_handover
+        assert error.delivery_unconfirmed
+
+    @pytest.mark.parametrize(
+        "reply",
+        [
+            pytest.param(b"251 2.1.0 sender ok\r\n", id="a-251"),
+            pytest.param(b"not a reply\r\n", id="unreadable"),
+            pytest.param(b"650 what\r\n", id="a-650"),
+        ],
+    )
+    def test_a_refused_sender_is_a_definite_failure_whatever_its_code(self, reply: bytes) -> None:
+        # smtplib gives up after MAIL FROM, before any recipient or the message.
+        server, sock = _scripted_server(reply + b"250 reset\r\n")
+        error = _send_failure(server)
+        assert b"x@example.com" not in _sent(sock)
+        assert (error.kind, error.smtp_code) == ("transient", None)
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
 
     def test_an_error_that_does_not_say_where_it_failed_counts_as_unconfirmed(self) -> None:
         # Telling a caller that a timeout definitely failed would invite a duplicate email.
@@ -340,6 +372,151 @@ class TestRefusedRecipients:
         assert not error.delivery_unconfirmed
         assert "nobody got the email" in str(error)
         assert "delivered" not in str(error)
+
+    def test_a_421_after_a_permanent_refusal_is_transient(self) -> None:
+        # The 421 sums it up, not the 550 before it: the server closed the
+        # session before c was tried, so nobody got the email and a retry can
+        # still reach b and c.
+        server, sock = _scripted_server(b"250 sender ok\r\n550 5.1.1 no such user\r\n421 4.7.0 closing\r\n")
+        error = _send_failure(server, ["a@example.com", "b@example.com", "c@example.com"])
+        assert b"c@example.com" not in _sent(sock)
+        assert error.refused_recipients == {"a@example.com": 550, "b@example.com": 421}
+        assert (error.kind, error.smtp_code) == ("transient", 421)
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
+
+    def test_an_unreadable_reply_for_the_only_recipient_is_a_definite_failure(self) -> None:
+        # smtplib reads a reply line with no number for its code as -1; with
+        # every recipient refused it never sends the message.
+        server, sock = _scripted_server(b"250 sender ok\r\nnot a reply\r\n")
+        error = _send_failure(server)
+        assert b"Subject: subj" not in _sent(sock)
+        assert error.refused_recipients == {"x@example.com": -1}
+        assert (error.kind, error.smtp_code) == ("transient", None)
+        assert error.failed_before_handover
+        assert not error.delivery_unconfirmed
+        assert "(reply codes: unreadable); nobody got the email" in str(error)
+
+    @pytest.mark.parametrize(
+        ("replies", "to", "refused"),
+        [
+            pytest.param(
+                b"250 sender ok\r\nnot a reply\r\n250 recipient ok\r\n354 go ahead\r\n250 queued\r\n",
+                ["a@example.com", "b@example.com"],
+                {"a@example.com": -1},
+                id="unreadable",
+            ),
+            pytest.param(
+                b"250 sender ok\r\n550 no such user\r\nnot a reply\r\n250 recipient ok\r\n354 go ahead\r\n250 queued\r\n",
+                ["a@example.com", "b@example.com", "c@example.com"],
+                {"a@example.com": 550, "b@example.com": -1},
+                id="unreadable-beside-a-refusal",
+            ),
+            pytest.param(
+                # smtplib reads the first three characters, " 25", as 25.
+                b"250 sender ok\r\n 250 2.1.5 ok\r\n250 recipient ok\r\n354 go ahead\r\n250 queued\r\n",
+                ["a@example.com", "b@example.com"],
+                {"a@example.com": 25},
+                id="garbled-into-a-number",
+            ),
+            pytest.param(
+                b"250 sender ok\r\n252 2.1.5 will try\r\n250 recipient ok\r\n354 go ahead\r\n250 queued\r\n",
+                ["a@example.com", "b@example.com"],
+                {"a@example.com": 252},
+                id="a-252",
+            ),
+            pytest.param(
+                # RFC 5321 defines no 6xx reply.
+                b"250 sender ok\r\n650 what\r\n250 recipient ok\r\n354 go ahead\r\n250 queued\r\n",
+                ["a@example.com", "b@example.com"],
+                {"a@example.com": 650},
+                id="a-650",
+            ),
+        ],
+    )
+    def test_an_unclear_reply_leaves_delivery_unconfirmed_when_the_rest_got_it(
+        self, replies: bytes, to: list[str], refused: dict[str, int],
+    ) -> None:
+        # The server took the message, and smtplib lists the recipient whose
+        # reply wasn't a clear refusal as refused, though they may have been
+        # accepted with it: a resend could duplicate it.
+        server, sock = _scripted_server(replies)
+        error = _send_failure(server, to)
+        assert b"Subject: subj" in _sent(sock)
+        assert error.refused_recipients == refused
+        assert (error.kind, error.smtp_code) == ("transient", None)
+        assert not error.failed_before_handover
+        assert error.delivery_unconfirmed
+        assert "delivered to the other 1, and maybe to the 1 whose reply wasn't a clear refusal" in str(error)
+
+
+class TestRefusalSummary:
+    """Which ``kind`` and ``smtp_code`` sum up a list of refused recipients."""
+
+    @pytest.mark.parametrize(
+        ("codes", "sent_to_the_rest", "kind", "smtp_code", "unconfirmed"),
+        [
+            pytest.param([550], False, "recipient_rejected", 550, False, id="permanent"),
+            pytest.param([450], False, "transient", 450, False, id="temporary"),
+            pytest.param([550, 553], False, "recipient_rejected", 550, False, id="first-permanent-code"),
+            pytest.param([450, 451], False, "transient", 450, False, id="first-temporary-code"),
+            pytest.param([550, 421], False, "transient", 421, False, id="421-after-a-refusal"),
+            pytest.param([550, 450], False, "transient", 450, False, id="temporary-beside-permanent-and-nobody-got-it"),
+            pytest.param([450, 550], True, "recipient_rejected", 550, False, id="permanent-beside-temporary-and-the-rest-got-it"),
+            pytest.param([450], True, "transient", 450, False, id="temporary-and-the-rest-got-it"),
+            pytest.param([400], False, "transient", 400, False, id="the-lowest-temporary-code"),
+            pytest.param([499], False, "transient", 499, False, id="the-highest-temporary-code"),
+            pytest.param([499], True, "transient", 499, False, id="the-highest-temporary-code-and-the-rest-got-it"),
+            pytest.param([500], False, "recipient_rejected", 500, False, id="the-lowest-permanent-code"),
+            pytest.param([599], False, "recipient_rejected", 599, False, id="the-highest-permanent-code"),
+            pytest.param([-1], False, "transient", None, False, id="unreadable-and-nobody-got-it"),
+            pytest.param([-1], True, "transient", None, True, id="unreadable-and-the-rest-got-it"),
+            pytest.param([-50], True, "transient", None, True, id="another-negative-code"),
+            pytest.param([550, -1], True, "transient", None, True, id="unreadable-beside-a-refusal"),
+            pytest.param([550, -1], False, "transient", None, False, id="unreadable-after-a-refusal-and-nobody-got-it"),
+            pytest.param([-1, 421], False, "transient", None, False, id="unreadable-before-a-421"),
+            pytest.param([25], True, "transient", None, True, id="garbled-into-a-number"),
+            pytest.param([0], True, "transient", None, True, id="zero"),
+            pytest.param([150], True, "transient", None, True, id="a-1xx"),
+            pytest.param([252], True, "transient", None, True, id="a-252"),
+            pytest.param([550, 252], False, "transient", None, False, id="a-252-beside-a-refusal-and-nobody-got-it"),
+            pytest.param([399], True, "transient", None, True, id="just-under-4xx"),
+            pytest.param([600], True, "transient", None, True, id="just-past-5xx"),
+            pytest.param([600], False, "transient", None, False, id="past-5xx-and-nobody-got-it"),
+            pytest.param([999], True, "transient", None, True, id="the-highest-three-digit-code"),
+            pytest.param([550, 650], True, "transient", None, True, id="past-5xx-beside-a-refusal"),
+        ],
+    )
+    def test_kind_and_code(
+        self,
+        codes: list[int],
+        sent_to_the_rest: bool,
+        kind: EmailFailureKind,
+        smtp_code: int | None,
+        unconfirmed: bool,
+    ) -> None:
+        error = error_from_refused_recipients(
+            {f"r{index}@example.com": (code, b"reply") for index, code in enumerate(codes)},
+            recipient_count=len(codes) + 1,
+            sent_to_the_rest=sent_to_the_rest,
+        )
+        assert (error.kind, error.smtp_code, error.delivery_unconfirmed) == (kind, smtp_code, unconfirmed)
+
+    def test_the_message_counts_every_reply_that_wasnt_a_clear_refusal(self) -> None:
+        error = error_from_refused_recipients(
+            {
+                "a@example.com": (-1, b"not a reply"),
+                "b@example.com": (-50, b"x"),
+                "c@example.com": (252, b"will try"),
+                "d@example.com": (550, b"no such user"),
+            },
+            recipient_count=5,
+            sent_to_the_rest=True,
+        )
+        assert str(error) == (
+            "SMTP server refused 4 of 5 recipient(s) (reply codes: unreadable, unreadable, 252, 550); "
+            "delivered to the other 1, and maybe to the 3 whose reply wasn't a clear refusal"
+        )
 
 
 class TestQuitAfterSend:
@@ -521,6 +698,19 @@ class TestConfigFaults:
         server.login.side_effect = smtplib.SMTPException("No suitable authentication method found.")
         with caplog.at_level(logging.WARNING):
             assert _send_failure(server).kind == "misconfigured"
+        assert any(
+            r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
+        )
+
+    def test_untrusted_certificate_is_misconfigured(self, caplog: pytest.LogCaptureFixture) -> None:
+        server = _server()
+        server.starttls.side_effect = ssl.SSLCertVerificationError(
+            1, "certificate verify failed: self-signed certificate",
+        )
+        with caplog.at_level(logging.WARNING):
+            error = _send_failure(server)
+        assert (error.kind, error.failed_before_handover) == ("misconfigured", True)
+        server.sendmail.assert_not_called()
         assert any(
             r.levelno == logging.ERROR and "SMTP send failed" in r.getMessage() for r in caplog.records
         )

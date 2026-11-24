@@ -33,9 +33,10 @@ operation is capped by ``SMTP_TIMEOUT_SECONDS``.
 A failed send raises ``EmailSendError`` carrying ``kind`` (misconfigured /
 recipient_rejected / message_rejected / transient), the server's
 ``smtp_code`` and any ``refused_recipients``, and is logged with them. Its
-``delivery_unconfirmed`` is True only when a timeout, a dropped connection or
-a reply smtplib couldn't read struck while the message was being handed over,
-so it may have arrived anyway.
+``delivery_unconfirmed`` is True only when the email may have arrived anyway:
+a timeout, a dropped connection, or a reply that was unreadable or wasn't a
+clear refusal, while the message was being handed over (see
+``EmailSendError.delivery_unconfirmed``).
 Log lines name recipients by count and domain only and never carry the
 subject, which often names a tenant or applicant.
 
@@ -320,9 +321,11 @@ def _hand_over(
     non-ASCII address, which smtplib encodes as ASCII) when ``sendmail`` fails.
     A timeout or dropped connection then can come after the server took the
     message, so the caller can't tell whether it was delivered. The whole call
-    counts, MAIL FROM and RCPT TO included: smtplib doesn't say which command
-    failed, and calling it unconfirmed can't cause a duplicate. Once
-    ``sendmail`` returns the email is out, so a failing QUIT afterwards is
+    counts, MAIL FROM and RCPT TO included: a timeout doesn't say which command
+    it struck, and calling it unconfirmed can't cause a duplicate (smtplib's
+    ``SMTPSenderRefused`` and ``SMTPRecipientsRefused`` do say, and count as
+    before the hand-over).
+    Once ``sendmail`` returns the email is out, so a failing QUIT afterwards is
     logged, not raised: reporting it as a failed send would invite a resend
     and a duplicate email.
     """
