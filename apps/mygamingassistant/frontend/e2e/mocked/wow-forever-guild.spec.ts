@@ -112,10 +112,10 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await expect(page).toHaveURL(/\/wow-forever\/topdeadcenter\?me=jason-kwon$/);
 
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
-  const levelBoard = page.getByRole("list", { name: "Dungeons cleared leaderboard" }).locator("li");
-  await expect(levelBoard).toHaveCount(3);
-  await expect(levelBoard.nth(1)).toContainText("Jason Kwon");
-  await expect(levelBoard.nth(1)).toContainText("You");
+  const dungeonBoard = page.getByRole("list", { name: "Dungeons cleared leaderboard" }).locator("li");
+  await expect(dungeonBoard).toHaveCount(3);
+  await expect(dungeonBoard.nth(1)).toContainText("Jason Kwon");
+  await expect(dungeonBoard.nth(1)).toContainText("You");
   // The Level board is retired: not offered, and the race is archived as a trophy.
   const picker = page.getByLabel("Rank members by");
   await expect(picker).toHaveValue("dungeons");

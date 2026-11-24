@@ -1470,7 +1470,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   gain isn't ranked (counted in a footer), nor is a member with no baseline
   ("needs a second lookup"). Each row says "since <baseline day>" — tracking
   began 2026-11-12, so spans differ per member until a full week builds up.
-  Not built: first to 60 (Forever's achievements have no level achievement),
+  First to 60: the Level board is retired (everyone reached 60); the Race to 60 is a hand-entered trophy in `data/guild/archivedRaces.ts` (`GuildArchivedRaces`, bottom of the Arena, no date: none is recorded; add a race by adding a row). The default board is the first in `LEADERBOARDS` (Dungeons cleared). Not built: other first-to races (Forever's achievements have no level achievement),
   raid attendance (Blizzard has no data), mounts/pets (account-wide vs
   per-character unresolved).
 - Guild faction standing board ("One faction's standing", Reputation group):

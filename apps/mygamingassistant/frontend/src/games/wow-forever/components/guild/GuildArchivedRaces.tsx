@@ -20,8 +20,8 @@ export default function GuildArchivedRaces({ races }: GuildArchivedRacesProps) {
           <div className="min-w-0">
             <p className="text-sm font-semibold">{race.title}</p>
             <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
-              <span>{ARCHIVED_RACES_COPY.won}</span>
-              <GuildMemberLink member={race.winner} />
+              <span>{ARCHIVED_RACES_COPY.won}</span>{" "}
+              <GuildMemberLink member={race.winner} />{" "}
               <span>
                 {race.achievement}
                 {race.day ? ` ${ARCHIVED_RACES_COPY.on(formatShortDay(race.day))}` : ""}

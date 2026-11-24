@@ -11,7 +11,7 @@ import type { LeaderboardEntry } from "@/games/wow-forever/types/guild/leaderboa
 interface GuildLeaderboardListProps {
   /** Every ranked entry, best first. */
   ranked: readonly LeaderboardEntry[];
-  /** The list's accessible name ("Level leaderboard"). */
+  /** The list's accessible name ("Dungeons cleared leaderboard"). */
   label: string;
   /** Shown in place of the list when nobody is ranked. */
   empty: string;
