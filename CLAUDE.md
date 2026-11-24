@@ -93,6 +93,7 @@ An app with a mobile version keeps its API types and endpoints in `apps/<slug>/a
 
 ## Workflow
 
+- Mechanical steps have scripts in `scripts/agent/` (worktree setup/teardown, wait for checks and merge, wait for deploys, install the WoW addons). Use them, and brief subagents to use them, instead of running the steps by hand.
 - Branch naming: `feature/<name>`, `fix/<name>`
 - PRs required before merging to main
 - One feature per PR — never combine multiple features
