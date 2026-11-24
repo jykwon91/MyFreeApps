@@ -94,7 +94,8 @@ async def send_email_or_raise(
 
     Raises:
         ValueError: If ``to`` is empty.
-        EmailNotConfiguredError: If SMTP creds are missing.
+        EmailNotConfiguredError: If an SMTP setting is empty or a login
+            setting isn't ASCII.
         EmailSendError: If SMTP send fails (network, auth, recipient
             rejected).
     """

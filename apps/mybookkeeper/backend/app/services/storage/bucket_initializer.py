@@ -12,8 +12,8 @@ verification even if one flag leaks into the env.
 
 Storage is a hard requirement for MBK — listing photos, lease attachments,
 and applicant documents all depend on MinIO. If env vars are missing or
-MinIO is unreachable at boot, the app MUST refuse to start so the deploy
-healthcheck fails and the rollout aborts.
+MinIO is unreachable at boot, the app MUST refuse to start so the deploy's
+health check fails. Nothing rolls back on its own.
 
 Previous behavior (graceful degradation) hid environmental
 misconfiguration as ``presigned_url=null`` in API responses, with no

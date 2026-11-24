@@ -92,6 +92,9 @@ _MULTIPART_OVERHEAD_BYTES = 1024 * 1024
 # app -> (config file under backend/app/core, Settings field holding the limit in bytes).
 _BODY_LIMITED_APPS = {"myrecipes": ("config.py", "max_photo_upload_bytes")}
 
+# A KEY=value line of an env file.
+_ENV_LINE = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$", re.MULTILINE)
+
 _TEST_ROUTE_MOUNT = re.compile(r"include_router\(\s*(_?test_helpers_router|test_helpers\.router)")
 
 
@@ -2974,4 +2977,24 @@ class TestSentryDisabledInTests:
         self._assert_blanks_dsn_before_app_imports(
             _read("infra", "templates", "scaffold", "backend", "tests", "conftest.py"),
             "the scaffold template's tests/conftest.py",
+        )
+
+
+
+class TestEnvExampleSmtpHost:
+    @pytest.mark.parametrize(
+        "env_example",
+        [*(("apps", app, "backend", ".env.docker.example") for app in _ALL_APPS),
+         ("infra", "templates", "scaffold", "backend", ".env.docker.example")],
+        ids=[*_ALL_APPS, "scaffold"],
+    )
+    def test_env_example_with_smtp_email_sets_an_smtp_host(self, env_example: tuple[str, ...]) -> None:
+        """check_email_configured refuses to boot with EMAIL_BACKEND=smtp and no SMTP_HOST,
+        so an env file seeded from this template must already carry one."""
+        values = dict(_ENV_LINE.findall(_read(*env_example)))
+        if values.get("EMAIL_BACKEND") != "smtp":
+            pytest.skip("EMAIL_BACKEND is not smtp")
+        assert values.get("SMTP_HOST", "").strip(), (
+            f"{'/'.join(env_example)} sets EMAIL_BACKEND=smtp, so it must set SMTP_HOST "
+            "(e.g. SMTP_HOST=smtp.gmail.com)."
         )

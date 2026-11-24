@@ -82,6 +82,7 @@ def _settings() -> SimpleNamespace:
         sentry_dsn="",
         turnstile_secret_key="",
         email_backend="console",
+        smtp_host="",
         smtp_user="",
         smtp_password="",
         sms_backend="console",

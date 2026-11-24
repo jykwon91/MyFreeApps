@@ -85,7 +85,7 @@ async def test_smtp(
     if not email_service.is_configured():
         return SmtpTestResponse(
             success=False,
-            message="Email is not configured. Set SMTP_USER and SMTP_PASSWORD in your environment.",
+            message="Email is not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASSWORD (ASCII only) in your environment.",
         )
     success = await email_service.send_test_email(body.email)
     if success:

@@ -36,6 +36,7 @@ def _settings(
     sentry_dsn: str = "",
     turnstile_secret_key: str = "",
     email_backend: str = "console",
+    smtp_host: str = "smtp.example.com",
     smtp_user: str = "",
     smtp_password: str = "",
     sms_backend: str = "console",
@@ -54,6 +55,7 @@ def _settings(
         sentry_dsn=sentry_dsn,
         turnstile_secret_key=turnstile_secret_key,
         email_backend=email_backend,
+        smtp_host=smtp_host,
         smtp_user=smtp_user,
         smtp_password=smtp_password,
         sms_backend=sms_backend,
@@ -204,6 +206,29 @@ class TestBootGuardsRunWithSettings:
             init_sentry=MagicMock(),
         )
         with pytest.raises(TurnstileNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_production_without_an_smtp_host_raises(self, app: FastAPI, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            audit_config=_AUDIT_CONFIG,
+            settings=_settings(
+                environment="production",
+                sentry_dsn="https://x@y/1",
+                turnstile_secret_key="present",
+                email_backend="smtp",
+                smtp_host="",
+                smtp_user="u",
+                smtp_password="p" * 16,
+            ),
+            init_sentry=MagicMock(),
+        )
+        with pytest.raises(EmailNotConfiguredError, match=r"Not set: SMTP_HOST\."):
             async with lifespan(app):
                 pass
 

@@ -27,7 +27,7 @@ Two concrete defects:
    `platform_shared.extraction`, PR #665) mirror canonical → same gap. This is the
    exact failure class `rules/pr-operational-migration.md` and the shared lifespan's
    own docstring (`platform_shared/core/lifespan.py:1-23`) exist to prevent
-   ("fail loud at boot → healthcheck → deploy rollback").
+   ("fail loud at boot → the deploy's health check fails").
 
 2. **MGA reimplemented the guard app-locally.** `apps/mygamingassistant/backend/app/main.py:55-100`
    hand-rolls `ClassifierNotConfiguredError` instead of using the shared layer.

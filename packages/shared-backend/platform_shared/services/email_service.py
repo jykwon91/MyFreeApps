@@ -63,6 +63,10 @@ from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
 from platform_shared.core.email_header_utils import strip_line_breaks, unique_addresses
 from platform_shared.core.recipient_log import describe_recipients
 from platform_shared.core.settings import BaseAppSettings
+from platform_shared.core.smtp_setting_faults import (
+    non_ascii_smtp_settings,
+    unset_smtp_settings,
+)
 from platform_shared.services.email_attachment import EmailAttachment
 from platform_shared.services.email_backend import EmailBackend
 from platform_shared.services.email_send_error import EmailSendError
@@ -76,7 +80,7 @@ logger = logging.getLogger(__name__)
 
 
 class EmailNotConfiguredError(RuntimeError):
-    """Raised when SMTP credentials are missing.
+    """Raised when an SMTP setting is empty, or a login setting isn't ASCII.
 
     Use the platform_shared.core.boot_guards.check_email_configured()
     boot guard to surface this at lifespan startup so deploys fail
@@ -140,8 +144,20 @@ class EmailService:
             raise ValueError(f"Unknown email backend {self.backend!r}; use one of {get_args(EmailBackend)}")
 
     def is_configured(self) -> bool:
-        """Whether a send can go through: always in console mode, else when SMTP creds are set."""
-        return self.backend == "console" or bool(self.smtp_user and self.smtp_password)
+        """Whether a send can go through: always in console mode, else when the SMTP
+        host, user and password are set and the login is ASCII (smtplib sends it so)."""
+        return self.backend == "console" or not self._smtp_setting_faults()
+
+    def _smtp_setting_faults(self) -> list[str]:
+        """What's wrong with the SMTP settings, by name and never by value."""
+        faults: list[str] = []
+        unset = unset_smtp_settings(host=self.smtp_host, user=self.smtp_user, password=self.smtp_password)
+        if unset:
+            faults.append(f"not set: {', '.join(unset)}")
+        not_ascii = non_ascii_smtp_settings(user=self.smtp_user, password=self.smtp_password)
+        if not_ascii:
+            faults.append(f"not ASCII: {', '.join(not_ascii)}")
+        return faults
 
     def send_or_raise(
         self,
@@ -170,7 +186,8 @@ class EmailService:
 
         Raises:
             ValueError: If ``to`` is empty.
-            EmailNotConfiguredError: If SMTP creds are missing.
+            EmailNotConfiguredError: If an SMTP setting is empty or a login
+                setting isn't ASCII.
             EmailSendError: If SMTP send fails for any other reason
                 (network, timeout, auth, recipient rejected). Its ``kind``,
                 ``smtp_code`` and ``refused_recipients`` say which, and
@@ -190,13 +207,13 @@ class EmailService:
                 describe_recipients(to), len(body_html), len(attachments or ()),
             )
             return
-        if not self.is_configured():
+        faults = self._smtp_setting_faults()
+        if faults:
             raise EmailNotConfiguredError(
-                "SMTP credentials are not configured (smtp_user / smtp_password "
-                "are empty). The platform_shared.core.boot_guards."
-                "check_email_configured() guard should have caught this at "
-                "lifespan startup — investigate why the runtime EmailService "
-                "instance has empty creds."
+                f"SMTP can't be used ({'; '.join(faults)}). The "
+                "platform_shared.core.boot_guards.check_email_configured() guard "
+                "should have caught this at lifespan startup; investigate why the "
+                "runtime EmailService has these settings."
             )
 
         subject = strip_line_breaks(subject)
