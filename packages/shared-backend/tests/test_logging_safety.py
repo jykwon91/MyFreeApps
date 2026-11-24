@@ -53,6 +53,21 @@ class TestEscapeLogControls:
     def test_del_is_escaped(self) -> None:
         assert escape_log_controls("\x7f") == "\\x7f"
 
+    def test_c1_controls_become_hex(self) -> None:
+        # NEL breaks a line for splitlines and many viewers; CSI starts a
+        # terminal control sequence on its own.
+        assert escape_log_controls("a\x85b\x9b2Jc\x80\x9f") == "a\\x85b\\x9b2Jc\\x80\\x9f"
+
+    def test_unicode_line_and_paragraph_separators_are_escaped(self) -> None:
+        assert escape_log_controls("a\u2028b\u2029c") == "a\\u2028b\\u2029c"
+
+    def test_nothing_left_splits_a_line(self) -> None:
+        every_code_point = "".join(chr(c) for c in range(0x3000))
+        assert len(escape_log_controls(every_code_point).splitlines()) == 1
+
+    def test_printable_latin1_is_untouched(self) -> None:
+        assert escape_log_controls("caf\xe9 \xa0\xff") == "caf\xe9 \xa0\xff"
+
     def test_tab_is_preserved(self) -> None:
         # Tab is common in legitimate payloads and cannot forge a record break.
         assert escape_log_controls("a\tb") == "a\tb"
@@ -61,7 +76,7 @@ class TestEscapeLogControls:
         assert escape_log_controls("vendor=ACME count=3") == "vendor=ACME count=3"
 
     def test_idempotent(self) -> None:
-        once = escape_log_controls("a\nb")
+        once = escape_log_controls("a\nb\x85c\u2028d")
         assert escape_log_controls(once) == once
 
 
