@@ -18,10 +18,18 @@ libraries alike — without touching a single call site.
 
 What is escaped
 ===============
-C0 control characters in the *interpolated message* — CR, LF, ESC, and the
-rest of the 0x00-0x1f range plus DEL — are rewritten to their printable
-backslash form. Horizontal tab is left alone: it is common in legitimate log
-payloads and cannot forge a record boundary.
+Control characters in the *interpolated message* are rewritten to their
+printable backslash form:
+
+- the C0 range (0x00-0x1f: CR, LF, ESC, ...) and DEL;
+- the C1 range (0x80-0x9f). U+0085 (NEL) is a line break to Python's
+  ``str.splitlines`` and many log viewers, and U+009B (CSI) starts a terminal
+  control sequence on its own, like ESC-bracket;
+- U+2028 and U+2029, the Unicode line and paragraph separators, which log
+  viewers and JSON-in-JavaScript tooling treat as line breaks.
+
+Horizontal tab is left alone: it is common in legitimate log payloads and
+cannot forge a record boundary.
 
 What is NOT escaped
 ===================
@@ -69,11 +77,15 @@ _MNEMONICS = {
     0x09: "t",  # listed for completeness; tab is exempted below
 }
 
+# LINE SEPARATOR and PARAGRAPH SEPARATOR: not controls, but line breaks.
+_UNICODE_LINE_BREAKS = (0x2028, 0x2029)
+
 
 def _build_translation_table() -> dict[int, str]:
-    """Map every C0 control (bar tab) plus DEL to a printable escape."""
+    """Map every C0 control (bar tab), DEL, every C1 control, and the
+    Unicode line and paragraph separators to a printable escape."""
     table: dict[int, str] = {}
-    for code in list(range(0x20)) + [0x7F]:
+    for code in [*range(0x20), 0x7F, *range(0x80, 0xA0)]:
         if code == 0x09:  # tab — legitimate in payloads, cannot break a record
             continue
         mnemonic = _MNEMONICS.get(code)
@@ -81,6 +93,8 @@ def _build_translation_table() -> dict[int, str]:
             table[code] = _BACKSLASH + mnemonic
         else:
             table[code] = _BACKSLASH + "x" + format(code, "02x")
+    for code in _UNICODE_LINE_BREAKS:
+        table[code] = _BACKSLASH + "u" + format(code, "04x")
     return table
 
 
@@ -90,8 +104,8 @@ _CONTROL_TRANSLATION = _build_translation_table()
 def escape_log_controls(message: str) -> str:
     """Return ``message`` with record-breaking control characters escaped.
 
-    Pure and idempotent: the output contains no control characters, so
-    re-applying it is a no-op.
+    Pure and idempotent: the output contains no control characters or line
+    separators, so re-applying it is a no-op.
     """
     return message.translate(_CONTROL_TRANSLATION)
 
@@ -103,9 +117,9 @@ class CRLFSafeLogFilter(logging.Filter):
     see records that propagate up from child loggers, which is exactly where
     app log calls originate.
 
-    When the interpolated message holds a control character other than tab,
-    this returns a copy of the record whose ``msg`` is the escaped text and
-    whose ``args`` are empty. Since Python 3.12 a filter may return a
+    When the interpolated message holds a character ``escape_log_controls``
+    rewrites, this returns a copy of the record whose ``msg`` is the escaped
+    text and whose ``args`` are empty. Since Python 3.12 a filter may return a
     replacement record, and ``logging.Handler.handle`` emits it in the
     record's place; a handler that overrides ``handle`` and emits the record
     it was given would write the original.
