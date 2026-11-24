@@ -34,8 +34,14 @@ workers:
     # On SIGTERM the worker finishes the step it is on and starts no other.
     # A parse is one Claude call (120s timeout, no SDK retries) plus a MinIO
     # download and a few DB writes; compose's 10s default would kill it
-    # mid-parse and leave the job in `processing`.
+    # mid-parse and leave the job in `processing`. A parse waiting out a
+    # Claude rate limit, or a refinement prepare, can run longer and is then
+    # killed mid-step.
     stop_grace_period: 150s
+    # Liveness only: the worker's heartbeat stays fresh while the process and
+    # its event loop are alive (app/core/resume_worker_constants.py).
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.resume_parser_healthcheck"]
   # The ONLY process that runs the discovery APScheduler (the api's two uvicorn
   # workers must not — see app/workers/discovery_scheduler_worker.py). Exactly
   # one replica: never scale this service.

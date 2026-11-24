@@ -16,10 +16,13 @@ import asyncio
 import inspect
 import io
 import logging
+import os
+import time
 import typing
 import uuid
 import zipfile
 from datetime import date
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -37,6 +40,7 @@ from app.core.ai_failure_messages import (
     AI_UNREADABLE_REPLY_MESSAGE,
 )
 from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
+from app.core.resume_worker_constants import HEARTBEAT_MAX_AGE_SECONDS
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.profile.skill_repository import add_if_absent
 from app.services.discovery import discovery_embedding_service
@@ -46,7 +50,7 @@ from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
 )
-from app.workers import resume_parser_worker
+from app.workers import resume_parser_healthcheck, resume_parser_worker
 from app.workers.resume_parser_worker import process_one
 
 # ---------------------------------------------------------------------------
@@ -840,7 +844,7 @@ async def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyP
 
 @pytest.mark.asyncio
 async def test_the_worker_starts_sentry_and_disposes_the_engine_on_stop(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
 ) -> None:
     init_sentry = MagicMock()
     load_model = MagicMock()
@@ -859,7 +863,10 @@ async def test_the_worker_starts_sentry_and_disposes_the_engine_on_stop(
 
 
 @pytest.mark.asyncio
-async def test_a_model_that_fails_to_load_crashes_the_boot(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_model_that_fails_to_load_crashes_the_boot(
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
+) -> None:
+    heartbeat.touch()  # left over from the previous run of the container
     poll = AsyncMock()
     monkeypatch.setattr(resume_parser_worker, "init_sentry", MagicMock())
     monkeypatch.setattr(
@@ -871,3 +878,59 @@ async def test_a_model_that_fails_to_load_crashes_the_boot(monkeypatch: pytest.M
     with pytest.raises(EmbeddingModelLoadError):
         await resume_parser_worker.run_resume_worker(asyncio.Event())
     poll.assert_not_awaited()
+    assert not heartbeat.exists()
+
+
+@pytest.fixture
+def heartbeat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    path = tmp_path / "resume-worker-heartbeat"
+    monkeypatch.setattr(resume_parser_worker, "HEARTBEAT_PATH", path)
+    monkeypatch.setattr(resume_parser_healthcheck, "HEARTBEAT_PATH", path)
+    return path
+
+
+@pytest.mark.asyncio
+async def test_the_heartbeat_advances_through_a_long_step_and_stops_after(
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
+) -> None:
+    # A step can wait out Claude rate limits for minutes: the heartbeat must
+    # keep advancing through it, and stop once the worker has returned.
+    monkeypatch.setattr(resume_parser_worker, "HEARTBEAT_INTERVAL_SECONDS", 0.01)
+    seen_at_boot: list[bool] = []
+    advanced: list[bool] = []
+
+    def _boot_step() -> None:
+        seen_at_boot.append(heartbeat.exists())
+
+    async def _long_step(_stop: asyncio.Event) -> None:
+        assert resume_parser_healthcheck.main() == 0
+        os.utime(heartbeat, (1.0, 1.0))
+        await asyncio.sleep(0.1)
+        advanced.append(heartbeat.stat().st_mtime > 1.0)
+
+    monkeypatch.setattr(resume_parser_worker, "init_sentry", MagicMock(side_effect=_boot_step))
+    monkeypatch.setattr(
+        resume_parser_worker.discovery_embedding_service,
+        "load_model_eager",
+        MagicMock(side_effect=_boot_step),
+    )
+    monkeypatch.setattr(resume_parser_worker, "engine", MagicMock(dispose=AsyncMock()))
+    monkeypatch.setattr(resume_parser_worker, "poll_until_stopped", _long_step)
+    heartbeat.touch()  # left over from the previous run of the container
+    await resume_parser_worker.run_resume_worker(asyncio.Event())
+    assert seen_at_boot == [False, False]
+    assert advanced == [True]
+    os.utime(heartbeat, (1.0, 1.0))
+    await asyncio.sleep(0.05)
+    assert heartbeat.stat().st_mtime == 1.0
+
+
+def test_the_healthcheck_fails_with_no_heartbeat(heartbeat: Path) -> None:
+    assert resume_parser_healthcheck.main() == 1
+
+
+def test_the_healthcheck_fails_on_a_stale_heartbeat(heartbeat: Path) -> None:
+    heartbeat.touch()
+    stale = time.time() - HEARTBEAT_MAX_AGE_SECONDS - 1
+    os.utime(heartbeat, (stale, stale))
+    assert resume_parser_healthcheck.main() == 1

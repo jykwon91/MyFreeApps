@@ -26,7 +26,17 @@ Idempotency: the atomic UPDATE in step 1 ensures only one worker instance
 processes a given job, even when multiple replicas run concurrently.
 
 SIGTERM / SIGINT stop the loop: an idle wait ends at once, and a step in
-progress finishes first (app.yaml's stop_grace_period covers one parse). Errors reach Sentry, as in the API.
+progress finishes first. app.yaml's stop_grace_period covers one parse that
+isn't rate limited; a rate-limited parse or a refinement prepare (several
+Claude calls) can outlast it and is then killed mid-step. Errors reach Sentry,
+as in the API.
+
+Liveness: once boot is done, a background task touches a heartbeat file every
+``HEARTBEAT_INTERVAL_SECONDS``; the container healthcheck
+(``app.workers.resume_parser_healthcheck``) reports unhealthy once it goes
+stale, which means the process died or its event loop is blocked. A step can
+legitimately run for minutes (Claude rate limits are waited out), so the
+heartbeat is not tied to finished steps.
 """
 from __future__ import annotations
 
@@ -39,6 +49,8 @@ from platform_shared.core import async_storage
 from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
 from platform_shared.workers.entrypoint import run_until_signalled, run_worker
+from platform_shared.workers.heartbeat import clear_heartbeat
+from platform_shared.workers.heartbeat_beater import keep_heartbeat_fresh
 from platform_shared.workers.wait_or_stop import wait_or_stop
 
 from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
@@ -48,6 +60,7 @@ from app.core.resume_parse_constants import (
     RESUME_PARSE_MAX_RETRIES,
     RESUME_PARSE_RETRY_BASE_SECONDS,
 )
+from app.core.resume_worker_constants import HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_PATH
 from app.core.retry_backoff import next_retry_at
 from app.core.storage import get_storage
 from app.core.transient_errors import TRANSIENT_WORKER_ERRORS
@@ -304,14 +317,16 @@ async def poll_until_stopped(stop: asyncio.Event) -> None:
 
 
 async def run_resume_worker(stop: asyncio.Event) -> None:
-    """Boot (fail loud), then poll until ``stop`` is set."""
+    """Boot (fail loud), then poll with a fresh heartbeat until ``stop`` is set."""
+    clear_heartbeat(HEARTBEAT_PATH)
     init_sentry()
     # Parses refresh the profile embedding, so load the model at boot: a
     # missing or corrupt model crashes the worker here (same as the
     # discovery scheduler) instead of on the first resume upload.
     discovery_embedding_service.load_model_eager()
     try:
-        await poll_until_stopped(stop)
+        async with keep_heartbeat_fresh(HEARTBEAT_PATH, interval_seconds=HEARTBEAT_INTERVAL_SECONDS):
+            await poll_until_stopped(stop)
     finally:
         await engine.dispose()
         logger.info("Resume worker stopped")
