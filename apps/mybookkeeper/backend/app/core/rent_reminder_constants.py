@@ -36,12 +36,17 @@ ERROR_NO_RECIPIENT = "no_recipient"
 ERROR_INVALID_PHONE = "invalid_phone"
 ERROR_SMS_NOT_CONFIGURED = "sms_not_configured"
 ERROR_SMS_EXPIRED = "expired"
-# A relay refusal is stored as ``sms_<provider code>`` (e.g. ``sms_http_422``),
-# and the phone's own error as ``phone_failed: <its words>``.
+# A text httpSMS answered with an error is stored as ``sms_<provider code>``
+# (e.g. ``sms_http_422``), and the phone's own error as
+# ``phone_failed: <its words>``. A few ``sms_`` codes have a fixed spelling
+# below, with words of their own.
 SMS_RELAY_CODE_PREFIX = "sms_"
 PHONE_FAILED_CODE_PREFIX = "phone_failed: "
 # The server couldn't reach httpSMS at all, so the text was not sent.
 ERROR_SMS_NETWORK = f"{SMS_RELAY_CODE_PREFIX}{SMS_PROVIDER_CODE_NETWORK_ERROR}"
+# httpSMS answered 401: it didn't accept the server's API key, so every text
+# fails the same way until the key on the server is fixed.
+ERROR_SMS_KEY_REJECTED = f"{SMS_RELAY_CODE_PREFIX}http_401"
 # httpSMS may have taken the text but never confirmed it (a timeout or broken
 # connection after the request went out, a 5xx, an unreadable reply). It may
 # already be on its way, so it is never retried automatically.
@@ -66,6 +71,7 @@ REMINDER_ERROR_CODES: frozenset[str] = frozenset({
     ERROR_SMS_NOT_CONFIGURED,
     ERROR_SMS_EXPIRED,
     ERROR_SMS_NETWORK,
+    ERROR_SMS_KEY_REJECTED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_NOT_CONFIGURED,
     ERROR_EMAIL_SEND_FAILED,

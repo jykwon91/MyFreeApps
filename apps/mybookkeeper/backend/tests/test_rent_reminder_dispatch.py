@@ -29,6 +29,7 @@ from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rent_reminder_alert_messages import MISSING_CONTACT, WHAT_HAPPENED
 from app.core.rent_reminder_constants import (
     ERROR_NO_RECIPIENT,
     MAY_STILL_ARRIVE_ERRORS,
@@ -98,13 +99,13 @@ def wired(db: AsyncSession):
         yield {"email": send_email_or_raise, "alert": send_email, "sms": sms_send}
 
 
-async def _tenant(db: AsyncSession) -> uuid.UUID:
+async def _tenant(db: AsyncSession, *, legal_name: str = "Sonu Patel") -> uuid.UUID:
     applicant = Applicant(
         id=uuid.uuid4(),
         organization_id=ORG,
         user_id=USER,
         stage="lease_signed",
-        legal_name="Sonu Patel",
+        legal_name=legal_name,
         contact_email="sonu@example.com",
         contact_phone="(713) 555-0100",
     )
@@ -155,9 +156,11 @@ async def _sends(db: AsyncSession) -> list[RentReminderSend]:
 
 
 def _last_alert(wired: dict[str, Mock]) -> tuple[str, str]:
-    """The last operator alert's subject and body, unescaped as the operator reads it."""
+    """The last operator alert's subject and body text as the operator reads it:
+    the one paragraph's tags dropped and its escaping undone."""
     _to, subject, body_html = wired["alert"].call_args.args
-    return subject, html.unescape(body_html)
+    assert body_html.startswith("<p>") and body_html.endswith("</p>"), body_html
+    return subject, html.unescape(body_html.removeprefix("<p>").removesuffix("</p>"))
 
 
 
@@ -477,12 +480,16 @@ class TestSms:
         assert row.operator_alerted_at is not None
         wired["alert"].assert_called_once()
         assert wired["alert"].call_args.args[0] == ["jason@example.com"]
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent text didn't go out"
+        assert body.startswith(f"{subject}. httpSMS refused the text (http_422). ")
 
     @staticmethod
-    def _real_httpsms_failing_with(error: httpx.HTTPError):
-        """The real shared httpSMS sender, with only the HTTP call failing."""
+    def _real_httpsms(**post):
+        """The real shared httpSMS sender with only its HTTP call replaced:
+        ``post`` is ``side_effect=<error>`` or ``return_value=<response>``."""
         def send(to: str, body: str, *, request_id: str) -> str:
-            with patch("platform_shared.services.httpsms_service.httpx.post", side_effect=error):
+            with patch("platform_shared.services.httpsms_service.httpx.post", **post):
                 return HttpSmsService(
                     api_key="test-key", from_number="+15551230000",
                 ).send_or_raise(to, body, request_id=request_id)
@@ -505,12 +512,36 @@ class TestSms:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
-        wired["sms"].side_effect = self._real_httpsms_failing_with(error)
+        wired["sms"].side_effect = self._real_httpsms(side_effect=error)
 
         assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
         [row] = await _sends(db)
         assert (row.status, row.error_code) == ("failed", code)
         wired["alert"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_rejected_api_key_tells_the_operator_to_fix_the_key(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        wired["sms"].side_effect = self._real_httpsms(
+            return_value=httpx.Response(401, json={"status": "error", "message": "Unauthorized"}),
+        )
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("failed", "sms_http_401")
+        wired["alert"].assert_called_once()
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent text didn't go out"
+        assert body.startswith(
+            f"{subject}. httpSMS rejected the server's API key, so the text wasn't sent. "
+            "Copy the API key from httpsms.com (Settings > API Key) into "
+            "HTTPSMS_API_KEY on the server and redeploy the app before retrying. "
+        )
 
     @pytest.mark.asyncio
     async def test_unknown_outcome_tells_the_operator_to_check_the_message_log(
@@ -519,7 +550,7 @@ class TestSms:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
-        wired["sms"].side_effect = self._real_httpsms_failing_with(httpx.ReadTimeout("timed out"))
+        wired["sms"].side_effect = self._real_httpsms(side_effect=httpx.ReadTimeout("timed out"))
 
         assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
 
@@ -532,7 +563,18 @@ class TestSms:
         assert "didn't go out" not in body
 
     @pytest.mark.asyncio
-    async def test_phone_reported_failure(self, db: AsyncSession, wired) -> None:
+    @pytest.mark.parametrize(
+        ("phone_said", "detail"),
+        [
+            ({"error_message": "RESULT_ERROR_NO_SERVICE"}, "RESULT_ERROR_NO_SERVICE"),
+            ({"error_message": "   "}, "unknown"),
+            ({}, "unknown"),
+        ],
+        ids=["error", "blank", "missing"],
+    )
+    async def test_phone_reported_failure(
+        self, db: AsyncSession, wired, phone_said: dict[str, str], detail: str,
+    ) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
@@ -540,12 +582,15 @@ class TestSms:
         [row] = await _sends(db)
 
         await webhook.handle_event(
-            {"type": "message.send.failed", "data": {"id": "httpsms-msg-1", "error_message": "RESULT_ERROR_NO_SERVICE"}},
+            {"type": "message.send.failed", "data": {"id": "httpsms-msg-1", **phone_said}},
             event_type_header=None,
         )
         assert row.status == "failed"
-        assert row.error_code == "phone_failed: RESULT_ERROR_NO_SERVICE"
+        assert row.error_code == f"phone_failed: {detail}"
         wired["alert"].assert_called_once()
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent text didn't go out"
+        assert body.startswith(f"{subject}. The phone reported a problem sending the text ({detail}). ")
 
 
 class TestWatchdog:
@@ -1579,6 +1624,13 @@ class TestEmailThatMayHaveBeenDelivered:
         assert wired["email"].call_count == 2
 
 
+# The alert subjects for Sonu, by channel and by whether it may have gone out.
+_TEXT_MAY = "Sonu's rent text may already have been sent"
+_TEXT_NOT = "Sonu's rent text didn't go out"
+_EMAIL_MAY = "Sonu's rent reminder email may already have been sent"
+_EMAIL_NOT = "Sonu's rent reminder email didn't go out"
+
+
 class TestAlertWording:
     """What the operator's alert says for each way a reminder can fail. Where
     to check before sending again follows the channel, never the code: only a
@@ -1622,40 +1674,50 @@ class TestAlertWording:
         assert body.index("so httpSMS gave up on it.") < body.index("battery-optimized")
 
     def test_every_code_with_a_fixed_spelling_has_its_own_words(self) -> None:
-        assert set(alerts._WHAT_HAPPENED) | {ERROR_NO_RECIPIENT} == REMINDER_ERROR_CODES
-        assert set(alerts._MISSING_CONTACT) == set(RENT_REMINDER_CHANNELS)
+        assert set(WHAT_HAPPENED) | {ERROR_NO_RECIPIENT} == REMINDER_ERROR_CODES
+        assert set(MISSING_CONTACT) == set(RENT_REMINDER_CHANNELS)
 
     @pytest.mark.parametrize(
-        ("channel", "code", "said"),
+        ("channel", "code", "expected_subject", "said"),
         [
-            ("sms", "no_phone_confirmation", f"The phone didn't confirm it sent the text within {SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes."),
-            ("sms", "expired", "The phone didn't send the text in time, so httpSMS gave up on it."),
-            ("sms", "send_interrupted", "Sending was interrupted before it was confirmed."),
-            ("sms", "no_recipient", "The tenant record has no phone number."),
-            ("sms", "invalid_phone", "The tenant's phone number couldn't be read. Re-enter it with the area code."),
-            ("sms", "sms_not_configured", "Text reminders are switched on but httpSMS isn't configured on the server."),
-            ("sms", "sms_network_error", "The server couldn't reach httpSMS, so the text wasn't sent."),
-            ("sms", "sms_outcome_unknown", "httpSMS didn't confirm it took the text."),
-            ("sms", "sms_http_422", "httpSMS refused the text (http_422)."),
-            ("sms", "sms_send_failed", "httpSMS refused the text (send_failed)."),
+            ("sms", "no_phone_confirmation", _TEXT_MAY, f"The phone didn't confirm it sent the text within {SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes."),
+            ("sms", "expired", _TEXT_NOT, "The phone didn't send the text in time, so httpSMS gave up on it."),
+            ("sms", "send_interrupted", _TEXT_MAY, "Sending was interrupted before it was confirmed."),
+            ("sms", "no_recipient", _TEXT_NOT, "The tenant record has no phone number."),
+            ("sms", "invalid_phone", _TEXT_NOT, "The tenant's phone number couldn't be read. Re-enter it with the area code."),
+            ("sms", "sms_not_configured", _TEXT_NOT, "Text reminders are switched on but httpSMS isn't configured on the server."),
+            ("sms", "sms_network_error", _TEXT_NOT, "The server couldn't reach httpSMS, so the text wasn't sent."),
+            (
+                "sms",
+                "sms_http_401",
+                _TEXT_NOT,
+                "httpSMS rejected the server's API key, so the text wasn't sent. "
+                "Copy the API key from httpsms.com (Settings > API Key) into "
+                "HTTPSMS_API_KEY on the server and redeploy the app before retrying.",
+            ),
+            ("sms", "sms_outcome_unknown", _TEXT_MAY, "httpSMS didn't confirm it took the text."),
+            ("sms", "sms_http_422", _TEXT_NOT, "httpSMS refused the text (http_422)."),
+            ("sms", "sms_send_failed", _TEXT_NOT, "httpSMS refused the text (send_failed)."),
             (
                 "sms",
                 "phone_failed: RESULT_ERROR_NO_SERVICE",
+                _TEXT_NOT,
                 "The phone reported a problem sending the text (RESULT_ERROR_NO_SERVICE). Check the httpSMS app on the phone.",
             ),
-            ("sms", "unexpected_error", "Something went wrong sending it."),
-            ("email", "send_interrupted", "Sending was interrupted before it was confirmed."),
-            ("email", "no_recipient", "The tenant record has no email address."),
-            ("email", "email_not_configured", "Email isn't set up on the server."),
-            ("email", "email_send_failed", "The mail server didn't take it."),
-            ("email", "email_outcome_unknown", "The mail server didn't confirm it took the email."),
-            ("email", "unexpected_error", "Something went wrong sending it."),
+            ("sms", "unexpected_error", _TEXT_NOT, "Something went wrong sending it."),
+            ("email", "send_interrupted", _EMAIL_MAY, "Sending was interrupted before it was confirmed."),
+            ("email", "no_recipient", _EMAIL_NOT, "The tenant record has no email address."),
+            ("email", "email_not_configured", _EMAIL_NOT, "Email isn't set up on the server."),
+            ("email", "email_send_failed", _EMAIL_NOT, "The mail server didn't take it."),
+            ("email", "email_outcome_unknown", _EMAIL_MAY, "The mail server didn't confirm it took the email."),
+            ("email", "unexpected_error", _EMAIL_NOT, "Something went wrong sending it."),
         ],
     )
     def test_each_failure_says_what_happened_right_after_the_subject(
-        self, channel: str, code: str, said: str,
+        self, channel: str, code: str, expected_subject: str, said: str,
     ) -> None:
         subject, body = alerts._alert_text(tenant="Sonu", channel=channel, code=code)
+        assert subject == expected_subject
         assert body.startswith(f"{subject}. {said} ")
 
     def test_a_code_with_no_words_is_still_shown(self) -> None:
@@ -1678,3 +1740,19 @@ class TestAlertWording:
         assert body.startswith(f"{subject}. Earlier it looked like it might have reached them. {said}")
         assert "phone_failed" not in body
         assert body.endswith("so you can send it again with Send now on the tenant's Rent reminders card.")
+
+    @pytest.mark.asyncio
+    async def test_the_alert_email_shows_the_tenant_name_as_text(self, db: AsyncSession, wired) -> None:
+        # A tenant's name can come from the public inquiry form, so a name
+        # written as markup must reach the operator as text, never as HTML.
+        applicant_id = await _tenant(db, legal_name="<b>Sonu&Co</b> Patel")
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = EmailSendError("bad address", kind="recipient_rejected", smtp_code=550)
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 0
+
+        wired["alert"].assert_called_once()
+        _to, _subject, body_html = wired["alert"].call_args.args
+        assert "&lt;b&gt;Sonu&amp;Co&lt;/b&gt;" in body_html
+        assert "<b>" not in body_html

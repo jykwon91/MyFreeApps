@@ -1126,6 +1126,7 @@
         "backend/app/api/rent_reminders.py",
         "backend/app/core/rent_reminder_enums.py",
         "backend/app/core/rent_reminder_constants.py",
+        "backend/app/core/rent_reminder_alert_messages.py",
         "backend/app/core/rent_reminder_request_id.py",
         "backend/app/workers/scheduler_worker.py",
         "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",

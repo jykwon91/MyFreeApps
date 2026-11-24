@@ -15,22 +15,18 @@ import html
 import logging
 import uuid
 
+from app.core.rent_reminder_alert_messages import (
+    CHECK_EMAIL,
+    CHECK_TEXT,
+    MISSING_CONTACT,
+    RETRY,
+    WHAT_HAPPENED,
+)
 from app.core.rent_reminder_constants import (
-    ERROR_EMAIL_NOT_CONFIGURED,
-    ERROR_EMAIL_OUTCOME_UNKNOWN,
-    ERROR_EMAIL_SEND_FAILED,
-    ERROR_INVALID_PHONE,
-    ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
-    ERROR_SEND_INTERRUPTED,
-    ERROR_SMS_EXPIRED,
-    ERROR_SMS_NETWORK,
-    ERROR_SMS_NOT_CONFIGURED,
-    ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     PHONE_FAILED_CODE_PREFIX,
-    SMS_CONFIRMATION_TIMEOUT_MINUTES,
     SMS_RELAY_CODE_PREFIX,
 )
 from app.db.session import unit_of_work
@@ -43,42 +39,6 @@ from app.services.system import email_service
 logger = logging.getLogger(__name__)
 
 _SMS = "sms"
-
-# Where to check whether a reminder that may have gone out did. Only texts
-# leave a log (httpSMS's); an email can only be checked with the tenant.
-_CHECK_TEXT = "check the message log on httpsms.com (or the phone's Messages app)"
-_CHECK_EMAIL = "ask the tenant whether it arrived"
-_RETRY = (
-    "If nothing else went out for this due date, you can retry from the "
-    "tenant's Rent reminders card with Send now. If the other channel did go "
-    "out, Send now won't resend this one, so contact the tenant yourself if "
-    "they still need it."
-)
-# What to fix when the phone let a text down. It is never the tenant's contact
-# details then.
-_PHONE_CHECKLIST = (
-    "Make sure the Android phone is on, online, and that httpSMS isn't "
-    "battery-optimized (Settings > Apps > httpSMS > Battery > Unrestricted)."
-)
-# Why a reminder failed, as the operator would put it, for each code with a
-# fixed spelling but ``no_recipient``, whose words depend on the channel.
-_WHAT_HAPPENED: dict[str, str] = {
-    ERROR_NO_PHONE_CONFIRMATION: (
-        "The phone didn't confirm it sent the text within "
-        f"{SMS_CONFIRMATION_TIMEOUT_MINUTES} minutes. {_PHONE_CHECKLIST}"
-    ),
-    ERROR_SMS_EXPIRED: f"The phone didn't send the text in time, so httpSMS gave up on it. {_PHONE_CHECKLIST}",
-    ERROR_SEND_INTERRUPTED: "Sending was interrupted before it was confirmed.",
-    ERROR_INVALID_PHONE: "The tenant's phone number couldn't be read. Re-enter it with the area code.",
-    ERROR_SMS_NOT_CONFIGURED: "Text reminders are switched on but httpSMS isn't configured on the server.",
-    ERROR_SMS_NETWORK: "The server couldn't reach httpSMS, so the text wasn't sent.",
-    ERROR_SMS_OUTCOME_UNKNOWN: "httpSMS didn't confirm it took the text.",
-    ERROR_EMAIL_NOT_CONFIGURED: "Email isn't set up on the server.",
-    ERROR_EMAIL_SEND_FAILED: "The mail server didn't take it.",
-    ERROR_EMAIL_OUTCOME_UNKNOWN: "The mail server didn't confirm it took the email.",
-    ERROR_UNEXPECTED: "Something went wrong sending it.",
-}
-_MISSING_CONTACT: dict[str, str] = {"sms": "phone number", "email": "email address"}
 
 
 async def operator_email(db, user_id: uuid.UUID) -> str | None:
@@ -102,11 +62,14 @@ def _settled_text(*, tenant: str, code: str) -> tuple[str, str]:
 
 def _what_happened(*, channel: str, code: str) -> str:
     """Why the reminder failed, as the operator would put it, and what to fix
-    when the phone let it down."""
+    first, if anything."""
     if code == ERROR_NO_RECIPIENT:
-        return f"The tenant record has no {_MISSING_CONTACT[channel]}."
-    if code in _WHAT_HAPPENED:
-        return _WHAT_HAPPENED[code]
+        return f"The tenant record has no {MISSING_CONTACT[channel]}."
+    # The table before the prefixes: some codes with a fixed spelling start
+    # with ``sms_`` too (``sms_network_error``, ``sms_http_401``) and have
+    # words of their own.
+    if code in WHAT_HAPPENED:
+        return WHAT_HAPPENED[code]
     if code.startswith(PHONE_FAILED_CODE_PREFIX):
         detail = code.removeprefix(PHONE_FAILED_CODE_PREFIX)
         return f"The phone reported a problem sending the text ({detail}). Check the httpSMS app on the phone."
@@ -119,11 +82,11 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
     what = "rent text" if channel == _SMS else "rent reminder email"
     if code in MAY_STILL_ARRIVE_ERRORS:
         subject = f"{tenant}'s {what} may already have been sent"
-        check = _CHECK_TEXT if channel == _SMS else _CHECK_EMAIL
-        next_step = f"It may already have reached them, so {check} before sending it again. {_RETRY}"
+        check = CHECK_TEXT if channel == _SMS else CHECK_EMAIL
+        next_step = f"It may already have reached them, so {check} before sending it again. {RETRY}"
     else:
         subject = f"{tenant}'s {what} didn't go out"
-        next_step = _RETRY
+        next_step = RETRY
     body = f"{subject}. {_what_happened(channel=channel, code=code)} {next_step}"
     return subject, body
 

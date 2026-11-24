@@ -12,6 +12,7 @@ const ERROR_LABEL = new Map<string, string>(Object.entries({
   email_outcome_unknown:
     "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again",
   sms_network_error: "The server couldn't reach the text relay, so it wasn't sent",
+  sms_http_401: "The text relay rejected the server's API key, so it wasn't sent",
   sms_outcome_unknown:
     "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again",
   unexpected_error: "Something went wrong sending it",

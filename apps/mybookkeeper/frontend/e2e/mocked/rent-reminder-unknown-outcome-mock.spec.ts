@@ -68,8 +68,14 @@ const failedReminder = (id: string, dueDate: string, errorCode: string, channel:
 
 const failedText = (id: string, dueDate: string, errorCode: string) => failedReminder(id, dueDate, errorCode);
 
-// Send now tries every channel OVERVIEW's plan has on.
-const PLAN_CHANNELS: readonly RentReminderChannel[] = ["email", "sms"];
+const PLAN_CHANNEL_ON: Record<RentReminderChannel, boolean> = {
+  email: OVERVIEW.plan.email_enabled,
+  sms: OVERVIEW.plan.sms_enabled,
+};
+// Send now tries every channel OVERVIEW's plan has on, email first, as the server does.
+const PLAN_CHANNELS: readonly RentReminderChannel[] = (["email", "sms"] as const).filter(
+  (channel) => PLAN_CHANNEL_ON[channel],
+);
 // How Send now's new try comes back: a text waits for the phone's report, an
 // email is sent once the mail server takes it.
 const SENT_STATUS = { sms: "sent_to_phone", email: "sent" } as const satisfies Record<

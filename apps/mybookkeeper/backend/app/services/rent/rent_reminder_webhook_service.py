@@ -177,7 +177,7 @@ async def _apply(
     else:
         # The phone's own words can quote the number it was sending to;
         # they are stored, shown and emailed to the operator.
-        detail = mask_phone_numbers((event.error_message or "unknown").strip())
+        detail = mask_phone_numbers((event.error_message or "").strip() or "unknown")
         code = f"{PHONE_FAILED_CODE_PREFIX}{detail}"
 
     if not _can_fail(row):
