@@ -28,7 +28,8 @@ processes a given job, even when multiple replicas run concurrently.
 SIGTERM / SIGINT stop the loop: an idle wait ends at once, and a step in
 progress finishes first. app.yaml's stop_grace_period covers one parse that
 isn't rate limited; a rate-limited parse or a refinement prepare (several
-Claude calls) can outlast it and is then killed mid-step. Errors reach Sentry,
+Claude calls) can outlast it and is then killed mid-step; the next boot
+puts it back on the queue (``interrupted_work_recovery``). Errors reach Sentry,
 as in the API.
 
 Liveness: once boot is done, a background task touches a heartbeat file every
@@ -78,6 +79,7 @@ from app.services.jobs.resume_text_extractor import (
 )
 from app.services.profile import profile_service
 from app.services.profile.resume_profile_merge_service import merge_parsed_profile_rows
+from app.workers.interrupted_work_recovery import recover_interrupted_work
 from app.workers.refinement_prepare_worker import process_one_session
 
 logger = logging.getLogger(__name__)
@@ -325,6 +327,7 @@ async def run_resume_worker(stop: asyncio.Event) -> None:
     # discovery scheduler) instead of on the first resume upload.
     discovery_embedding_service.load_model_eager()
     try:
+        await recover_interrupted_work()
         async with keep_heartbeat_fresh(HEARTBEAT_PATH, interval_seconds=HEARTBEAT_INTERVAL_SECONDS):
             await poll_until_stopped(stop)
     finally:

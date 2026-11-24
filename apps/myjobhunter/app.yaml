@@ -36,7 +36,8 @@ workers:
     # download and a few DB writes; compose's 10s default would kill it
     # mid-parse and leave the job in `processing`. A parse waiting out a
     # Claude rate limit, or a refinement prepare, can run longer and is then
-    # killed mid-step.
+    # killed mid-step; the next boot puts it back on the queue
+    # (app/workers/interrupted_work_recovery.py).
     stop_grace_period: 150s
     # Liveness only: the worker's heartbeat stays fresh while the process and
     # its event loop are alive (app/core/resume_worker_constants.py).

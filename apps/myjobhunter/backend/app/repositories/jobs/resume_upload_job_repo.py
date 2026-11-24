@@ -70,6 +70,23 @@ async def get_by_id_for_user(
     return result.scalar_one_or_none()
 
 
+async def list_processing(db: AsyncSession) -> list[ResumeUploadJob]:
+    """Every job currently claimed ``processing``, oldest claim first.
+
+    Read once at worker boot to find jobs whose worker was killed mid-parse.
+    Not tenant-scoped, like ``claim_next_queued``.
+    """
+    result = await db.execute(
+        select(ResumeUploadJob)
+        .where(
+            ResumeUploadJob.status == "processing",
+            ResumeUploadJob.started_at.is_not(None),
+        )
+        .order_by(ResumeUploadJob.started_at.asc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_claimed_for_update(
     db: AsyncSession,
     job_id: uuid.UUID,
