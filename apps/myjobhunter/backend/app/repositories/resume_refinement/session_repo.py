@@ -352,6 +352,48 @@ async def lock_next_due_preparation(db: AsyncSession) -> ResumeRefinementSession
     return result.scalar_one_or_none()
 
 
+async def list_claimed_preparations(db: AsyncSession) -> list[ResumeRefinementSession]:
+    """Every ``preparing`` session a worker has claimed, oldest claim first.
+
+    Read once at worker boot to find preparations whose worker was killed
+    mid-step. Not tenant-scoped, like ``lock_next_due_preparation``.
+    """
+    result = await db.execute(
+        select(ResumeRefinementSession)
+        .where(
+            ResumeRefinementSession.status == "preparing",
+            ResumeRefinementSession.preparation_started_at.is_not(None),
+        )
+        .order_by(ResumeRefinementSession.preparation_started_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_claimed_preparation_for_update(
+    db: AsyncSession,
+    session_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    claimed_at: datetime,
+) -> ResumeRefinementSession | None:
+    """The session, locked until commit, if it is still ``preparing`` under the claim made at ``claimed_at``.
+
+    None when the session is gone, finished, failed or re-claimed.
+    """
+    result = await db.execute(
+        select(ResumeRefinementSession)
+        .where(
+            ResumeRefinementSession.id == session_id,
+            ResumeRefinementSession.user_id == user_id,
+            ResumeRefinementSession.status == "preparing",
+            ResumeRefinementSession.preparation_started_at == claimed_at,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def mark_preparation_started(
     db: AsyncSession, session: ResumeRefinementSession,
 ) -> ResumeRefinementSession:

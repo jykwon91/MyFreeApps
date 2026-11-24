@@ -1,6 +1,6 @@
 /**
  * No-backend E2E for the Profile page while an upload waits to be read again:
- * the AI service was busy, so the job went back to the queue. The row says it
+ * the read didn't finish, so the job went back to the queue. The row says it
  * will be retried instead of looking stuck, and the note goes away once the
  * read succeeds.
  */

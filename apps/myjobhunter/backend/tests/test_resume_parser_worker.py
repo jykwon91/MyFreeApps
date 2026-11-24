@@ -843,28 +843,35 @@ async def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyP
 
 
 @pytest.mark.asyncio
-async def test_the_worker_starts_sentry_and_disposes_the_engine_on_stop(
-    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
+async def test_the_worker_boots_recovers_interrupted_work_then_polls(
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path, recover: AsyncMock,
 ) -> None:
-    init_sentry = MagicMock()
-    load_model = MagicMock()
+    order: list[str] = []
     engine = MagicMock()
     engine.dispose = AsyncMock()
-    monkeypatch.setattr(resume_parser_worker, "init_sentry", init_sentry)
     monkeypatch.setattr(
-        resume_parser_worker.discovery_embedding_service, "load_model_eager", load_model,
+        resume_parser_worker, "init_sentry", MagicMock(side_effect=lambda: order.append("sentry")),
     )
+    monkeypatch.setattr(
+        resume_parser_worker.discovery_embedding_service,
+        "load_model_eager",
+        MagicMock(side_effect=lambda: order.append("model")),
+    )
+    recover.side_effect = lambda: order.append("recover")
     monkeypatch.setattr(resume_parser_worker, "engine", engine)
-    monkeypatch.setattr(resume_parser_worker, "poll_until_stopped", AsyncMock())
+    monkeypatch.setattr(
+        resume_parser_worker,
+        "poll_until_stopped",
+        AsyncMock(side_effect=lambda _stop: order.append("poll")),
+    )
     await resume_parser_worker.run_resume_worker(asyncio.Event())
-    init_sentry.assert_called_once()
-    load_model.assert_called_once()
+    assert order == ["sentry", "model", "recover", "poll"]
     engine.dispose.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_a_model_that_fails_to_load_crashes_the_boot(
-    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path, recover: AsyncMock,
 ) -> None:
     heartbeat.touch()  # left over from the previous run of the container
     poll = AsyncMock()
@@ -878,7 +885,15 @@ async def test_a_model_that_fails_to_load_crashes_the_boot(
     with pytest.raises(EmbeddingModelLoadError):
         await resume_parser_worker.run_resume_worker(asyncio.Event())
     poll.assert_not_awaited()
+    recover.assert_not_awaited()
     assert not heartbeat.exists()
+
+
+@pytest.fixture
+def recover(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    mock = AsyncMock()
+    monkeypatch.setattr(resume_parser_worker, "recover_interrupted_work", mock)
+    return mock
 
 
 @pytest.fixture
@@ -891,7 +906,7 @@ def heartbeat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.mark.asyncio
 async def test_the_heartbeat_advances_through_a_long_step_and_stops_after(
-    monkeypatch: pytest.MonkeyPatch, heartbeat: Path,
+    monkeypatch: pytest.MonkeyPatch, heartbeat: Path, recover: AsyncMock,
 ) -> None:
     # A step can wait out Claude rate limits for minutes: the heartbeat must
     # keep advancing through it, and stop once the worker has returned.
