@@ -28,6 +28,7 @@ interface CraftPricesPanelProps {
   selfMadeNote: string;
   formulas: readonly CraftRecipe[];
   knownFormulas: ReadonlySet<number>;
+  assumedFormulas: ReadonlySet<number>;
   onFormula: (spell: number, known: boolean) => void;
   /** Enchanting only. */
   slots: { excluded: ReadonlySet<EnchantSlot>; onToggle: (slot: EnchantSlot, allowed: boolean) => void } | null;
@@ -77,6 +78,7 @@ export default function CraftPricesPanel({
   selfMadeNote,
   formulas,
   knownFormulas,
+  assumedFormulas,
   onFormula,
   slots,
   place,
@@ -177,6 +179,7 @@ export default function CraftPricesPanel({
           title="Recipes you've bought"
           formulas={formulas}
           known={knownFormulas}
+          assumed={assumedFormulas}
           onToggle={onFormula}
           place={place}
         />

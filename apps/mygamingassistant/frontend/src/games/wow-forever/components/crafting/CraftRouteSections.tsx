@@ -84,6 +84,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
             selfMadeNote={guide.pricedFromMaterials ?? ""}
             formulas={priced.formulas}
             knownFormulas={priced.knownFormulas}
+            assumedFormulas={priced.assumedFormulas}
             onFormula={priced.setFormula}
             slots={slots}
             place={place}

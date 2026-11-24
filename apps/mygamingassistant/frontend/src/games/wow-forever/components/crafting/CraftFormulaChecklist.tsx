@@ -11,6 +11,8 @@ interface CraftFormulaChecklistProps {
   title: string;
   formulas: readonly CraftRecipe[];
   known: ReadonlySet<number>;
+  /** Patterns the guide's route already uses: counted as yours, can't be unticked. */
+  assumed: ReadonlySet<number>;
   onToggle: (spell: number, known: boolean) => void;
   place: CraftPlace;
 }
@@ -38,15 +40,16 @@ function formulaIcon(recipe: CraftRecipe): WowIcon | null {
 }
 
 /**
- * Patterns / Formulas (and quest / NPC recipes) you own. Only these join the cheapest
- * route — a recipe you'd have to go and get isn't "cheapest" until you have it.
+ * Patterns / Formulas (and quest / NPC recipes) you own, plus the ones the guide's own
+ * route uses. Only these join the cheapest route — any other recipe you'd have to go
+ * and get isn't "cheapest" until you have it.
  */
-export default function CraftFormulaChecklist({ title, formulas, known, onToggle, place }: CraftFormulaChecklistProps) {
+export default function CraftFormulaChecklist({ title, formulas, known, assumed, onToggle, place }: CraftFormulaChecklistProps) {
   if (!formulas.length) return null;
   return (
     <fieldset className="space-y-1 min-w-0">
       <legend className="text-sm font-medium">{title}</legend>
-      <p className="text-xs text-muted-foreground">Tick the ones you've learned. Only these can be picked for the cheapest route.</p>
+      <p className="text-xs text-muted-foreground">Tick the ones you've learned. The cheapest route can pick these, and the patterns the route already tells you to get.</p>
       <ul className="space-y-1">
         {formulas.map((recipe) => (
           <li key={recipe.spell}>
@@ -54,13 +57,17 @@ export default function CraftFormulaChecklist({ title, formulas, known, onToggle
               <input
                 type="checkbox"
                 className="mt-1 h-5 w-5 shrink-0"
-                checked={known.has(recipe.spell)}
+                checked={known.has(recipe.spell) || assumed.has(recipe.spell)}
+                disabled={assumed.has(recipe.spell)}
                 onChange={(e) => onToggle(recipe.spell, e.target.checked)}
               />
               <GameIcon icon={formulaIcon(recipe)} size={24} alt="" />
               <span className="min-w-0 break-words">
                 <span className="block text-sm">{formulaName(recipe)}</span>
-                <span className="block text-xs text-muted-foreground">{learnLine(recipe, place)}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {assumed.has(recipe.spell) ? "In this guide's route — counted as yours · " : ""}
+                  {learnLine(recipe, place)}
+                </span>
               </span>
             </label>
           </li>

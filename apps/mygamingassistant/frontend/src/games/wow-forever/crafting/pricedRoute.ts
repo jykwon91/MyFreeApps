@@ -10,7 +10,9 @@ import {
   cheapestRoute,
   formulaChoices,
   priceItems,
+  routePatterns,
   routeTotal,
+  withRoutePatterns,
   type CraftContext,
   type EnchantSlot,
   type PriceItem,
@@ -117,9 +119,11 @@ export function pricedRoute(input: PricedRouteInput): PricedRouteResult {
   // Auction prices and yours; then whatever can be worked out from those.
   const known = effectivePrices(auction, typed);
   const ctx = craftContext(profession, data);
-  const choices: RouteChoices = { knownFormulas: input.knownFormulas, excludedSlots };
+  const ticked: RouteChoices = { knownFormulas: input.knownFormulas, excludedSlots };
+  // The guide's own patterns count without a tick: it already sends you to get them.
+  const choices = withRoutePatterns(ctx, ticked);
   const items = priceItems(ctx, start, choices);
-  const formulas = formulaChoices(ctx, start, choices);
+  const formulas = formulaChoices(ctx, start, ticked);
   const all = [...items.main, ...items.more];
   const derived = derivePrices(known, data.file.makers ?? NO_MAKERS, all.map((i) => i.id));
   const prices = withDerived(known, derived);
@@ -141,6 +145,7 @@ export function pricedRoute(input: PricedRouteInput): PricedRouteResult {
     priceBook: hasCosts ? book : null,
     items,
     formulas,
+    assumedFormulas: routePatterns(ctx),
     excludedSlots,
     autoPrices,
   };
