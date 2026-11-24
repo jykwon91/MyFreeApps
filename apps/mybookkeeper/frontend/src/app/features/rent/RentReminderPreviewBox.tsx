@@ -7,15 +7,14 @@ import {
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
-import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
 import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
 import { rentReminderPlanChannels } from "@mybookkeeper/api-client/utils/rentReminderPlanChannels";
-import { possiblySentAdvice } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import RentReminderPossiblySentWarning from "./RentReminderPossiblySentWarning";
-import { possiblySentKey, TENANT_WORDS } from "./rent-reminder-possibly-sent";
+import { possiblySentKey } from "./rent-reminder-possibly-sent";
+import { sendNowToast } from "./rent-reminder-send-now-toast";
 
 export interface RentReminderPreviewBoxProps {
   applicantId: string;
@@ -24,20 +23,12 @@ export interface RentReminderPreviewBoxProps {
 }
 
 function reportResults(results: RentReminderSend[]) {
-  const failed = results.filter((r) => r.status === "failed");
-  const notSent = failed.filter((r) => !reminderMayStillArrive(r.error_code)).map((r) => r.channel);
-  const unsure = failed.filter((r) => reminderMayStillArrive(r.error_code)).map((r) => r.channel);
-  const problems = [
-    ...(notSent.length > 0 ? [`The ${rentReminderChannelWords(notSent)} didn't go out.`] : []),
-    ...(unsure.length > 0
-      ? [`The ${rentReminderChannelWords(unsure)} may already have been sent. ${possiblySentAdvice(unsure, TENANT_WORDS)}`]
-      : []),
-  ];
-  if (problems.length > 0) {
-    showError(`${problems.join(" ")} See history below.`);
+  const toast = sendNowToast(results);
+  if (toast.isProblem) {
+    showError(toast.message);
     return;
   }
-  showSuccess(`Reminder sent by ${rentReminderChannelWords(results.map((r) => r.channel))}.`);
+  showSuccess(toast.message);
 }
 
 /**

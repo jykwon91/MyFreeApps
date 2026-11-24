@@ -725,7 +725,8 @@ class TestSendNow:
             ("email", "sent"), ("sms", "sent_to_phone"),
         ]
         assert {r.due_date for r in results} == {_dt.date(2026, 11, 1)}
-        with pytest.raises(dispatch.ReminderAlreadySentError):
+        # The text is only with the phone, so the refusal mustn't say it went out.
+        with pytest.raises(dispatch.ReminderAlreadySentError, match=r"^This reminder was already sent\."):
             await _send_now(applicant_id)
 
     @pytest.mark.asyncio

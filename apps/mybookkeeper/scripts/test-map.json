@@ -1140,6 +1140,8 @@
         "api-client/src/utils/rentReminderChannelWords.ts",
         "api-client/src/utils/rentReminderPossiblySent.ts",
         "api-client/src/utils/rentReminderPlanChannels.ts",
+        "api-client/src/utils/isTextHandedOff.ts",
+        "api-client/src/constants/rentReminderLabels.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [
@@ -1154,7 +1156,8 @@
         "test_rent_reminder_channels.py"
       ],
       "frontend_tests": [
-        "RentReminderCard.test.tsx"
+        "RentReminderCard.test.tsx",
+        "rent-reminder-send-now-toast.test.ts"
       ],
       "e2e_specs": [
         "mocked/rent-reminder-time-zone-mock.spec.ts",

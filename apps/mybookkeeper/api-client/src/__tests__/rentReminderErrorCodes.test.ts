@@ -20,7 +20,7 @@ describe("mayHaveBeenSentRefusalMessage", () => {
   });
 
   it("is null for the plain already-sent 409 and other errors", () => {
-    expect(mayHaveBeenSentRefusalMessage({ status: 409, data: { detail: "This reminder already went out." } })).toBeNull();
+    expect(mayHaveBeenSentRefusalMessage({ status: 409, data: { detail: "This reminder was already sent." } })).toBeNull();
     expect(mayHaveBeenSentRefusalMessage({ status: 412, data: { detail: { code: "REMINDER_MAY_HAVE_BEEN_SENT" } } })).toBeNull();
   });
 });

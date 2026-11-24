@@ -1,3 +1,5 @@
+import { TEXT_HANDOFF_HOLDER } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+
 export const RENT_REMINDERS_SHOWN_AT_FIRST = 3;
 /** Long enough for a send that lost its answer to show up in the history. */
 export const LOST_SEND_HOLD_MS = 30_000;
@@ -36,7 +38,7 @@ export const REMINDER_MESSAGES = {
   noHistory: "No reminders sent yet.",
   showFewer: "Show fewer",
   changed: "That changed since you looked. Here's the new one.",
-  alreadyWent: "That reminder already went out.",
+  alreadySent: "That reminder was already sent.",
   tooMany: "That's a lot of reminders in a short time. Try again in a while.",
   demo: "Demo accounts can't send reminders.",
   gone: "That tenant or plan is gone.",
@@ -44,7 +46,7 @@ export const REMINDER_MESSAGES = {
   lostButSent: "I lost the connection, but the server has the reminder. Check the history below to see how it went.",
   lostUnknown: "I lost the connection and I can't tell if that went out. Nothing shows in the history yet, so check again in a minute before trying again.",
   unreachable: "I can't reach the server, so I'm not sure that went out. Check the history before trying again.",
-  textWithPhone: "The text is with your phone and I'll show Delivered or Failed in the history.",
+  textHandedOff: `The text is with ${TEXT_HANDOFF_HOLDER}, and I'll show in the history whether it went out.`,
 } as const;
 
 export function sendNowLabel(firstName: string | null): string {
@@ -91,8 +93,9 @@ export function showAllReminders(count: number): string {
   return `Show all ${count} reminders`;
 }
 
-export function sentBoth(): string {
-  return `I sent the email. ${REMINDER_MESSAGES.textWithPhone}`;
+/** `textLine` says where the text is: with the phone, or gone out. */
+export function sentBoth(textLine: string): string {
+  return `I sent the email. ${textLine}`;
 }
 
 export function sentEmail(name: string | null): string {
@@ -103,8 +106,9 @@ export function emailOnlyWent(reason: string, name: string | null): string {
   return `The email went out, but the text didn't. ${reason}. I can't resend it from here. Text ${name ?? UNNAMED_TENANT} yourself if you need to.`;
 }
 
-export function textOnlyWent(reason: string): string {
-  return `The text went out, but the email didn't. ${reason}. I can't resend just the email.`;
+/** `textLine` says where the text is: with the phone, or gone out. */
+export function onlyEmailFailed(reason: string, textLine: string): string {
+  return `The email didn't go out. ${reason}. ${textLine} I can't resend just the email.`;
 }
 
 export function neitherWent(reason: string): string {
