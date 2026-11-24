@@ -9,7 +9,12 @@ Three additions in one migration because they're tightly coupled:
 * ``transactions.spending_category_id`` — nullable FK to spending_categories,
   SET NULL when a category is deleted.  Only populated for personal-scope rows.
 
-Downgrade reverses the schema changes; it does NOT delete the seed data.
+Personal rows can never carry tax fields, and only personal rows carry a
+spending category (``chk_txn_personal_not_tax``,
+``chk_txn_spending_category_personal``). Every existing row is rental, so
+both hold from the start.
+
+Downgrade drops the table, so the seeded categories go with it.
 
 Revision ID: perscat261123
 Revises: finacct261123
@@ -17,13 +22,26 @@ Create Date: 2026-11-23
 """
 from __future__ import annotations
 
+import datetime as _dt
+import uuid as _uuid
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-from app.core.spending_category_enums import (
-    DEFAULT_SPENDING_CATEGORIES,
-    TRANSACTION_SCOPES_SQL,
+# Frozen copies: a migration must not change when the app's constants do.
+TRANSACTION_SCOPES_SQL = "('rental', 'business', 'personal')"
+DEFAULT_SPENDING_CATEGORIES: tuple[str, ...] = (
+    "Groceries",
+    "Dining & restaurants",
+    "Gas & fuel",
+    "Shopping & retail",
+    "Entertainment & recreation",
+    "Travel & vacation",
+    "Health & medical",
+    "Subscriptions",
+    "Personal utilities",
+    "Other personal",
 )
 
 revision = "perscat261123"
@@ -113,13 +131,22 @@ def upgrade() -> None:
         ["spending_category_id"],
         postgresql_where=sa.text("spending_category_id IS NOT NULL"),
     )
+    op.create_check_constraint(
+        "chk_txn_personal_not_tax",
+        "transactions",
+        "transaction_scope <> 'personal' OR ("
+        "NOT tax_relevant AND schedule_e_line IS NULL AND NOT is_capital_improvement"
+        ")",
+    )
+    op.create_check_constraint(
+        "chk_txn_spending_category_personal",
+        "transactions",
+        "spending_category_id IS NULL OR transaction_scope = 'personal'",
+    )
 
     # 4. Seed default categories for every existing organization
     conn = op.get_bind()
     org_rows = conn.execute(sa.text("SELECT id FROM organizations")).fetchall()
-    import uuid as _uuid
-    import datetime as _dt
-
     now = _dt.datetime.now(_dt.timezone.utc)
     seed_rows = []
     for (org_id,) in org_rows:
@@ -144,6 +171,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_constraint("chk_txn_spending_category_personal", "transactions", type_="check")
+    op.drop_constraint("chk_txn_personal_not_tax", "transactions", type_="check")
     op.drop_index("ix_txn_spending_category_id_partial", table_name="transactions")
     op.drop_constraint("fk_txn_spending_category", "transactions", type_="foreignkey")
     op.drop_column("transactions", "spending_category_id")

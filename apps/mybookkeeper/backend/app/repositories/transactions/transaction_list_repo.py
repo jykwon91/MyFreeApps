@@ -7,6 +7,7 @@ from sqlalchemy import ColumnElement, Row, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
+from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.core.property_constants import UNASSIGNED_PROPERTY_ID
 from app.core.tags import EXPENSE_TAGS, NON_DEDUCTIBLE_TAGS, REVENUE_TAGS
 from app.core.transaction_sort_constants import (
@@ -371,7 +372,11 @@ async def find_by_vendor_for_retroactive(
     require_address: bool = False,
     limit: int = 500,
 ) -> list[Transaction]:
-    """Find non-deleted transactions for retroactive rule application."""
+    """Find non-deleted transactions for retroactive rule application.
+
+    Personal rows are left out: classification rules carry tax categories and
+    properties, and personal spending is never filed under either.
+    """
     stmt = (
         select(Transaction)
         .where(
@@ -379,6 +384,7 @@ async def find_by_vendor_for_retroactive(
             Transaction.vendor.isnot(None),
             Transaction.deleted_at.is_(None),
             Transaction.id != exclude_id,
+            Transaction.transaction_scope != TRANSACTION_SCOPE_PERSONAL,
         )
         .limit(limit)
     )

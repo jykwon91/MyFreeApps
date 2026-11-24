@@ -11,6 +11,7 @@ from app.core.tags import (
     schedule_e_line_after_category_change,
     transaction_type_for_category,
 )
+from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL, TRANSACTION_SCOPE_RENTAL
 from app.core.tax_year_after_date_change import tax_year_after_date_change
 from app.core.tax_total_inputs import tax_total_inputs
 from app.core.transaction_statuses import COUNTED_STATUS
@@ -29,6 +30,7 @@ from app.services.transactions.duplicate_absorb import absorb_duplicates
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
 from app.services.transactions.reference_ownership import assert_references_owned
+from app.services.transactions.scope_rules import scope_overrides
 from app.services.transactions.transfer_rules import transfer_overrides
 
 # Union of all possible value types in a Transaction field dict
@@ -137,6 +139,14 @@ async def count_to_review(ctx: RequestContext) -> int:
         return await transaction_repo.count_to_review(db, ctx.organization_id)
 
 
+def _apply_scope_rules(txn: Transaction) -> None:
+    for field, value in scope_overrides(
+        transaction_scope=txn.transaction_scope,
+        spending_category_id=txn.spending_category_id,
+    ).items():
+        setattr(txn, field, value)
+
+
 async def create_manual_transaction(
     ctx: RequestContext, data: dict[str, TransactionFieldValue]
 ) -> Transaction:
@@ -152,6 +162,13 @@ async def create_manual_transaction(
         account_id=account_id if isinstance(account_id, uuid.UUID) else None,
         transfer_to_account_id=(
             transfer_to_account_id if isinstance(transfer_to_account_id, uuid.UUID) else None
+        ),
+    ))
+    spending_category_id = data.get("spending_category_id")
+    data.update(scope_overrides(
+        transaction_scope=str(data.get("transaction_scope") or TRANSACTION_SCOPE_RENTAL),
+        spending_category_id=(
+            spending_category_id if isinstance(spending_category_id, uuid.UUID) else None
         ),
     ))
     data["placed_in_service_date"] = placed_in_service_date_for(
@@ -222,12 +239,20 @@ async def update_transaction(
             txn.is_capital_improvement, txn.placed_in_service_date, txn.transaction_date,
         )
 
+        category_changed = "category" in updates and txn.category != old_category
+        if category_changed and "schedule_e_line" not in updates:
+            txn.schedule_e_line = schedule_e_line_after_category_change(
+                old_schedule_e_line, old_category, txn.category,
+            )
+        # After the category's Schedule E line is worked out, before anything
+        # queries (and so flushes) the row.
+        _apply_scope_rules(txn)
+        # A personal row's tax category and property mean nothing, so a
+        # correction to one must not become a rule for the vendor's other rows.
+        learns_rules = txn.transaction_scope != TRANSACTION_SCOPE_PERSONAL
+
         retroactive_count = 0
-        if "category" in updates and txn.category != old_category:
-            if "schedule_e_line" not in updates:
-                txn.schedule_e_line = schedule_e_line_after_category_change(
-                    old_schedule_e_line, old_category, txn.category,
-                )
+        if category_changed and learns_rules:
             retroactive_count = await rule_learning_service.learn_from_correction(
                 db,
                 organization_id=ctx.organization_id,
@@ -241,7 +266,7 @@ async def update_transaction(
         # Clearing a property teaches nothing: a rule with no property would take
         # the property off every other row from this vendor at this address.
         new_property_id = updates.get("property_id")
-        if new_property_id is not None and new_property_id != old_property_id:
+        if learns_rules and new_property_id is not None and new_property_id != old_property_id:
             property_retroactive = await rule_learning_service.learn_from_property_correction(
                 db,
                 organization_id=ctx.organization_id,
@@ -281,10 +306,15 @@ async def bulk_approve(
 async def bulk_set_capital_improvement(
     ctx: RequestContext, ids: list[uuid.UUID], is_capital_improvement: bool,
 ) -> dict[str, int]:
-    """Mark or unmark the expenses among the ids; anything else is skipped."""
+    """Mark or unmark the non-personal expenses among the ids; anything else is skipped."""
     async with unit_of_work() as db:
         locked = await transaction_repo.lock_live_transactions(db, ids, ctx.organization_id)
-        expenses = [txn for txn in locked if txn.transaction_type == "expense"]
+        # Personal spending never reaches a depreciation schedule.
+        expenses = [
+            txn for txn in locked
+            if txn.transaction_type == "expense"
+            and txn.transaction_scope != TRANSACTION_SCOPE_PERSONAL
+        ]
         totals_moved = False
         for txn in expenses:
             old_tax_inputs = tax_total_inputs(txn)
@@ -451,6 +481,7 @@ async def merge_transactions(
             transfer_to_account_id=survivor.transfer_to_account_id,
         ).items():
             setattr(survivor, field, value)
+        _apply_scope_rules(survivor)
 
         # Mark the survivor as approved and reviewed
         survivor.status = COUNTED_STATUS

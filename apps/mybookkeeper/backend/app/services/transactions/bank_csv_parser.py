@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.models.transactions.transaction import Transaction
 from app.services.extraction.sender_category_service import match_sender_category
 from app.core.tags import CATEGORY_TO_SCHEDULE_E, REVENUE_TAGS, EXPENSE_TAGS
@@ -113,13 +114,15 @@ def _build_transaction(
 
     # Personal-scope transactions are never tax-relevant — the user is tracking
     # personal spending, not rental/business activity.
-    if transaction_scope == "personal":
+    if transaction_scope == TRANSACTION_SCOPE_PERSONAL:
         category = "other_expense" if transaction_type == "expense" else "uncategorized"
         tax_relevant = False
         schedule_e_line = None
     else:
         schedule_e_line = CATEGORY_TO_SCHEDULE_E.get(category)
         tax_relevant = category != "uncategorized"
+        # A spending category only means something on a personal row.
+        spending_category_id = None
 
     return Transaction(
         id=uuid.uuid4(),

@@ -325,6 +325,18 @@ class Transaction(Base):
             f"transaction_scope IN {TRANSACTION_SCOPES_SQL}",
             name="chk_txn_scope",
         ),
+        # Personal spending is tracked, never taxed: it can never reach a tax
+        # form or a depreciation schedule (see services/transactions/scope_rules).
+        CheckConstraint(
+            "transaction_scope <> 'personal' OR ("
+            "NOT tax_relevant AND schedule_e_line IS NULL AND NOT is_capital_improvement"
+            ")",
+            name="chk_txn_personal_not_tax",
+        ),
+        CheckConstraint(
+            "spending_category_id IS NULL OR transaction_scope = 'personal'",
+            name="chk_txn_spending_category_personal",
+        ),
         # Personal spending category: only meaningful on personal-scope rows.
         # NULL on rental / business rows.
         Index(
