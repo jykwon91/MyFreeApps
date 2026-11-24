@@ -8,13 +8,15 @@ friction. A spending category only means something on a personal row, so it
 is dropped from rental and business rows. ``chk_txn_personal_not_tax`` and
 ``chk_txn_spending_category_personal`` hold the same rules in the database.
 
-Pure: takes the row's would-be values, returns the overrides to apply.
+``scope_overrides`` is pure: it takes the row's would-be values and returns
+the overrides; ``apply_scope_rules`` sets them on a row.
 """
 from __future__ import annotations
 
 import uuid
 
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
+from app.models.transactions.transaction import Transaction
 
 ScopeOverrides = dict[str, bool | str | uuid.UUID | None]
 
@@ -32,3 +34,11 @@ def scope_overrides(
         "is_capital_improvement": False,
         "placed_in_service_date": None,
     }
+
+
+def apply_scope_rules(txn: Transaction) -> None:
+    for field, value in scope_overrides(
+        transaction_scope=txn.transaction_scope,
+        spending_category_id=txn.spending_category_id,
+    ).items():
+        setattr(txn, field, value)

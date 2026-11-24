@@ -27,9 +27,10 @@ from app.schemas.transactions.duplicate import DuplicateMergeOverrides
 from app.services.classification import rule_learning_service
 from app.services.extraction.dedup_resolution_service import resolve_and_link
 from app.services.extraction.dedup_service import DedupDecision
-from app.services.transactions import attribution_service, transaction_service
+from app.services.transactions import attribution_service, duplicate_service, transaction_service
 
 _SERVICE = "app.services.transactions.transaction_service"
+_DUPLICATE_SERVICE = "app.services.transactions.duplicate_service"
 
 
 def _ctx(org: Organization, user: User) -> RequestContext:
@@ -160,8 +161,8 @@ class TestDelete:
         dupe = await _seed_txn(db, _txn(test_org, test_user))
         draft, filed = await _seed_returns(db, test_org)
 
-        with patch(f"{_SERVICE}.unit_of_work", _session_factory(db)):
-            await transaction_service.keep_transaction(_ctx(test_org, test_user), keep.id, [dupe.id])
+        with patch(f"{_DUPLICATE_SERVICE}.unit_of_work", _session_factory(db)):
+            await duplicate_service.keep_transaction(_ctx(test_org, test_user), keep.id, [dupe.id])
 
         await _assert_flagged(db, draft, filed, flagged=True)
 
@@ -307,8 +308,8 @@ class TestMerge:
         b = await _seed_txn(db, _txn(test_org, test_user, status="pending"))
         draft, filed = await _seed_returns(db, test_org)
 
-        with patch(f"{_SERVICE}.unit_of_work", _session_factory(db)):
-            survivor = await transaction_service.merge_transactions(
+        with patch(f"{_DUPLICATE_SERVICE}.unit_of_work", _session_factory(db)):
+            survivor = await duplicate_service.merge_transactions(
                 _ctx(test_org, test_user), a.id, b.id, a.id, DuplicateMergeOverrides(),
             )
 

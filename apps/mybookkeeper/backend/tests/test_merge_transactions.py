@@ -14,7 +14,7 @@ from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
 from app.schemas.transactions.duplicate import DuplicateMergeFieldSource, DuplicateMergeOverrides
-from app.services.transactions import transaction_service
+from app.services.transactions import duplicate_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.core.context import RequestContext
 from app.core.tags import CATEGORY_TO_SCHEDULE_E
@@ -204,10 +204,10 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx,
                 txn_a.id,
                 txn_b.id,
@@ -244,10 +244,10 @@ class TestMergeTransactions:
         )
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, overrides,
             )
 
@@ -274,10 +274,10 @@ class TestMergeTransactions:
         overrides = DuplicateMergeOverrides(tags=DuplicateMergeFieldSource.a)
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, overrides,
             )
 
@@ -314,10 +314,10 @@ class TestMergeTransactions:
         overrides = DuplicateMergeOverrides(category=DuplicateMergeFieldSource.a)
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_b.id, overrides,
             )
 
@@ -343,10 +343,10 @@ class TestMergeTransactions:
 
         # Auto-pick will choose earlier date (a = 2024-12-01), so tax_year should be 2024
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, DuplicateMergeOverrides(),
             )
 
@@ -370,10 +370,10 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, DuplicateMergeOverrides(),
             )
 
@@ -407,10 +407,10 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, DuplicateMergeOverrides(),
             )
 
@@ -442,10 +442,10 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_a.id, DuplicateMergeOverrides(),
             )
 
@@ -468,11 +468,11 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
             pytest.raises(ValueError, match="surviving_id must be one of"),
         ):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, uuid.uuid4(), DuplicateMergeOverrides(),
             )
 
@@ -492,11 +492,11 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
             pytest.raises(ValueError, match="not found"),
         ):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, missing_id, txn_b.id, missing_id, DuplicateMergeOverrides(),
             )
 
@@ -516,11 +516,11 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
             pytest.raises(ValueError, match="not found"),
         ):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, txn_a.id, missing_id, txn_a.id, DuplicateMergeOverrides(),
             )
 
@@ -541,10 +541,10 @@ class TestMergeTransactions:
             yield db
 
         with (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         ):
-            result = await transaction_service.merge_transactions(
+            result = await duplicate_service.merge_transactions(
                 ctx, txn_a.id, txn_b.id, txn_b.id, DuplicateMergeOverrides(),
             )
 
@@ -561,8 +561,8 @@ class TestMergeRefusesDeletedOrSameRow:
             yield db
 
         return (
-            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+            patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
         )
 
     @pytest.mark.asyncio
@@ -586,7 +586,7 @@ class TestMergeRefusesDeletedOrSameRow:
 
         first, second = self._session(db)
         with first, second, pytest.raises(ValueError, match="not found"):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, survivor.id, loser.id, survivor.id, DuplicateMergeOverrides(),
             )
 
@@ -609,7 +609,7 @@ class TestMergeRefusesDeletedOrSameRow:
 
         first, second = self._session(db)
         with first, second, pytest.raises(ValueError, match="not found"):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, mine.id, theirs.id, mine.id, DuplicateMergeOverrides(),
             )
 
@@ -628,7 +628,7 @@ class TestMergeRefusesDeletedOrSameRow:
 
         first, second = self._session(db)
         with first, second, pytest.raises(ValueError, match="itself"):
-            await transaction_service.merge_transactions(
+            await duplicate_service.merge_transactions(
                 ctx, txn.id, txn.id, txn.id, DuplicateMergeOverrides(),
             )
 

@@ -23,7 +23,7 @@ from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_list_query import TransactionListQuery
 from app.schemas.transactions.transaction_page_query import TransactionPageQuery
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
-from app.services.transactions import transaction_service
+from app.services.transactions import duplicate_service, transaction_service
 from app.services.transactions.merge_conflict_error import MergeConflictError
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -89,7 +89,7 @@ async def get_duplicates(
     limit: int = Query(default=100, le=500),
     ctx: RequestContext = Depends(current_org_member),
 ) -> DuplicatePairsResponse:
-    pairs_raw = await transaction_service.get_duplicate_pairs(ctx, limit=limit)
+    pairs_raw = await duplicate_service.get_duplicate_pairs(ctx, limit=limit)
 
     all_ids = [t.id for triple in pairs_raw for t in (triple[0], triple[1])]
     linked_docs = await transaction_service.get_linked_document_ids(ctx, all_ids)
@@ -126,7 +126,7 @@ async def keep_duplicate(
     ctx: RequestContext = Depends(require_write_access),
 ) -> KeepDuplicateResponse:
     try:
-        result = await transaction_service.keep_transaction(ctx, body.keep_id, body.delete_ids)
+        result = await duplicate_service.keep_transaction(ctx, body.keep_id, body.delete_ids)
     except MergeConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
@@ -139,7 +139,7 @@ async def dismiss_duplicates(
     body: DuplicateDismissRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> DismissDuplicatesResponse:
-    result = await transaction_service.dismiss_duplicates(ctx, body.transaction_ids)
+    result = await duplicate_service.dismiss_duplicates(ctx, body.transaction_ids)
     return DismissDuplicatesResponse(**result)
 
 
@@ -149,7 +149,7 @@ async def merge_duplicates(
     ctx: RequestContext = Depends(require_write_access),
 ) -> MergeDuplicatesResponse:
     try:
-        result = await transaction_service.merge_transactions(
+        result = await duplicate_service.merge_transactions(
             ctx,
             body.transaction_a_id,
             body.transaction_b_id,

@@ -26,7 +26,7 @@ from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories.rent import rent_charge_repo
 from app.schemas.transactions.duplicate import DuplicateMergeFieldSource, DuplicateMergeOverrides
-from app.services.transactions import transaction_service
+from app.services.transactions import duplicate_service
 from app.services.transactions.merge_conflict_error import MergeConflictError
 
 TENANT = uuid.uuid4()
@@ -71,8 +71,8 @@ def _patched(db: AsyncSession):
         yield db
 
     return (
-        patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
-        patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+        patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake),
+        patch("app.services.transactions.duplicate_service.unit_of_work", _fake),
     )
 
 
@@ -82,7 +82,7 @@ async def _merge(
 ) -> Transaction:
     first, second = _patched(db)
     with first, second:
-        return await transaction_service.merge_transactions(
+        return await duplicate_service.merge_transactions(
             _ctx(org, user), a.id, b.id, survivor.id, overrides or DuplicateMergeOverrides(),
         )
 
@@ -92,7 +92,7 @@ async def _keep(
 ) -> dict[str, int]:
     first, second = _patched(db)
     with first, second:
-        return await transaction_service.keep_transaction(
+        return await duplicate_service.keep_transaction(
             _ctx(org, user), keep.id, [t.id for t in delete],
         )
 
