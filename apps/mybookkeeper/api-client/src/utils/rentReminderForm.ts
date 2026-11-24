@@ -55,12 +55,16 @@ export function isAmountOverrideValid(text: string, decimalSeparator: DecimalSep
   return amountOverrideProblem(text, decimalSeparator) === undefined;
 }
 
+export function hasReminderChannel(values: Pick<RentReminderFormValues, "emailEnabled" | "smsEnabled">): boolean {
+  return values.emailEnabled || values.smsEnabled;
+}
+
 export function canSaveReminder(values: RentReminderFormValues, decimalSeparator: DecimalSeparator): boolean {
   return (
     isDaysBeforeValid(values.frequency, values.sendDaysBefore) &&
     isSendTimeValid(values.sendTime) &&
     isAmountOverrideValid(values.amountOverride, decimalSeparator) &&
-    (values.emailEnabled || values.smsEnabled)
+    hasReminderChannel(values)
   );
 }
 

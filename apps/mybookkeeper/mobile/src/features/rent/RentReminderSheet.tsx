@@ -7,6 +7,7 @@ import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/r
 import {
   amountOverrideProblem,
   canSaveReminder,
+  hasReminderChannel,
   isDaysBeforeValid,
   isSendTimeValid,
   reminderFormValues,
@@ -47,7 +48,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   const fields = useFieldChain(["daysBefore", "howToPay", "fixedAmount"]);
 
   const change = <K extends keyof RentReminderFormValues>(key: K, value: RentReminderFormValues[K]) => setValues((current) => ({ ...current, [key]: value }));
-  const hasChannel = values.emailEnabled || values.smsEnabled;
+  const hasChannel = hasReminderChannel(values);
   const isDaysValid = isDaysBeforeValid(values.frequency, values.sendDaysBefore);
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
   const hasChanges = (Object.keys(initial) as (keyof RentReminderFormValues)[]).some((key) => initial[key] !== values[key]);
