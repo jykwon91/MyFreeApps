@@ -4,8 +4,8 @@ The codes are decided on the server (``app/core/rent_reminder_constants.py``);
 the api-client repeats the words for each one, the prefixes of the codes that
 carry their own detail, the "may still arrive" set it warns about, and the code
 Send now refuses a possible duplicate with. It also repeats the send statuses
-and channels (``app/core/rent_reminder_enums.py``) that its row types are built
-from.
+(``app/core/rent_reminder_enums.py``) that its row type is built from; the
+channels are compared in ``test_rent_reminder_channels``.
 """
 import re
 from pathlib import Path
@@ -19,7 +19,7 @@ from app.core.rent_reminder_constants import (
     SMS_FAILED_CODE_PREFIX,
     SMS_REFUSED_CODE_PREFIX,
 )
-from app.core.rent_reminder_enums import RENT_REMINDER_CHANNELS, RENT_REMINDER_SEND_STATUSES
+from app.core.rent_reminder_enums import RENT_REMINDER_SEND_STATUSES
 
 API_CLIENT = Path(__file__).parents[2] / "api-client" / "src"
 
@@ -92,11 +92,6 @@ def test_may_have_been_sent_code_matches() -> None:
 def test_send_statuses_match() -> None:
     values = _const_object_values("RENT_REMINDER_SEND_STATUSES", file="rent-reminder-send-status.ts")
     assert values == set(RENT_REMINDER_SEND_STATUSES)
-
-
-def test_channels_match() -> None:
-    values = _const_object_values("RENT_REMINDER_CHANNELS", file="rent-reminder-channel.ts")
-    assert values == set(RENT_REMINDER_CHANNELS)
 
 
 def test_a_moved_file_shape_fails_with_a_clear_message() -> None:

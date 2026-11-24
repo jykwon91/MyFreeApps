@@ -1,5 +1,5 @@
 """Each reminder channel is declared once, in ``RentReminderChannel``; its named
-constants, the table's checks and the api-client's union are checked against it."""
+constants, the table's checks and the api-client's const object are checked against it."""
 import re
 from pathlib import Path
 from typing import get_args
@@ -40,11 +40,11 @@ def test_send_now_takes_no_more_channels_than_there_are() -> None:
     assert fields["confirmed_possibly_sent"]["maxItems"] == len(RENT_REMINDER_CHANNELS)
 
 
-def test_the_api_client_union_lists_the_same_channels() -> None:
+def test_the_api_client_lists_the_same_channels() -> None:
     source = API_CLIENT_CHANNEL.read_text(encoding="utf-8")
-    union = re.search(r"export type RentReminderChannel = ([^;]+);", source)
-    assert union, (
-        "rent-reminder-channel.ts no longer declares RentReminderChannel as a union "
-        "of strings; update this test's parser so the channels are still compared."
+    channels = re.search(r"export const RENT_REMINDER_CHANNELS = \{([^}]+)\} as const;", source)
+    assert channels, (
+        "rent-reminder-channel.ts no longer declares RENT_REMINDER_CHANNELS as a const "
+        "object of strings; update this test's parser so the channels are still compared."
     )
-    assert set(re.findall(r'"([^"]+)"', union.group(1))) == set(RENT_REMINDER_CHANNELS)
+    assert set(re.findall(r'"([^"]+)"', channels.group(1))) == set(RENT_REMINDER_CHANNELS)
