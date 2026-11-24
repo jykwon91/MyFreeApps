@@ -3,7 +3,8 @@
  * token planting, the catch-all and the route helpers are shared
  * (@platform/ui/test-support); what stays here is MyBookkeeper's: the
  * active-workspace key, its user shape, the workspace, version and
- * tax-profile reads every signed-in page makes, and the dashboard's reads.
+ * tax-profile reads every signed-in page makes, the financial-account list
+ * the transaction pages and forms read, and the dashboard's reads.
  *
  * Unlike the shared stubSignedInShell, stubWorkspaceShell registers no
  * catch-all and plants no token. A spec calls stubUnmatchedApi (or its own
@@ -17,6 +18,7 @@ import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/Or
 import type { TaxProfile } from "@/shared/types/organization/tax-profile";
 import type { UserProfile } from "@/shared/types/user";
 import type { VersionInfo } from "@mybookkeeper/api-client/types/version/version-info";
+import type { FinancialAccountListResponse } from "@mybookkeeper/api-client/types/financial-account/financial-account-list-response";
 import { stubDashboardReads } from "./mockDashboard";
 
 export const ORG_ID = "00000000-0000-0000-0000-000000000010";
@@ -25,6 +27,8 @@ export const VERSION_INFO: VersionInfo = { commit: "abc1234", timestamp: "2026-1
 const ACTIVE_ORG_STORAGE_KEY = "v1_activeOrgId";
 const ORG_CREATED_AT = "2026-01-01T00:00:00Z";
 const TAX_PROFILE_ID = "00000000-0000-0000-0000-000000000011";
+/** No accounts yet: a catch-all's `[]` isn't the list's shape. */
+const NO_FINANCIAL_ACCOUNTS: FinancialAccountListResponse = { items: [], totals: [] };
 
 /** GET /users/me as MyBookkeeper's UserRead sends it: `name` and a platform `role`, no display_name. */
 const TEST_USER: UserProfile = {
@@ -57,7 +61,8 @@ export async function plantAuth(page: Page): Promise<void> {
 
 /**
  * Answers the reads every signed-in page makes (the user, the workspace with
- * `orgRole`, version and tax profile) and the dashboard's, so a spec that lands
+ * `orgRole`, version and tax profile), the financial-account list and the
+ * dashboard's, so a spec that lands
  * on / renders it instead of crashing on catch-all answers.
  */
 export async function stubWorkspaceShell(page: Page, orgRole: OrgRole): Promise<void> {
@@ -66,6 +71,7 @@ export async function stubWorkspaceShell(page: Page, orgRole: OrgRole): Promise<
     { path: "/organizations", body: [workspaceOf(ORG_ID, "Test Workspace", orgRole)] },
     { path: "/version", body: VERSION_INFO },
     { path: "/tax-profile", body: TAX_PROFILE },
+    { path: "/financial-accounts", body: NO_FINANCIAL_ACCOUNTS },
   ]);
   await stubDashboardReads(page);
 }

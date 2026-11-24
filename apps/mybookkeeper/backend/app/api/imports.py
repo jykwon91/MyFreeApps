@@ -18,6 +18,7 @@ router = APIRouter(prefix="/imports", tags=["imports"])
 async def import_bank_csv(
     file: UploadFile,
     property_id: Optional[uuid.UUID] = Query(None),
+    account_id: Optional[uuid.UUID] = Query(None),
     ctx: RequestContext = Depends(require_write_access),
 ) -> ImportResult:
     content_bytes = await read_upload_or_reject(
@@ -28,7 +29,7 @@ async def import_bank_csv(
     )
     try:
         return await import_service.import_bank_csv_file(
-            ctx, content_bytes, file.filename or "", property_id,
+            ctx, content_bytes, file.filename or "", property_id, account_id,
         )
     except ForeignReferenceError as e:
         raise HTTPException(status_code=422, detail=str(e))

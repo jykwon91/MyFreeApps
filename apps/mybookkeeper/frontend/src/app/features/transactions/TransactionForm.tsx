@@ -5,7 +5,10 @@ import { fetchDocumentBlob } from "@/shared/services/documentService";
 import { FieldFeedback, fieldFeedbackAria, FormField, LoadingRegion, showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import { formatTag } from "@/shared/utils/tag";
-import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
+import { PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
+import { DEFAULT_CATEGORY_FOR_TYPE, TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@mybookkeeper/api-client/constants/transactionTypes";
+import { categoriesForType } from "@mybookkeeper/api-client/utils/categoriesForType";
+import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
@@ -19,6 +22,7 @@ import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-clie
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import SourcePreviewDialog from "./SourcePreviewDialog";
+import TransactionAccountFields from "./TransactionAccountFields";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -57,7 +61,8 @@ export default function TransactionForm({
   }, []);
 
   const transactionType = watch("transaction_type");
-  const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
+  const categories = categoriesForType(transactionType);
+  const isTransfer = transactionType === "transfer";
 
   // PR 4.2: vendor rolodex for the "Assign vendor" dropdown, every vendor a page at a time.
   const { pages: vendorPages, mode: vendorsMode, options: vendorOptions } = useVendorSelectOptions(transaction.vendor_id ?? null);
@@ -236,17 +241,20 @@ export default function TransactionForm({
           <Select
             {...register("transaction_type", {
               onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance", { shouldDirty: true });
+                setValue("category", DEFAULT_CATEGORY_FOR_TYPE[e.target.value as TransactionType], { shouldDirty: true });
               },
             })}
             className={selectClass("transaction_type")}
             {...field}
           >
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
+            {TRANSACTION_TYPES.map((type) => (
+              <option key={type} value={type}>{TRANSACTION_TYPE_LABELS[type]}</option>
+            ))}
           </Select>
         )}
       </FormField>
+
+      <TransactionAccountFields register={register} watch={watch} selectClass={selectClass} dirtyFields={dirtyFields} />
 
       <FormField label="Category" dirty={!!dirtyFields.category}>
         {(field) => (
@@ -299,16 +307,19 @@ export default function TransactionForm({
         )}
       </FormField>
 
-      <FormField label="Tax Relevant" group dirty={!!dirtyFields.tax_relevant}>
-        <label className={`flex items-center gap-2 text-sm ${dirtyFields.tax_relevant ? "text-primary font-medium" : ""}`}>
-          <input
-            type="checkbox"
-            {...register("tax_relevant")}
-            className="cursor-pointer"
-          />
-          <span>Include in tax reports</span>
-        </label>
-      </FormField>
+      {/* A transfer never reaches a tax report; the server forces it off. */}
+      {!isTransfer && (
+        <FormField label="Tax Relevant" group dirty={!!dirtyFields.tax_relevant}>
+          <label className={`flex items-center gap-2 text-sm ${dirtyFields.tax_relevant ? "text-primary font-medium" : ""}`}>
+            <input
+              type="checkbox"
+              {...register("tax_relevant")}
+              className="cursor-pointer"
+            />
+            <span>Include in tax reports</span>
+          </label>
+        </FormField>
+      )}
 
       {transactionType === "expense" && (
         <FormField label={MSG.capitalImprovement} group dirty={!!dirtyFields.is_capital_improvement}>

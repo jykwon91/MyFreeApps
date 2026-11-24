@@ -4,10 +4,11 @@ import userEvent from "@testing-library/user-event";
 import TransactionFilterBar from "@/app/features/transactions/TransactionFilterBar";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import { EMPTY_FILTERS } from "@/shared/lib/transaction-config";
+import { aFinancialAccount } from "@/test/financial-account-fixture";
 
 
 function renderBar(filters: Filters = EMPTY_FILTERS, onChange = vi.fn()) {
-  render(<TransactionFilterBar filters={filters} onChange={onChange} properties={[]} />);
+  render(<TransactionFilterBar filters={filters} onChange={onChange} properties={[]} accounts={[]} />);
   return { onChange, toggle: screen.getByRole("button", { name: /^Filters/ }) };
 }
 
@@ -66,5 +67,24 @@ describe("TransactionFilterBar", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
     expect(onChange).toHaveBeenCalledWith(EMPTY_FILTERS);
+  });
+  it("filters by account once there are accounts, closed ones included", async () => {
+    const onChange = vi.fn();
+    const accounts = [aFinancialAccount(), aFinancialAccount({ id: "acct-9", name: "Old Card", mask: null, closed_on: "2026-01-01" })];
+    render(<TransactionFilterBar filters={EMPTY_FILTERS} onChange={onChange} properties={[]} accounts={accounts} />);
+    const select = screen.getByRole("combobox", { name: "Filter by account" });
+
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All Accounts", "Chase Checking ··4821", "Old Card",
+    ]);
+    await userEvent.selectOptions(select, "acct-9");
+
+    expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTERS, account_id: "acct-9" });
+  });
+
+  it("offers Transfer as a type", () => {
+    renderBar();
+    const type = screen.getByRole("combobox", { name: "Filter by type" });
+    expect(within(type).getAllByRole("option").map((option) => option.textContent)).toContain("Transfer");
   });
 });

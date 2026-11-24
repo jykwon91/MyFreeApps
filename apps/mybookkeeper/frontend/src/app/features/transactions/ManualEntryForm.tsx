@@ -2,7 +2,10 @@ import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { taxYearOf } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 import { formatTag } from "@/shared/utils/tag";
-import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
+import { PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
+import { DEFAULT_CATEGORY_FOR_TYPE, TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@mybookkeeper/api-client/constants/transactionTypes";
+import { categoriesForType } from "@mybookkeeper/api-client/utils/categoriesForType";
+import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
@@ -13,6 +16,7 @@ import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError"
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
+import TransactionAccountFields from "./TransactionAccountFields";
 
 export interface ManualEntryFormProps {
   properties: readonly Property[];
@@ -39,6 +43,8 @@ function buildDefaults(): TransactionFormValues {
     is_capital_improvement: false,
     channel: "",
     payment_method: "",
+    account_id: "",
+    transfer_to_account_id: "",
   };
 }
 
@@ -56,7 +62,8 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
   const transactionDate = watch("transaction_date");
   const category = watch("category");
 
-  const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
+  const categories = categoriesForType(transactionType);
+  const isTransfer = transactionType === "transfer";
   const isValid = moneyInputError(amount, NUMBER_INPUT_DECIMAL_SEPARATOR) === undefined && transactionDate && category;
 
   async function onSubmit(data: TransactionFormValues) {
@@ -70,7 +77,9 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
         transaction_type: data.transaction_type,
         category: data.category,
         property_id: data.property_id || null,
-        tax_relevant: data.tax_relevant,
+        tax_relevant: isTransfer ? false : data.tax_relevant,
+        account_id: data.account_id || null,
+        transfer_to_account_id: isTransfer ? data.transfer_to_account_id || null : null,
         channel: data.channel || null,
         payment_method: data.payment_method || null,
         is_manual: true,
@@ -115,17 +124,20 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
             <Select
               {...register("transaction_type", {
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                  setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance");
+                  setValue("category", DEFAULT_CATEGORY_FOR_TYPE[e.target.value as TransactionType]);
                 },
               })}
               className="w-full"
               {...field}
             >
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
+              {TRANSACTION_TYPES.map((type) => (
+                <option key={type} value={type}>{TRANSACTION_TYPE_LABELS[type]}</option>
+              ))}
             </Select>
           )}
         </FormField>
+
+        <TransactionAccountFields register={register} watch={watch} />
 
         <FormField label="Amount" required>
           {(field) => (
@@ -224,16 +236,18 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
           )}
         </FormField>
 
-        <FormField label="Tax Relevant" group>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              {...register("tax_relevant")}
-              className="cursor-pointer"
-            />
-            <span>Include in tax reports</span>
-          </label>
-        </FormField>
+        {!isTransfer && (
+          <FormField label="Tax Relevant" group>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                {...register("tax_relevant")}
+                className="cursor-pointer"
+              />
+              <span>Include in tax reports</span>
+            </label>
+          </FormField>
+        )}
       </form>
 
       <div className="flex items-center justify-end gap-2 px-5 py-4 border-t">

@@ -19,6 +19,8 @@ routes:
     not_on_mobile: Operator tool, for the website.
   /documents:
     screen: (app)/(tabs)/money
+  /financial-accounts:
+    not_on_mobile: New in this release; the phone screen follows once accounts sync from the bank.
   /forbidden:
     not_on_mobile: A web-only error page.
   /forgot-password:

@@ -11,7 +11,7 @@ import { FlatList, type ListRenderItem, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
-import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, TYPE_FILTER_SUMMARY, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
 import { TRANSACTION_LIST_MESSAGES, transactionCountLabel } from "../../constants/transactionList";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -95,7 +95,7 @@ export default function TransactionsScreen({
   const summary = [
     filters.propertyId === UNASSIGNED_PROPERTY ? "No property" : filters.propertyId ? propertyLabel(filters.propertyId, properties) : null,
     filters.category ? categoryLabel(filters.category) : null,
-    filters.type === "income" ? "Income" : filters.type === "expense" ? "Expenses" : null,
+    filters.type ? TYPE_FILTER_SUMMARY[filters.type] : null,
     filters.view === "review"
       ? null
       : filters.month

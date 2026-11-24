@@ -1,10 +1,13 @@
 import type { PaginationState } from "@tanstack/react-table";
 import { EXPENSE_CATEGORY_LIST } from "@/shared/lib/constants";
+import { TRANSFER_CATEGORY } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { TRANSACTION_TYPES } from "@mybookkeeper/api-client/constants/transactionTypes";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 
 export const EMPTY_FILTERS: Filters = {
   property_id: "",
+  account_id: "",
   status: "",
   transaction_type: "",
   category: "",
@@ -25,6 +28,6 @@ export const APPROVABLE_STATUSES: readonly TransactionStatus[] = [
   "unverified",
 ];
 
-export const TYPE_OPTIONS = ["income", "expense"] as const;
+export const TYPE_OPTIONS = TRANSACTION_TYPES;
 
-export const ALL_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", ...EXPENSE_CATEGORY_LIST] as const;
+export const ALL_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", ...EXPENSE_CATEGORY_LIST, TRANSFER_CATEGORY] as const;

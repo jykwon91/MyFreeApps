@@ -17,6 +17,7 @@ export function transactionListQuery(params: TransactionListParams): string {
     property_id: params.property_id,
     unassigned: params.unassigned ? "true" : undefined,
     applicant_id: params.applicant_id,
+    account_id: params.account_id,
     status: params.status,
     to_review: params.to_review ? "true" : undefined,
     transaction_type: params.transaction_type,

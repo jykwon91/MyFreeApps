@@ -1,4 +1,5 @@
-import { INCOME_CATEGORIES, EXPENSE_CATEGORY_LIST } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { INCOME_CATEGORIES, EXPENSE_CATEGORY_LIST, TRANSFER_CATEGORY } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { categoriesForType } from "@mybookkeeper/api-client/utils/categoriesForType";
 import { useListTransactionCategoriesQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useMemo } from "react";
 import { NO_FILTERS } from "../../constants/transactionFilters";
@@ -6,9 +7,8 @@ import type { TransactionFilters } from "../../types/TransactionFilters";
 import { toListParams } from "./transactionFilters";
 
 function knownCategories(draft: TransactionFilters): readonly string[] {
-  if (draft.type === "income") return INCOME_CATEGORIES;
-  if (draft.type === "expense") return EXPENSE_CATEGORY_LIST;
-  return [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORY_LIST])];
+  if (draft.type) return categoriesForType(draft.type);
+  return [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORY_LIST, TRANSFER_CATEGORY])];
 }
 
 /**

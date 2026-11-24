@@ -19,6 +19,11 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", async () => {
   };
 });
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 vi.mock("@/shared/lib/api", () => ({ default: { get: vi.fn() } }));
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),

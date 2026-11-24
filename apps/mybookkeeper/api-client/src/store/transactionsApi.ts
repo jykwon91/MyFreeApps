@@ -18,6 +18,7 @@ import type { TransactionPageParams } from "../types/transaction/TransactionPage
 import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
 import type { TransactionReviewCount } from "../types/transaction/TransactionReviewCount";
 import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
+import { bankCsvImportParams } from "../utils/bankCsvImportParams";
 import { pathWithQuery } from "../utils/pathWithQuery";
 import { transactionListQuery } from "../utils/transactionListQuery";
 
@@ -116,12 +117,12 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     importBankCsv: builder.mutation<ImportResult, BankCsvImportRequest>({
-      query: ({ form, propertyId }) => ({
+      query: ({ form, propertyId, accountId }) => ({
         url: "/imports/bank-csv",
         method: "POST",
         data: form,
         timeout: UPLOAD_REQUEST_TIMEOUT_MS,
-        params: propertyId ? { property_id: propertyId } : undefined,
+        params: bankCsvImportParams(propertyId, accountId),
       }),
       // New rows change the list, the review count and every total built from them.
       invalidatesTags: ["Transaction", "Summary", "TaxReturn"],

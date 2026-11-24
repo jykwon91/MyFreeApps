@@ -8,7 +8,7 @@ scope mirrors how the app lets the requesting user read it:
   attribution review queue, ...) are exported workspace-wide.
 * Tables the app shows only to the member who owns the row (applicants and
   everything about them, rent schedules and charges, signed leases and
-  templates, vendors, insurance policies, mortgages, utility plans and the
+  templates, vendors, insurance policies, mortgages, financial accounts, utility plans and the
   utility accounts learned from their bills, reply templates, calendar review
   items) are exported only when they are the requesting user's.
 * A table whose read endpoint requires a role (taxpayer profiles: owner or
@@ -35,6 +35,7 @@ from app.models.calendar.calendar_listing_blocklist import CalendarListingBlockl
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
+from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.inquiry_message import InquiryMessage
@@ -192,6 +193,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(InsurancePolicyAttachment, Scope.CHILD, InsurancePolicy, "policy_id"),
     Source(InsuranceBenchmark, Scope.WORKSPACE),
     Source(Mortgage, Scope.WORKSPACE_MEMBER),
+    Source(FinancialAccount, Scope.WORKSPACE_MEMBER),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),
     Source(WelcomeManualRoom, Scope.CHILD, WelcomeManual, "manual_id"),

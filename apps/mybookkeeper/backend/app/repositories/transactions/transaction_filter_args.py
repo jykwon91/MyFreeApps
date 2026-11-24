@@ -10,6 +10,7 @@ class TransactionFilterArgs(TypedDict, total=False):
     property_id: uuid.UUID | None
     unassigned: bool
     applicant_id: uuid.UUID | None
+    account_id: uuid.UUID | None
     status: str | None
     to_review: bool
     transaction_type: str | None

@@ -184,6 +184,7 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "insurance_policy_attachments": {"storage_key": _STORAGE_KEY},
     "insurance_benchmarks": {},
     "mortgages": {"key_version": _KEY_VERSION},
+    "financial_accounts": {},
     "welcome_manuals": {
         "share_token": "Bearer secret of the guest share link; a credential.",
         "share_pin": "PIN that unlocks the guest share link; a credential.",

@@ -1,8 +1,8 @@
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
-import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
+import { categoriesForType } from "@mybookkeeper/api-client/utils/categoriesForType";
 import { isAllowedTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
@@ -31,13 +31,12 @@ export function toEditValues(transaction: Transaction): TransactionEditValues {
 
 /** The list for this type, plus the row's own value if it's one the list doesn't offer. */
 export function categoryChoices(type: TransactionType, current: string): string[] {
-  const list: readonly string[] = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
+  const list = categoriesForType(type);
   return list.includes(current) ? [...list] : [current, ...list];
 }
 
 export function categoryFitsType(type: TransactionType, category: string): boolean {
-  const list: readonly string[] = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
-  return list.includes(category);
+  return categoriesForType(type).includes(category);
 }
 
 /** The stored amount left as it was, or retyped as the same number ("84.2" for "84.20"). A stored refund is negative, which can't be typed, so it's matched as text. */

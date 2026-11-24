@@ -146,10 +146,20 @@ class TestColumnFilters:
         assert await _vendors(client, {"property_ids": [str(other.id)]}) == ["At other"]
 
     @pytest.mark.asyncio
+    async def test_transfer_is_a_type_the_list_filters_on(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        await _seed_transaction(db, org, owner, vendor="To savings", transaction_type="transfer", category="transfer")
+        await _seed_transaction(db, org, owner, vendor="Repair")
+
+        assert await _vendors(client, {"transaction_types": ["transfer"]}) == ["To savings"]
+        assert await _vendors(client, {"transaction_types": ["expense"]}) == ["Repair"]
+
+    @pytest.mark.asyncio
     async def test_refuses_values_outside_each_allowlist(self, client: AsyncClient) -> None:
         for params in (
             {"statuses": "archived"},
-            {"transaction_types": "transfer"},
+            {"transaction_types": "refund"},
             {"categories": "groceries"},
             {"property_ids": "not-a-uuid"},
             {"sort_by": "description"},

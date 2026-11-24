@@ -69,6 +69,8 @@ export default function Transactions() {
     setShowClassificationRules,
     properties,
     propertyMap,
+    accounts,
+    accountMap,
     duplicatePairs,
     isDuplicatesLoading,
     dupCount,
@@ -97,7 +99,7 @@ export default function Transactions() {
     return ids;
   }, [duplicatePairs]);
 
-  const columns = useTransactionColumns(propertyMap, {
+  const columns = useTransactionColumns(propertyMap, accountMap, {
     onOpen: setEditingTransaction,
     onDelete: handleDelete,
     onApprove: handleApprove,
@@ -212,7 +214,7 @@ export default function Transactions() {
       {/* Transactions tab content */}
       {activeTab === "transactions" && (
         <>
-          <TransactionFilterBar filters={filters} onChange={setFilters} properties={properties} />
+          <TransactionFilterBar filters={filters} onChange={setFilters} properties={properties} accounts={accounts} />
 
           {selectedCount > 0 && canWrite && (
             <TransactionBulkBar
@@ -245,6 +247,7 @@ export default function Transactions() {
               editingId={editingTransaction?.id ?? null}
               filterOptions={filterOptions}
               propertyMap={propertyMap}
+              accountMap={accountMap}
               mode={listMode}
               isRefreshing={isFetching}
             />
@@ -318,6 +321,7 @@ export default function Transactions() {
       {showBankImport ? (
         <BankStatementImport
           properties={properties}
+          accounts={accounts}
           onClose={() => setShowBankImport(false)}
           onSuccess={(msg) => {
             setShowBankImport(false);

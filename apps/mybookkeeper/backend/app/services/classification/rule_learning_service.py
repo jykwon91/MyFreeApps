@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tags import (
+    TRANSFER_CATEGORY,
     VENDOR_SPLIT_CATEGORIES,
     schedule_e_line_after_category_change,
     transaction_type_for_category,
@@ -38,6 +39,11 @@ async def learn_from_correction(
     if new_category == old_category:
         return 0
     if {new_category, old_category} & VENDOR_SPLIT_CATEGORIES:
+        return 0
+    # Whether a payment is a transfer depends on which accounts it ran
+    # between, not on who it was to, so it is not a vendor rule. Rules cannot
+    # name the transfer category either (classification_rule.VALID_CATEGORIES).
+    if TRANSFER_CATEGORY in {new_category, old_category}:
         return 0
 
     await classification_rule_repo.upsert_rule(
@@ -99,6 +105,8 @@ async def learn_from_property_correction(
     Returns count of retroactively updated transactions.
     """
     if not transaction.vendor or not transaction.address:
+        return 0
+    if transaction.category == TRANSFER_CATEGORY:
         return 0
 
     await classification_rule_repo.upsert_rule(

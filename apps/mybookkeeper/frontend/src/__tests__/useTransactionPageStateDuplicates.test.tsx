@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTransactionPageState } from "@/app/features/transactions/hooks/useTransactionPageState";
+import { EMPTY_FINANCIAL_ACCOUNTS_QUERY } from "@/test/empty-financial-accounts";
 
 const REASON = "These transactions are linked to different tenants. Set the same one on both, or clear it on one of them, then try again.";
 
@@ -13,6 +14,9 @@ const mockKeep = vi.fn();
 
 vi.mock("@/shared/hooks/useToast", () => ({ useToast: () => ({ showError: mockShowError, showSuccess: mockShowSuccess }) }));
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({ useGetPropertiesQuery: () => ({ data: [] }) }));
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", () => ({
+  useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY,
+}));
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", async () => {
   const { queryData } = await import("@/test/rtk-query-data");
   const idle = () => [vi.fn(), { isLoading: false }];

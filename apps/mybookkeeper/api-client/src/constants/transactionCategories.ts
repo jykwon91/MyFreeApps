@@ -24,4 +24,7 @@ export const EXPENSE_CATEGORY_LIST = [
 
 export const INCOME_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", "business_income", "uncategorized"] as const;
 
+/** The one category a transfer carries. Never income, never an expense. */
+export const TRANSFER_CATEGORY = "transfer";
+
 export const REVENUE_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", "business_income"] as const;

@@ -8,6 +8,7 @@ export const APP_PAGES = [
   "/applicants",
   "/calendar",
   "/documents",
+  "/financial-accounts",
   "/inquiries",
   "/insurance-policies",
   "/integrations",

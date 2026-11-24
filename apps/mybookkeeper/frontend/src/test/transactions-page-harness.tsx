@@ -16,6 +16,7 @@ import type { TransactionListPage } from "@mybookkeeper/api-client/types/transac
 import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
 import Transactions from "@/app/pages/Transactions";
 import { serverError } from "./server-error";
+import { NO_FINANCIAL_ACCOUNTS } from "./empty-financial-accounts";
 
 export const TOTAL = 120;
 export const PENDING_TOTAL = 2;
@@ -65,6 +66,8 @@ function aTransaction(n: number, prefix: string): Transaction {
     external_source: null,
     is_pending: false,
     activity_id: null,
+    account_id: null,
+    transfer_to_account_id: null,
     review_reason: null,
     applicant_id: null,
     attribution_source: null,
@@ -157,6 +160,7 @@ export const adapter: AxiosAdapter = async (config) => {
   }
   if (url.pathname === "/transactions/selection") data = await server.selectionResponse(url.searchParams);
   if (url.pathname === "/transactions/categories") data = ["repairs", "utilities"];
+  if (url.pathname === "/financial-accounts") data = NO_FINANCIAL_ACCOUNTS;
   if (url.pathname === "/transactions/bulk-delete" && isIdsBody(body)) data = { deleted: body.ids.length, skipped: 0 };
   if (url.pathname === "/transactions/bulk-approve" && isIdsBody(body)) {
     for (const id of body.ids) server.approved.add(id);

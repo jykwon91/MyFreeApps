@@ -14,6 +14,7 @@ import type { TransactionFormValues } from "@/shared/types/transaction/transacti
 import { restoreApi, stubApi } from "@/test/api-stub";
 import { answerListPage } from "@/test/paged-list-server";
 import { renderWithStore } from "@/test/render-with-store";
+import { NO_FINANCIAL_ACCOUNTS } from "@/test/empty-financial-accounts";
 
 const PAGE_SIZE = 25;
 const VENDOR_COUNT = PAGE_SIZE + 5;
@@ -78,6 +79,7 @@ function renderForm(vendorId: string | null): void {
   singleVendorReads = [];
   stubApi((path, params) => {
     if (path === "/vendors") return answerListPage(VENDORS, params);
+    if (path === "/financial-accounts") return NO_FINANCIAL_ACCOUNTS;
     const id = path.split("/")[2];
     singleVendorReads.push(id);
     return VENDORS.find((vendor) => vendor.id === id);

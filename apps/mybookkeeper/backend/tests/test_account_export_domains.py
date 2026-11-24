@@ -4,7 +4,7 @@ Seeded world:
 - User U and teammate T are members of workspace W; U exports W.
 - Workspace X belongs to someone else; U is not a member.
 
-U's export must carry U's applicants, leases, rent, insurance, mortgages,
+U's export must carry U's applicants, leases, rent, insurance, mortgages, accounts,
 vendors, utility accounts, the workspace's listings, inquiries, tax data,
 payer aliases and welcome manuals, with encrypted PII decrypted and tax IDs
 masked as the app shows them. The taxpayer profile, which the app shows only
@@ -39,6 +39,7 @@ from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.listings.channel_listing import ChannelListing
 from app.models.listings.listing import Listing
+from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.mortgage.mortgage import Mortgage
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember, OrgRole
@@ -276,6 +277,14 @@ async def _seed(db: AsyncSession) -> tuple[User, Organization]:
             id=uuid.uuid4(), user_id=teammate.id, organization_id=ws.id, property_id=prop.id,
             lender="Teammate Credit Union", rate_type="fixed",
         ),
+        FinancialAccount(
+            id=uuid.uuid4(), user_id=me.id, organization_id=ws.id, name="My Checking",
+            account_type="checking", mask="4821",
+        ),
+        FinancialAccount(
+            id=uuid.uuid4(), user_id=teammate.id, organization_id=ws.id, name="Teammate Checking",
+            account_type="checking",
+        ),
     ])
 
     integration = Integration(
@@ -353,6 +362,7 @@ async def test_export_includes_every_new_domain_with_real_values(db: AsyncSessio
     assert (taxpayer["first_name"], taxpayer["city"], taxpayer["ssn_last_four"]) == ("Jordan", "Austin", "6789")
     assert _values(data, "insurance_policies", "policy_number") == ["POL-777"]
     assert _values(data, "mortgages", "account_number") == ["ACCT-998877"]
+    assert _values(data, "financial_accounts", "name") == ["My Checking"]
     assert _live(data, "vendors", "name") == ["Ace Plumbing"]
     assert _values(data, "welcome_manuals", "title") == ["House Guide"]
     assert _values(data, "welcome_manual_sections", "body") == ["Network: MapleNet"]

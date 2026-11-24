@@ -1,4 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import { DEFAULT_CATEGORY_FOR_TYPE } from "@mybookkeeper/api-client/constants/transactionTypes";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
@@ -6,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
-import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transactionEdit";
+import { NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import { TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import { pickerLoadError } from "../../lib/pickerLoadError";
@@ -121,7 +122,7 @@ export default function NewTransactionForm() {
           />
           <SegmentedControl
             accessibilityLabel="Type"
-            onChange={(type: TransactionType) => update({ type, category: DEFAULT_CATEGORY[type] })}
+            onChange={(type: TransactionType) => update({ type, category: DEFAULT_CATEGORY_FOR_TYPE[type] })}
             segments={TRANSACTION_TYPES}
             value={values.type}
           />
@@ -141,7 +142,9 @@ export default function NewTransactionForm() {
           <PickerField label="Property" onPress={() => setOpenSheet("property")} valueLabel={propertyLabel(values.propertyId, properties)} />
           <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} valueLabel={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
           <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} valueLabel={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
-          <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
+          {values.type === "transfer" ? null : (
+            <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
+          )}
         </View>
         <LoadingButton disabled={locked} isLoading={isSaving} loadingText="Adding…" onPress={save}>
           Add transaction
