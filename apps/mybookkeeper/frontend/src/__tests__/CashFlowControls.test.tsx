@@ -24,23 +24,23 @@ describe("CashFlowControls", () => {
     expect(screen.getByTestId("cash-flow-scope-all")).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("changes the scope and range, keeping the rest", async () => {
+  it("sends only the picked scope or range", async () => {
     const onChange = vi.fn();
     render(<CashFlowControls value={{ ...DEFAULT, accountId: "a1" }} onChange={onChange} />);
     await userEvent.click(screen.getByTestId("cash-flow-scope-personal"));
-    expect(onChange).toHaveBeenLastCalledWith({ range: "6m", scope: "personal", accountId: "a1" });
+    expect(onChange).toHaveBeenLastCalledWith({ scope: "personal" });
     await userEvent.click(screen.getByTestId("cash-flow-range-ytd"));
-    expect(onChange).toHaveBeenLastCalledWith({ range: "ytd", scope: "all", accountId: "a1" });
+    expect(onChange).toHaveBeenLastCalledWith({ range: "ytd" });
   });
 
   it("narrows to one account and back to all", async () => {
     const onChange = vi.fn();
     const { rerender } = render(<CashFlowControls value={DEFAULT} onChange={onChange} />);
     await userEvent.selectOptions(screen.getByTestId("cash-flow-account"), "a2");
-    expect(onChange).toHaveBeenLastCalledWith({ ...DEFAULT, accountId: "a2" });
+    expect(onChange).toHaveBeenLastCalledWith({ accountId: "a2" });
     rerender(<CashFlowControls value={{ ...DEFAULT, accountId: "a2" }} onChange={onChange} />);
     await userEvent.selectOptions(screen.getByTestId("cash-flow-account"), "");
-    expect(onChange).toHaveBeenLastCalledWith(DEFAULT);
+    expect(onChange).toHaveBeenLastCalledWith({ accountId: null });
   });
 
   it("leaves out the account picker when there are no accounts", () => {

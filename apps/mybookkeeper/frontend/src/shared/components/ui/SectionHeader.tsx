@@ -11,7 +11,7 @@ export default function SectionHeader({ title, subtitle, actions }: SectionHeade
         <h1 className="text-2xl font-semibold">{title}</h1>
         {subtitle ? <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap gap-2 sm:shrink-0">{actions}</div> : null}
     </div>
   );
 }

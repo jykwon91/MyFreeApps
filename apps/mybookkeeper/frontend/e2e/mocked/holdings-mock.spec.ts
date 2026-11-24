@@ -23,6 +23,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { toast } from "@platform/ui/test-support/toast";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { DESKTOP_VIEWPORT, expectFullWidthPage } from "./fixtures/fullWidthPage";
 
 const BROKERAGE = "44444444-4444-4444-4444-444444444444";
 const IRA = "55555555-5555-5555-5555-555555555555";
@@ -269,6 +270,14 @@ test.describe("Investments", () => {
     await expect(page.getByTestId("holdings-skeleton-tile")).toHaveCount(3);
     await expect(page.getByTestId("holdings-skeleton-allocation")).toHaveCount(1);
     await expect(page.getByTestId("holdings-skeleton-row")).not.toHaveCount(0);
+  });
+
+  test("uses the full width on a desktop screen", async ({ page }) => {
+    await page.setViewportSize(DESKTOP_VIEWPORT);
+    await stubApi(page);
+    await page.goto("/investments");
+    await expect(page.getByTestId("holding-row-h-vti")).toBeVisible();
+    await expectFullWidthPage(page);
   });
 
   test("fits a phone screen with cards instead of the table", async ({ page }) => {
