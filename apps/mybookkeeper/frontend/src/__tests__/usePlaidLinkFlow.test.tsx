@@ -6,14 +6,38 @@ import { usePlaidLinkFlow } from "@/app/features/financial-accounts/plaid/usePla
 import { PLAID_MESSAGES as MSG } from "@/shared/lib/plaid-messages";
 import { PLAID_LINK_SESSION_STORAGE_KEY } from "@/shared/lib/session-storage-keys";
 
-const open = vi.fn();
+const open = vi.fn<(linkToken: string | null) => void>();
 let linkOptions: PlaidLinkOptionsWithLinkToken | null = null;
-vi.mock("react-plaid-link", () => ({
-  usePlaidLink: (options: PlaidLinkOptionsWithLinkToken) => {
-    linkOptions = options;
-    return { open, ready: options.token !== null, error: null, exit: vi.fn() };
-  },
-}));
+interface FakeHandler {
+  token: string | null;
+  destroyed: boolean;
+}
+// Behaves like react-plaid-link 5: a handler per token, built in an effect and
+// loaded later (onLoad); when the token goes away the old handler is destroyed
+// but still returned, so `ready` stays true and its open() does nothing.
+vi.mock("react-plaid-link", async () => {
+  const { useEffect, useState } = await import("react");
+  return {
+    usePlaidLink: (options: PlaidLinkOptionsWithLinkToken) => {
+      linkOptions = options;
+      const [handler, setHandler] = useState<FakeHandler | null>(null);
+      useEffect(() => {
+        if (!options.token && !options.receivedRedirectUri) return;
+        const next: FakeHandler = { token: options.token, destroyed: false };
+        setHandler(next);
+        const loaded = setTimeout(() => options.onLoad?.(), 0);
+        return () => {
+          clearTimeout(loaded);
+          next.destroyed = true;
+        };
+      }, [options.token]); // eslint-disable-line react-hooks/exhaustive-deps
+      const openHandler = () => {
+        if (handler && !handler.destroyed) open(handler.token);
+      };
+      return { open: openHandler, ready: handler !== null, error: null, exit: vi.fn() };
+    },
+  };
+});
 
 const createLinkToken = vi.fn();
 const markReconnected = vi.fn();
@@ -64,6 +88,33 @@ describe("usePlaidLinkFlow", () => {
     const stored: unknown = JSON.parse(localStorage.getItem(PLAID_LINK_SESSION_STORAGE_KEY) ?? "null");
     expect(stored).toEqual({ linkToken: "link-1", itemId: null });
     expect(result.current.starting).toBeUndefined();
+  });
+
+  it("opens Link again for a second bank after the first one closed", async () => {
+    tokenIs("link-1");
+    const { result } = renderHook(() => usePlaidLinkFlow());
+    await act(() => result.current.begin(null));
+    await waitFor(() => expect(open).toHaveBeenCalledWith("link-1"));
+
+    act(() => linkOptions?.onSuccess("public-1", metadata));
+    tokenIs("link-2");
+    await act(() => result.current.begin(null));
+
+    await waitFor(() => expect(open).toHaveBeenLastCalledWith("link-2"));
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens Link again after the person closed it without connecting", async () => {
+    tokenIs("link-1");
+    const { result } = renderHook(() => usePlaidLinkFlow());
+    await act(() => result.current.begin(null));
+    await waitFor(() => expect(open).toHaveBeenCalledWith("link-1"));
+
+    act(() => linkOptions?.onExit?.(null, { institution: null, status: null, link_session_id: "s", request_id: "r" }));
+    tokenIs("link-2");
+    await act(() => result.current.begin(null));
+
+    await waitFor(() => expect(open).toHaveBeenLastCalledWith("link-2"));
   });
 
   it("a new bank waits for the person to say what each account is", async () => {

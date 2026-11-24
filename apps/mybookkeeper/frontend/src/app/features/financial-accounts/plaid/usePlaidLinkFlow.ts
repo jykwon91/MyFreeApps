@@ -20,8 +20,12 @@ const SERVICE_UNAVAILABLE = 503;
  *
  * The Link token is kept in localStorage while Link is open: an OAuth bank
  * (Chase) sends the person away and back to /plaid-oauth, which resumes the
- * same session from it. Link opens as soon as its script is ready; the button
- * shows loading from the click until then.
+ * same session from it. Link opens once the session's own Link has loaded; the
+ * button shows loading from the click until then.
+ *
+ * Not on `ready`: after a Link closes, react-plaid-link keeps its destroyed
+ * handler and still reports ready, so opening on ready calls a dead open() and
+ * the next bank's Link never shows. `onLoad` fires only for a newly built Link.
  */
 export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled }: PlaidLinkFlowOptions = {}): PlaidLinkFlow {
   const [createLinkToken] = useCreatePlaidLinkTokenMutation();
@@ -32,6 +36,7 @@ export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled
   // Link keeps the callbacks it was created with, so they read the session from here.
   const sessionRef = useRef(session);
   const openedToken = useRef<string | null>(null);
+  const [loadedToken, setLoadedToken] = useState<string | null>(null);
 
   const finish = useCallback(() => {
     forgetPlaidLinkSession();
@@ -64,11 +69,15 @@ export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled
     onSettled?.();
   }, [finish, onSettled]);
 
-  const { open, ready } = usePlaidLink({
-    token: session?.linkToken ?? null,
+  const linkToken = session?.linkToken ?? null;
+  const onLoad = useCallback(() => setLoadedToken(linkToken), [linkToken]);
+
+  const { open } = usePlaidLink({
+    token: linkToken,
     receivedRedirectUri,
     onSuccess,
     onExit,
+    onLoad,
   });
 
   useEffect(() => {
@@ -76,11 +85,11 @@ export function usePlaidLinkFlow({ receivedRedirectUri, resume = null, onSettled
   }, [session]);
 
   useEffect(() => {
-    if (!session || !ready || openedToken.current === session.linkToken) return;
+    if (!session || loadedToken !== session.linkToken || openedToken.current === session.linkToken) return;
     openedToken.current = session.linkToken;
     setStarting(undefined);
     open();
-  }, [session, ready, open]);
+  }, [session, loadedToken, open]);
 
   const begin = useCallback(async (itemId: string | null, { addInvestments = false }: PlaidLinkBeginOptions = {}) => {
     setStarting(itemId);
