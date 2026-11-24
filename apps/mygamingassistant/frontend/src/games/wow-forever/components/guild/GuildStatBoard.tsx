@@ -7,7 +7,6 @@ import {
   boardStatus,
   gainsNote,
   isGainBoard,
-  levelCapCount,
   missingCount,
   noBaselineCount,
   noGainCount,
@@ -34,7 +33,6 @@ export default function GuildStatBoard({ members, board, me, gainsWindowDays, pi
   const shownCount = topEntries(ranked).length;
   const viewerUnranked = viewerIsUnranked(members, ranked, me);
   const missing = missingCount(members, board, ranked.length);
-  const atCap = levelCapCount(members, board);
   const gains = isGainBoard(board);
   const noGain = noGainCount(members, board);
   const noBaseline = noBaselineCount(members, board);
@@ -44,7 +42,7 @@ export default function GuildStatBoard({ members, board, me, gainsWindowDays, pi
     <>
       <div className={LEADERBOARD_PICKER_GRID}>{picker}</div>
       <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
-        {boardStatus(board, shownCount, ranked.length, atCap)}
+        {boardStatus(board, shownCount, ranked.length)}
       </div>
       {gains ? <p className="text-xs text-muted-foreground">{gainsNote(gainsWindowDays)}</p> : null}
       <GuildLeaderboardList

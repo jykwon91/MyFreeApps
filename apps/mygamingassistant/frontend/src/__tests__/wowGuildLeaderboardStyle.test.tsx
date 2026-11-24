@@ -8,7 +8,7 @@ import { MemoryRouter } from "react-router-dom";
 import GuildLeaderboardList from "@/games/wow-forever/components/guild/GuildLeaderboardList";
 import GuildLeaderboardPicker from "@/games/wow-forever/components/guild/GuildLeaderboardPicker";
 import { CLASS_COLORS } from "@/games/wow-forever/data/guild/classColors";
-import { LEADERBOARD_BAR_MIN_PERCENT } from "@/games/wow-forever/data/guild/leaderboardConfig";
+import { LEADERBOARD_BAR_MIN_PERCENT, LEADERBOARDS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { findBoard } from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import { barPercent } from "@/games/wow-forever/lib/guild/leaderboardBar";
 import { memberClassStyle } from "@/games/wow-forever/lib/guild/memberClassStyle";
@@ -83,7 +83,7 @@ describe("leaderboard look logic", () => {
   it("draws no bars on fewest-first boards or standings", () => {
     expect(findBoard("fewest-deaths").showBar).toBe(false);
     expect(findBoard("faction").showBar).toBe(false);
-    expect(findBoard("level").showBar).toBe(true);
+    expect(findBoard("dungeons").showBar).toBe(true);
     expect(findBoard("levels-gained").showBar).toBe(true);
   });
 });
@@ -128,12 +128,18 @@ describe("leaderboard list", () => {
 describe("board picker", () => {
   it("shows one category's boards, and a chip picks its first board", () => {
     const onChange = vi.fn();
-    render(<GuildLeaderboardPicker board={findBoard("level")} onChange={onChange} />);
+    render(<GuildLeaderboardPicker board={findBoard(null)} onChange={onChange} />);
     expect(screen.getByRole("button", { name: "Character" })).toHaveAttribute("aria-pressed", "true");
     const options = within(screen.getByLabelText("Rank members by")).getAllByRole("option").map((o) => o.getAttribute("value"));
-    expect(options).toEqual(["level", "item-level", "dungeons", "fewest-deaths"]);
+    expect(options).toEqual(["dungeons", "item-level", "fewest-deaths"]);
     fireEvent.click(screen.getByRole("button", { name: "PvP" }));
     expect(onChange).toHaveBeenCalledWith("honorable-kills");
+  });
+
+  it("retired the Level board: it is not offered, and the default board is Dungeons cleared", () => {
+    expect(LEADERBOARDS.map((b) => b.id)).not.toContain("level");
+    expect(findBoard(null).id).toBe("dungeons");
+    expect(findBoard("level").id).toBe("dungeons");
   });
 
   it("lists every category as a chip", () => {

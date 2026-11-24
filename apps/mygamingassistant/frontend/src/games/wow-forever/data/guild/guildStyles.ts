@@ -72,6 +72,8 @@ export const TITLE_PIP = "rounded-full border border-current px-1.5 text-[10px] 
 /** A section of the fun part of the guild page. */
 export const HALL_SECTION = "space-y-3 rounded-xl border bg-card p-3 sm:p-4";
 export const HALL_HEADING = "flex items-center gap-2 text-lg font-bold";
+/** An archived race on the Arena's trophy shelf: a gold-edged card (bg-card; popover/accent tokens are no-ops here). */
+export const ARCHIVED_RACE_CARD = "flex items-center gap-3 rounded-xl border border-[#F2C94C]/60 bg-card px-3 py-2";
 /** A title card in the Hall of Titles; the tier's tint goes with it. */
 export const TITLE_CARD = "flex flex-col gap-1.5 rounded-xl border-2 p-3";
 /** The weekly heroes' row: a snapping strip scrolling inside itself on a phone, a grid from `sm`. */

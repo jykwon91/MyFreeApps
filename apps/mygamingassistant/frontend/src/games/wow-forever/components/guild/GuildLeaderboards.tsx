@@ -1,8 +1,10 @@
 import { Swords } from "lucide-react";
 import { useId } from "react";
+import GuildArchivedRaces from "@/games/wow-forever/components/guild/GuildArchivedRaces";
 import GuildFactionBoard from "@/games/wow-forever/components/guild/GuildFactionBoard";
 import GuildLeaderboardPicker from "@/games/wow-forever/components/guild/GuildLeaderboardPicker";
 import GuildStatBoard from "@/games/wow-forever/components/guild/GuildStatBoard";
+import { ARCHIVED_RACES } from "@/games/wow-forever/data/guild/archivedRaces";
 import { ARENA_HEADING } from "@/games/wow-forever/data/guild/guildHallCopy";
 import { HALL_HEADING, HALL_SECTION } from "@/games/wow-forever/data/guild/guildStyles";
 import { useLeaderboardParams } from "@/games/wow-forever/hooks/useLeaderboardParams";
@@ -33,6 +35,7 @@ export default function GuildLeaderboards({ slug, members, gainsWindowDays }: Gu
       ) : (
         <GuildStatBoard members={members} board={board} me={me} gainsWindowDays={gainsWindowDays} picker={picker} />
       )}
+      <GuildArchivedRaces races={ARCHIVED_RACES} />
     </section>
   );
 }

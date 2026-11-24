@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-24",
+    "title": "The Level board is retired: the Arena opens on Dungeons cleared, and the Race to 60 has a trophy",
+    "summary": "Once everyone reaches 60 a level ranking says nothing, so it is gone. The Arena now opens on Dungeons cleared, and a trophy card records that Ozrix Forever was first to level 60. The Trailblazer title goes with it.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-24",
     "title": "MGA Professions addon shows the cheapest Tailoring and Enchanting route at today's prices",
     "summary": "With MGA Prices installed, the Route tab picks each recipe from your faction's auction house prices, the same pick the site makes, and says when those prices were updated. The hourly updater refreshes it. Without MGA Prices it shows the built-in route as before.",
     "to": "/wow-forever/professions"

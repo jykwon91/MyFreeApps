@@ -15,6 +15,7 @@ export default function GuildArenaSkeleton() {
         <div className="h-[68px] rounded-md bg-muted animate-pulse" />
       </div>
       <GuildPodiumSkeleton />
+      <div className="h-[62px] rounded-xl bg-muted animate-pulse" />
     </GuildSkeletonCard>
   );
 }

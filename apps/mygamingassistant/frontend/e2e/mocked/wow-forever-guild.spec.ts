@@ -72,10 +72,10 @@ function guild() {
     gone: false,
     gains_window_days: 7,
     members: [
-      { ...member("jason-kwon", "Jason", "Kwon", "Warlock", 37, 28, 0), honorable_kills: 40,
+      { ...member("jason-kwon", "Jason", "Kwon", "Warlock", 37, 28, 0), honorable_kills: 40, dungeons_done: 10,
         professions: [{ id: 197, skill: 148, max_skill: 225 }] },
-      { ...member("big-sue", "Big", "Sue", "Warrior", 60, null, 1), honorable_kills: 40 },
-      { ...member("tiny-john", "Tiny", "John", "Mage", 12, 8, 3), honorable_kills: 112 },
+      { ...member("big-sue", "Big", "Sue", "Warrior", 60, null, 1), honorable_kills: 40, dungeons_done: 30 },
+      { ...member("tiny-john", "Tiny", "John", "Mage", 12, 8, 3), honorable_kills: 112, dungeons_done: 5 },
     ],
   };
 }
@@ -112,10 +112,17 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await expect(page).toHaveURL(/\/wow-forever\/topdeadcenter\?me=jason-kwon$/);
 
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
-  const levelBoard = page.getByRole("list", { name: "Level leaderboard" }).locator("li");
-  await expect(levelBoard).toHaveCount(3);
-  await expect(levelBoard.nth(1)).toContainText("Jason Kwon");
-  await expect(levelBoard.nth(1)).toContainText("You");
+  const dungeonBoard = page.getByRole("list", { name: "Dungeons cleared leaderboard" }).locator("li");
+  await expect(dungeonBoard).toHaveCount(3);
+  await expect(dungeonBoard.nth(1)).toContainText("Jason Kwon");
+  await expect(dungeonBoard.nth(1)).toContainText("You");
+  // The Level board is retired: not offered, and the race is archived as a trophy.
+  const picker = page.getByLabel("Rank members by");
+  await expect(picker).toHaveValue("dungeons");
+  await expect(picker.locator("option", { hasText: /^Level$/ })).toHaveCount(0);
+  const trophy = page.getByRole("list", { name: "Archived races" });
+  await expect(trophy).toContainText("Race to 60");
+  await expect(trophy).toContainText("Won by Ozrix Forever first to level 60");
   await page.getByRole("tab", { name: "Roster", exact: true }).click();
   await expect(page.getByText("3 of 4 members shown")).toBeVisible();
   await expect(page.getByText(/1 member has no profile from Blizzard/)).toBeVisible();
@@ -235,7 +242,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await expect(page.getByRole("tab", { name: "Home", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "The Arena" })).toBeVisible();
   // The podium skeleton is the loaded podium's size, so the board doesn't jump when it arrives.
-  const loadedCards = await podiumHeights(page.getByRole("list", { name: "Level leaderboard" }).locator("li"));
+  const loadedCards = await podiumHeights(page.getByRole("list", { name: "Dungeons cleared leaderboard" }).locator("li"));
   loadedCards.forEach((height, i) => expect(Math.abs(height - skeletonCards[i])).toBeLessThan(4));
 });
 
@@ -355,7 +362,7 @@ test("Hall of Titles: medallion badges by a leader's name (rarest first), every 
   await expect(strip).toContainText("Not in-game titles");
   const cards = strip.getByRole("listitem");
   await expect(cards).toHaveCount(3);
-  await expect(cards.filter({ hasText: "Trailblazer" }).getByRole("link")).toHaveText("Big Sue");
+  await expect(cards.filter({ hasText: "Dungeon Delver" }).getByRole("link")).toHaveText("Big Sue");
   const bloodletter = cards.filter({ hasText: "Bloodletter" });
   await expect(bloodletter).toContainText("most honorable kills · 112");
   await expect(bloodletter).toContainText("Legendary");

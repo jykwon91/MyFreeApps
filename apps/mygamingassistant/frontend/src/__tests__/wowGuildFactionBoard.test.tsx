@@ -189,7 +189,7 @@ describe("faction standing board", () => {
   });
 
   it("other boards never ask for standings", () => {
-    renderAt("?board=level");
+    renderAt("?board=dungeons");
     expect(mockReputations).not.toHaveBeenCalled();
   });
 });
