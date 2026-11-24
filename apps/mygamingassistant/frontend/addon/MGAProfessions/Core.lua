@@ -148,10 +148,35 @@ function M.CraftsNeeded(skill, step)
   return math.ceil(sum - 1e-9)
 end
 
--- The rows still ahead of `skill`, in the guide's order.
+-- The cheapest route at today's auction prices for your faction's house, when MGA Prices carries one for
+-- this profession; the hand-written route's options rows stay as they are. Second value: when the prices were updated.
+function M.PricedSteps(key)
+  local house = M.Side() == "H" and "horde" or "alliance"
+  local data = MGAPricesData and MGAPricesData.houses and MGAPricesData.houses[house]
+  local routes = data and data.routes and data.routes[key]
+  if not routes or #routes == 0 then return nil end
+  local hand = {}
+  for _, step in ipairs(Data.professions[key].steps) do
+    if step.kind == "options" then hand[step.from] = step end
+  end
+  local steps = {}
+  for _, row in ipairs(routes) do
+    if row.options then
+      if not hand[row.from] then return nil end
+      table.insert(steps, hand[row.from])
+    else
+      local step = { kind = "craft" }
+      for field, value in pairs(row) do step[field] = value end
+      table.insert(steps, step)
+    end
+  end
+  return steps, data.updated or MGAPricesData.updated
+end
+
+-- The rows still ahead of `skill`, in the guide's order (the priced route when there is one).
 function M.Upcoming(key, skill)
   local rows = {}
-  for _, step in ipairs(Data.professions[key].steps) do
+  for _, step in ipairs(M.PricedSteps(key) or Data.professions[key].steps) do
     if step.to > skill then table.insert(rows, step) end
   end
   return rows
@@ -218,6 +243,14 @@ function M.PriceOf(id)
   local data = MGAPricesData and MGAPricesData.houses and MGAPricesData.houses[house]
   local row = data and data.items and data.items[id]
   return row and row[1] or nil
+end
+
+-- "3 hours ago" for an epoch time.
+function M.Ago(when)
+  local hours = math.floor((time() - when) / 3600)
+  if hours < 1 then return "less than an hour ago" end
+  if hours < 48 then return hours .. (hours == 1 and " hour ago" or " hours ago") end
+  return math.floor(hours / 24) .. " days ago"
 end
 
 -- Copper for the mats, or nil when the prices addon is missing; second value = how many mats have no price.
@@ -483,6 +516,10 @@ function M.RouteLines(key, full)
     add(lines, "You are at your rank cap (" .. cap .. ")." .. (rank and (" Train " .. rank.name .. " next: see Trainers.") or ""), { head = true })
   end
   if full then add(lines, prof.intro) end
+  local priced, updated = M.PricedSteps(key)
+  if priced then
+    add(lines, "Route picked from today's auction prices" .. (updated and (", updated " .. M.Ago(updated)) or "") .. ".")
+  end
   local rows = M.Upcoming(key, skill)
   local shown = full and #rows or math.min(M.STEPS_SHOWN, #rows)
   if #rows == 0 then add(lines, "Nothing left on the route: you are past its last row.") end

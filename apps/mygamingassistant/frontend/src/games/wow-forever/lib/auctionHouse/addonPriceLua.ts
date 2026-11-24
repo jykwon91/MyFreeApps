@@ -2,7 +2,10 @@ import { AUCTION_CUT } from "@/games/wow-forever/data/auctionHouse/reagentDemand
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import type { QuestItemObjective } from "@/games/wow-forever/lib/auctionHouse/loadQuestItemObjectives";
 import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
+import { pricedRouteRows } from "@/games/wow-forever/lib/auctionHouse/pricedRouteRows";
+import { luaValue } from "@/games/wow-forever/lib/professionsAddon/luaValue";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
+import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
 import type { DisenchantTables } from "@/games/wow-forever/types/auctionHouse/disenchantTables";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
@@ -89,13 +92,29 @@ function questItemsLines(
 }
 
 /**
+ * `routes[profession] = {row, ...}` — the cheapest route at this house's prices, worked out by the site's own
+ * `pricedRoute`, for the MGA Professions addon to show. Nothing is written for a house with no priced route.
+ */
+function routeLines(crafting: CraftingByProfession, prices: AuctionPrices): string[] {
+  const routes = pricedRouteRows(crafting, prices);
+  if (routes.size === 0) return [];
+  const lines = ["      routes = {"];
+  for (const [profession, rows] of [...routes].sort((a, b) => a[0].localeCompare(b[0]))) {
+    lines.push(`        ${profession} = ${luaValue(rows, 3)},`);
+  }
+  lines.push("      },");
+  return lines;
+}
+
+/**
  * The MGA Prices addon's `Data.lua`: each house's prices as
  * `items[itemId] = { market value, cheapest, on sale }` in copper, with when
  * Blizzard listed them, the house's cut of a sale (so the addon can say
  * whether an item nets more there than at a vendor), and its `crafts[itemId] = { recipe, profit }` (the
  * best craft that pays with that material there), and its `wanted[itemId] =
  * { recipe, count, sells }` (the most valuable thing that material goes into
- * there, which is what holds its price up). `reagents` says which
+ * there, which is what holds its price up), and its `routes[profession]` (the cheapest leveling route
+ * at those prices, from skill 1: the same `pricedRoute` the Professions page runs). `reagents` says which
  * leveling routes use each material. The top-level `updated` is the oldest
  * house's, so the addon's "download again" warning never understates how old
  * a price is.
@@ -133,7 +152,7 @@ export function addonPriceLua(
     houseLines.push("      },", "      crafts = {");
     const crafts = craftsThatPay(crafting, prices.byId, AUCTION_CUT[prices.faction]);
     for (const [id, c] of [...crafts].sort((a, b) => a[0] - b[0])) houseLines.push(`        [${id}] = {${luaString(c.recipe)}, ${c.profit}},`);
-    houseLines.push("      },", "      wanted = {");
+    houseLines.push("      },", ...routeLines(crafting, prices), "      wanted = {");
     for (const [id, w] of [...mostWantedFor(crafting, prices.byId)].sort((a, b) => a[0] - b[0])) {
       houseLines.push(`        [${id}] = {${luaString(w.recipe)}, ${w.count}, ${w.sells}},`);
     }

@@ -17,7 +17,7 @@ function matsOf(recipe: CraftRecipe): AddonMat[] {
   return recipe.reagents.map((reagent) => ({ id: reagent.id, name: reagent.name, count: reagent.count }));
 }
 
-function stepOf(entry: ResolvedRouteEntry, label: string): AddonStep {
+export function stepOf(entry: ResolvedRouteEntry, label: string): AddonStep {
   const confirmed = entry.step.confidence === "confirmed";
   if (entry.kind === "options") {
     return {
