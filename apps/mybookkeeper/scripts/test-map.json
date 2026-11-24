@@ -2405,6 +2405,40 @@
         "financial-accounts-layout.spec.ts"
       ]
     },
+    "spending_categories": {
+      "source_paths": [
+        "backend/app/models/transactions/spending_category.py",
+        "backend/app/repositories/transactions/spending_category_repo.py",
+        "backend/app/schemas/spending_categories/",
+        "backend/app/services/spending_categories/",
+        "backend/app/api/spending_categories.py",
+        "backend/app/core/spending_category_enums.py",
+        "backend/app/mappers/spending_category_mapper.py",
+        "backend/app/mappers/export/spending_category_export_mappers.py",
+        "backend/alembic/versions/perscat261123_personal_spending_categories.py",
+        "frontend/src/app/pages/SpendingCategories.tsx",
+        "frontend/src/app/features/spending-categories/",
+        "frontend/src/app/features/transactions/TransactionScopeSelect.tsx",
+        "frontend/src/app/features/transactions/PersonalCategorySelect.tsx",
+        "frontend/src/shared/lib/spending-category-messages.ts",
+        "frontend/src/test/empty-spending-categories.ts",
+        "api-client/src/store/spendingCategoriesApi.ts",
+        "api-client/src/types/spending-category/",
+        "api-client/src/types/transaction/TransactionScope.ts"
+      ],
+      "backend_tests": [
+        "test_spending_categories_service.py",
+        "test_spending_categories_api.py",
+        "test_personal_scope_tax_exclusion.py",
+        "test_account_export_completeness.py"
+      ],
+      "frontend_tests": [
+        "SpendingCategories.test.tsx"
+      ],
+      "e2e_specs": [
+        "spending-categories.spec.ts"
+      ]
+    },
     "attribution": {
       "source_paths": [
         "backend/app/models/transactions/rent_attribution_review_queue.py",

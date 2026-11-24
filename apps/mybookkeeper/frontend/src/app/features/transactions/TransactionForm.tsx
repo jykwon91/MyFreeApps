@@ -21,8 +21,10 @@ import TransactionDuplicateActions from "@/app/features/transactions/Transaction
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
+import PersonalCategorySelect from "./PersonalCategorySelect";
 import SourcePreviewDialog from "./SourcePreviewDialog";
 import TransactionAccountFields from "./TransactionAccountFields";
+import TransactionScopeSelect from "./TransactionScopeSelect";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -61,8 +63,10 @@ export default function TransactionForm({
   }, []);
 
   const transactionType = watch("transaction_type");
+  const transactionScope = watch("transaction_scope");
   const categories = categoriesForType(transactionType);
   const isTransfer = transactionType === "transfer";
+  const isPersonal = transactionScope === "personal";
 
   // PR 4.2: vendor rolodex for the "Assign vendor" dropdown, every vendor a page at a time.
   const { pages: vendorPages, mode: vendorsMode, options: vendorOptions } = useVendorSelectOptions(transaction.vendor_id ?? null);
@@ -256,6 +260,9 @@ export default function TransactionForm({
 
       <TransactionAccountFields register={register} watch={watch} selectClass={selectClass} dirtyFields={dirtyFields} />
 
+      <TransactionScopeSelect register={register} value={watch("transaction_scope")} dirty={!!dirtyFields.transaction_scope} />
+      {isPersonal ? <PersonalCategorySelect register={register} value={watch("spending_category_id")} dirty={!!dirtyFields.spending_category_id} /> : null}
+
       <FormField label="Category" dirty={!!dirtyFields.category}>
         {(field) => (
           <Select {...register("category")} className={selectClass("category")}
@@ -307,8 +314,8 @@ export default function TransactionForm({
         )}
       </FormField>
 
-      {/* A transfer never reaches a tax report; the server forces it off. */}
-      {!isTransfer && (
+      {/* Transfers and personal spending never reach a tax report; the server forces it off. */}
+      {!isTransfer && !isPersonal && (
         <FormField label="Tax Relevant" group dirty={!!dirtyFields.tax_relevant}>
           <label className={`flex items-center gap-2 text-sm ${dirtyFields.tax_relevant ? "text-primary font-medium" : ""}`}>
             <input
@@ -321,7 +328,7 @@ export default function TransactionForm({
         </FormField>
       )}
 
-      {transactionType === "expense" && (
+      {transactionType === "expense" && !isPersonal && (
         <FormField label={MSG.capitalImprovement} group dirty={!!dirtyFields.is_capital_improvement}>
           <label className={`flex items-center gap-2 text-sm min-h-[44px] ${dirtyFields.is_capital_improvement ? "text-primary font-medium" : ""}`}>
             <input

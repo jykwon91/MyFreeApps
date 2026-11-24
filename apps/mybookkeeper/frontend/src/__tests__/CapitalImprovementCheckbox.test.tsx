@@ -11,6 +11,10 @@ vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
   return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
 });
 
+vi.mock("@mybookkeeper/api-client/store/spendingCategoriesApi", () => ({
+  useListSpendingCategoriesQuery: () => ({ data: [], isLoading: false }),
+}));
+
 const updateUnwrap = vi.fn();
 const updateTransaction = vi.fn(() => ({ unwrap: updateUnwrap }));
 
@@ -62,6 +66,13 @@ const INCOME_TXN = {
   category: "rental_revenue",
 } as unknown as Transaction;
 
+const PERSONAL_TXN = {
+  ...BASE_TXN,
+  id: "00000000-0000-0000-0000-000000000003",
+  transaction_scope: "personal",
+  spending_category_id: null,
+} as unknown as Transaction;
+
 function renderPanel(txn: Transaction) {
   render(
     <Provider store={store}>
@@ -86,6 +97,13 @@ describe("Capital improvement checkbox", () => {
     // Wait for the tax-relevant checkbox (always present) to confirm the form has rendered.
     await screen.findByRole("checkbox", { name: "Include in tax reports" });
     expect(screen.queryByRole("checkbox", { name: "Capital improvement" })).not.toBeInTheDocument();
+  });
+
+  it("is hidden, with the tax toggle, for personal spending", async () => {
+    renderPanel(PERSONAL_TXN);
+    await screen.findByRole("textbox", { name: "Vendor" });
+    expect(screen.queryByRole("checkbox", { name: "Capital improvement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Include in tax reports" })).not.toBeInTheDocument();
   });
 
   it("includes is_capital_improvement: true in the update payload when checked", async () => {

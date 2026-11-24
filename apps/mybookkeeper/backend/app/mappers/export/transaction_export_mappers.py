@@ -48,6 +48,8 @@ TRANSACTIONS_EXPORT: Final = TableExportMapper(
         "transfer_to_account_id",
         "applicant_id",
         "attribution_source",
+        "transaction_scope",
+        "spending_category_id",
         "payer_name",
         "payer_handle",
         "transaction_date",

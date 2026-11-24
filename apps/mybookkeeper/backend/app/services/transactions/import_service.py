@@ -5,6 +5,7 @@ from app.core.context import RequestContext
 from app.db.session import unit_of_work
 from app.repositories.transactions import transaction_repo
 from app.schemas.transactions.imports import ImportResult, TransactionPreview
+from app.schemas.transactions.transaction import TransactionScope
 from app.services.transactions.bank_csv_account_scope import dedupe_keys, scoped_external_id
 from app.services.transactions.bank_csv_parser import detect_bank_format, parse_bank_csv
 from app.services.transactions.reference_ownership import assert_references_owned
@@ -23,6 +24,8 @@ async def import_bank_csv_file(
     filename: str,
     property_id: uuid.UUID | None,
     account_id: uuid.UUID | None = None,
+    transaction_scope: TransactionScope = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> ImportResult:
     """Parse a bank CSV and import non-duplicate transactions.
 
@@ -44,7 +47,11 @@ async def import_bank_csv_file(
     if fmt == "unknown":
         raise ValueError("Could not detect bank CSV format")
 
-    parsed = parse_bank_csv(content, ctx.organization_id, ctx.user_id, property_id)
+    parsed = parse_bank_csv(
+        content, ctx.organization_id, ctx.user_id, property_id,
+        transaction_scope=transaction_scope,
+        spending_category_id=spending_category_id,
+    )
     if not parsed:
         raise ValueError("No transactions found in CSV")
 
@@ -65,7 +72,11 @@ async def import_bank_csv_file(
             db,
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
-            fields={"property_id": property_id, "account_id": account_id},
+            fields={
+                "property_id": property_id,
+                "account_id": account_id,
+                "spending_category_id": spending_category_id,
+            },
         )
         existing_ids = await transaction_repo.get_existing_external_ids(
             db, ctx.organization_id, "bank_csv", external_ids,

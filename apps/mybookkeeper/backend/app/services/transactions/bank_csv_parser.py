@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.models.transactions.transaction import Transaction
 from app.services.extraction.sender_category_service import match_sender_category
 from app.core.tags import CATEGORY_TO_SCHEDULE_E, REVENUE_TAGS, EXPENSE_TAGS
@@ -53,16 +54,22 @@ def parse_bank_csv(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     property_id: uuid.UUID | None = None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     fmt = detect_bank_format(content)
+    kwargs = {
+        "transaction_scope": transaction_scope,
+        "spending_category_id": spending_category_id,
+    }
     if fmt == "chase":
-        return _parse_chase(content, organization_id, user_id, property_id)
+        return _parse_chase(content, organization_id, user_id, property_id, **kwargs)
     if fmt == "wellsfargo":
-        return _parse_wellsfargo(content, organization_id, user_id, property_id)
+        return _parse_wellsfargo(content, organization_id, user_id, property_id, **kwargs)
     if fmt == "bofa":
-        return _parse_bofa(content, organization_id, user_id, property_id)
+        return _parse_bofa(content, organization_id, user_id, property_id, **kwargs)
     if fmt == "generic":
-        return _parse_generic(content, organization_id, user_id, property_id)
+        return _parse_generic(content, organization_id, user_id, property_id, **kwargs)
     return []
 
 
@@ -89,6 +96,8 @@ def _build_transaction(
     description: str,
     amount: Decimal,
     payment_method: str | None = None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> Transaction:
     if amount > 0:
         transaction_type = "expense"
@@ -103,9 +112,17 @@ def _build_transaction(
     elif category in EXPENSE_TAGS:
         transaction_type = "expense"
 
-    schedule_e_line = CATEGORY_TO_SCHEDULE_E.get(category)
-
-    tax_relevant = category != "uncategorized"
+    # Personal-scope transactions are never tax-relevant — the user is tracking
+    # personal spending, not rental/business activity.
+    if transaction_scope == TRANSACTION_SCOPE_PERSONAL:
+        category = "other_expense" if transaction_type == "expense" else "uncategorized"
+        tax_relevant = False
+        schedule_e_line = None
+    else:
+        schedule_e_line = CATEGORY_TO_SCHEDULE_E.get(category)
+        tax_relevant = category != "uncategorized"
+        # A spending category only means something on a personal row.
+        spending_category_id = None
 
     return Transaction(
         id=uuid.uuid4(),
@@ -127,6 +144,8 @@ def _build_transaction(
         is_manual=False,
         external_source="bank_csv",
         external_id=_make_external_id(txn_date, amount, description),
+        transaction_scope=transaction_scope,
+        spending_category_id=spending_category_id,
     )
 
 
@@ -135,6 +154,8 @@ def _parse_chase(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     property_id: uuid.UUID | None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     reader = csv.DictReader(io.StringIO(content))
     transactions: list[Transaction] = []
@@ -148,6 +169,8 @@ def _parse_chase(
                 organization_id, user_id, property_id,
                 txn_date, description, amount,
                 payment_method="bank_transfer",
+                transaction_scope=transaction_scope,
+                spending_category_id=spending_category_id,
             ))
         except (ValueError, InvalidOperation, KeyError):
             continue
@@ -159,6 +182,8 @@ def _parse_wellsfargo(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     property_id: uuid.UUID | None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     reader = csv.reader(io.StringIO(content))
     transactions: list[Transaction] = []
@@ -174,6 +199,8 @@ def _parse_wellsfargo(
                 organization_id, user_id, property_id,
                 txn_date, description, amount,
                 payment_method="bank_transfer",
+                transaction_scope=transaction_scope,
+                spending_category_id=spending_category_id,
             ))
         except (ValueError, InvalidOperation):
             continue
@@ -185,6 +212,8 @@ def _parse_bofa(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     property_id: uuid.UUID | None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     reader = csv.DictReader(io.StringIO(content))
     transactions: list[Transaction] = []
@@ -198,6 +227,8 @@ def _parse_bofa(
                 organization_id, user_id, property_id,
                 txn_date, description, amount,
                 payment_method="bank_transfer",
+                transaction_scope=transaction_scope,
+                spending_category_id=spending_category_id,
             ))
         except (ValueError, InvalidOperation, KeyError):
             continue
@@ -209,6 +240,8 @@ def _parse_generic(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     property_id: uuid.UUID | None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     reader = csv.reader(io.StringIO(content))
     headers_raw = next(reader, None)
@@ -260,6 +293,8 @@ def _parse_generic(
                 organization_id, user_id, property_id,
                 txn_date, description, amount,
                 payment_method="bank_transfer",
+                transaction_scope=transaction_scope,
+                spending_category_id=spending_category_id,
             ))
         except (ValueError, InvalidOperation, IndexError):
             continue

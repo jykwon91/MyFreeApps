@@ -36,6 +36,7 @@ from app.models.classification.classification_rule import ClassificationRule
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.financial_accounts.financial_account import FinancialAccount
+from app.models.transactions.spending_category import SpendingCategory
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.inquiry_message import InquiryMessage
@@ -194,6 +195,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(InsuranceBenchmark, Scope.WORKSPACE),
     Source(Mortgage, Scope.WORKSPACE_MEMBER),
     Source(FinancialAccount, Scope.WORKSPACE_MEMBER),
+    Source(SpendingCategory, Scope.WORKSPACE),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),
     Source(WelcomeManualRoom, Scope.CHILD, WelcomeManual, "manual_id"),

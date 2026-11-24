@@ -72,6 +72,8 @@ function aTransaction(n: number, prefix: string): Transaction {
     applicant_id: null,
     attribution_source: null,
     payer_name: null,
+    transaction_scope: "rental",
+    spending_category_id: null,
   };
 }
 

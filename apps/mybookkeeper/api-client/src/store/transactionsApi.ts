@@ -117,12 +117,12 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     importBankCsv: builder.mutation<ImportResult, BankCsvImportRequest>({
-      query: ({ form, propertyId, accountId }) => ({
+      query: ({ form, propertyId, accountId, transactionScope, spendingCategoryId }) => ({
         url: "/imports/bank-csv",
         method: "POST",
         data: form,
         timeout: UPLOAD_REQUEST_TIMEOUT_MS,
-        params: bankCsvImportParams(propertyId, accountId),
+        params: bankCsvImportParams(propertyId, accountId, transactionScope, spendingCategoryId),
       }),
       // New rows change the list, the review count and every total built from them.
       invalidatesTags: ["Transaction", "Summary", "TaxReturn"],

@@ -83,6 +83,8 @@ def _patch_service_session(db: AsyncSession):
     with (
         patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake_session),
         patch("app.services.transactions.transaction_service.unit_of_work", _fake_session),
+        patch("app.services.transactions.duplicate_service.AsyncSessionLocal", _fake_session),
+        patch("app.services.transactions.duplicate_service.unit_of_work", _fake_session),
     ):
         yield
 

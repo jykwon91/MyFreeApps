@@ -1,4 +1,5 @@
 import type { SubCategory } from "./SubCategory";
+import type { TransactionScope } from "./TransactionScope";
 import type { TransactionStatus } from "./TransactionStatus";
 import type { TransactionType } from "./TransactionType";
 import type { UsageUnit } from "./UsageUnit";
@@ -60,4 +61,8 @@ export interface Transaction {
   account_id: string | null;
   /** A transfer's receiving account. Null on anything that isn't a transfer. */
   transfer_to_account_id: string | null;
+  /** Whether this transaction is for the rental, the business, or personal spending. */
+  transaction_scope: TransactionScope;
+  /** Personal spending category, set when transaction_scope is 'personal'. */
+  spending_category_id: string | null;
 }

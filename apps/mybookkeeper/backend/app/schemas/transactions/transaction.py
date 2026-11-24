@@ -29,6 +29,7 @@ def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
 
 
 TransactionType = Literal["income", "expense", "transfer"]
+TransactionScope = Literal["rental", "business", "personal"]
 TransactionStatus = Literal["pending", "approved", "needs_review", "duplicate", "unverified"]
 # Same values as the chk_txn_category constraint: a row the database accepts has
 # to survive being read back.
@@ -71,6 +72,11 @@ class TransactionRead(BaseModel):
     # and ``transfer_to_account_id`` where it arrived.
     account_id: uuid.UUID | None = None
     transfer_to_account_id: uuid.UUID | None = None
+    # Personal spending category — set for personal-scope transactions.
+    spending_category_id: uuid.UUID | None = None
+    # Whether this transaction is for the rental, the business, or personal
+    # spending.  Defaults to 'rental' for all existing rows.
+    transaction_scope: TransactionScope = "rental"
 
     transaction_date: date
     tax_year: int
@@ -130,6 +136,8 @@ class TransactionCreate(BaseModel):
     property_id: uuid.UUID | None = None
     account_id: uuid.UUID | None = None
     transfer_to_account_id: uuid.UUID | None = None
+    spending_category_id: uuid.UUID | None = None
+    transaction_scope: TransactionScope = "rental"
     transaction_date: date
     tax_year: int | None = None
     vendor: str | None = None
@@ -168,7 +176,7 @@ class ScheduleELineItem(BaseModel):
 # Optional on the row and meaningful when empty: no property, no vendor name.
 _CLEARABLE_FIELDS = (
     "property_id", "vendor_id", "vendor", "description", "channel", "payment_method",
-    "account_id", "transfer_to_account_id",
+    "account_id", "transfer_to_account_id", "spending_category_id",
 )
 
 
@@ -178,6 +186,8 @@ class TransactionUpdate(BaseModel):
     vendor_id: uuid.UUID | None = None
     account_id: uuid.UUID | None = None
     transfer_to_account_id: uuid.UUID | None = None
+    spending_category_id: uuid.UUID | None = None
+    transaction_scope: TransactionScope | None = None
     transaction_date: date | None = None
     tax_year: int | None = None
     vendor: str | None = None

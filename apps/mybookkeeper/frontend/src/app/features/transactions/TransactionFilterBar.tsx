@@ -64,6 +64,13 @@ export default function TransactionFilterBar({ filters, onChange, properties, ac
         ))}
       </Select>
 
+      <Select aria-label="Filter by scope" value={filters.transaction_scope} onChange={(e) => update("transaction_scope", e.target.value)} className="text-xs py-1.5">
+        <option value="">All Scopes</option>
+        <option value="rental">Rental</option>
+        <option value="business">Business</option>
+        <option value="personal">Personal</option>
+      </Select>
+
       <input
         type="text"
         value={filters.vendor}

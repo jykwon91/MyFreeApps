@@ -7,4 +7,6 @@ export interface Filters {
   vendor: string;
   start_date: string;
   end_date: string;
+  /** "rental" | "business" | "personal" — empty string means all scopes. */
+  transaction_scope: string;
 }

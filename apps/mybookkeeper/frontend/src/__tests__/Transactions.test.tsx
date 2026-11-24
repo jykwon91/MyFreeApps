@@ -58,6 +58,8 @@ const mockTransactions: Transaction[] = [
     applicant_id: null,
     attribution_source: null,
     payer_name: null,
+    transaction_scope: "rental",
+    spending_category_id: null,
   },
   {
     id: "txn-2",
@@ -107,6 +109,8 @@ const mockTransactions: Transaction[] = [
     applicant_id: null,
     attribution_source: null,
     payer_name: null,
+    transaction_scope: "rental",
+    spending_category_id: null,
   },
 ];
 

@@ -162,6 +162,7 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
         "next_retry_at": "Processing retry bookkeeping; internal.",
     },
     "transactions": {},
+    "spending_categories": {},
     "transaction_documents": {},
     "booking_statements": {},
     "reconciliation_sources": {},

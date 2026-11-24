@@ -8,6 +8,7 @@ from platform_shared.core.capped_upload import read_upload_or_reject
 from app.core.context import RequestContext
 from app.core.permissions import require_write_access
 from app.schemas.transactions.imports import ImportResult
+from app.schemas.transactions.transaction import TransactionScope
 from app.services.transactions import import_service
 from app.services.transactions.foreign_reference_error import ForeignReferenceError
 
@@ -19,6 +20,8 @@ async def import_bank_csv(
     file: UploadFile,
     property_id: Optional[uuid.UUID] = Query(None),
     account_id: Optional[uuid.UUID] = Query(None),
+    transaction_scope: TransactionScope = Query("rental"),
+    spending_category_id: Optional[uuid.UUID] = Query(None),
     ctx: RequestContext = Depends(require_write_access),
 ) -> ImportResult:
     content_bytes = await read_upload_or_reject(
@@ -30,6 +33,8 @@ async def import_bank_csv(
     try:
         return await import_service.import_bank_csv_file(
             ctx, content_bytes, file.filename or "", property_id, account_id,
+            transaction_scope=transaction_scope,
+            spending_category_id=spending_category_id,
         )
     except ForeignReferenceError as e:
         raise HTTPException(status_code=422, detail=str(e))
