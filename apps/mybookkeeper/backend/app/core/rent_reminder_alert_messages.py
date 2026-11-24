@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from types import MappingProxyType
 
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_constants import (
     ERROR_EMAIL_NOT_CONFIGURED,
     ERROR_EMAIL_OUTCOME_UNKNOWN,
@@ -24,11 +25,20 @@ from app.core.rent_reminder_constants import (
     ERROR_UNEXPECTED,
     SMS_CONFIRMATION_TIMEOUT_MINUTES,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 
-# Where to check whether a reminder that may have gone out did. Only texts
-# leave a log (httpSMS's); an email can only be checked with the tenant.
-CHECK_TEXT = "check the message log on httpsms.com (or the phone's Messages app)"
-CHECK_EMAIL = "ask the tenant whether it arrived"
+# What the alert calls the reminder, by channel.
+REMINDER_NAME: Mapping[RentReminderChannel, str] = MappingProxyType({
+    RENT_REMINDER_CHANNEL_SMS: "rent text",
+    RENT_REMINDER_CHANNEL_EMAIL: "rent reminder email",
+})
+# Where to check whether a reminder that may have gone out did, by channel.
+# Only texts leave a log (httpSMS's); an email can only be checked with the
+# tenant.
+CHECK_WHETHER_SENT: Mapping[RentReminderChannel, str] = MappingProxyType({
+    RENT_REMINDER_CHANNEL_SMS: "check the message log on httpsms.com (or the phone's Messages app)",
+    RENT_REMINDER_CHANNEL_EMAIL: "ask the tenant whether it arrived",
+})
 RETRY = (
     "If nothing else went out for this due date, you can retry from the "
     "tenant's Rent reminders card with Send now. If the other channel did go "
@@ -65,4 +75,7 @@ WHAT_HAPPENED: Mapping[str, str] = MappingProxyType({
     ERROR_UNEXPECTED: "Something went wrong sending it.",
 })
 # What ``no_recipient`` says is missing, by channel.
-MISSING_CONTACT: Mapping[str, str] = MappingProxyType({"sms": "phone number", "email": "email address"})
+MISSING_CONTACT: Mapping[RentReminderChannel, str] = MappingProxyType({
+    RENT_REMINDER_CHANNEL_SMS: "phone number",
+    RENT_REMINDER_CHANNEL_EMAIL: "email address",
+})

@@ -33,7 +33,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.encrypted_string_type import EncryptedString
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_enums import (
+    RENT_REMINDER_CHANNEL_SMS,
     RENT_REMINDER_CHANNELS_SQL,
     RENT_REMINDER_EMAIL_STATUSES_SQL,
     RENT_REMINDER_PENDING_STATUSES_SQL,
@@ -70,7 +72,7 @@ class RentReminderSend(Base):
     )
 
     due_date: Mapped[_dt.date] = mapped_column(Date, nullable=False)
-    channel: Mapped[str] = mapped_column(String(8), nullable=False)
+    channel: Mapped[RentReminderChannel] = mapped_column(String(8), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     message_body: Mapped[str] = mapped_column(EncryptedString(2000), nullable=False)
@@ -130,7 +132,7 @@ class RentReminderSend(Base):
         ),
         # Phone-only states never appear on an email row.
         CheckConstraint(
-            f"channel = 'sms' OR status IN {RENT_REMINDER_EMAIL_STATUSES_SQL}",
+            f"channel = '{RENT_REMINDER_CHANNEL_SMS}' OR status IN {RENT_REMINDER_EMAIL_STATUSES_SQL}",
             name="chk_rent_reminder_send_status_matches_channel",
         ),
         CheckConstraint("amount >= 0", name="chk_rent_reminder_send_amount_non_negative"),

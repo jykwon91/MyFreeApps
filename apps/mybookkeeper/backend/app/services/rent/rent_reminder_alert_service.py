@@ -16,12 +16,13 @@ import logging
 import uuid
 
 from app.core.rent_reminder_alert_messages import (
-    CHECK_EMAIL,
-    CHECK_TEXT,
+    CHECK_WHETHER_SENT,
     MISSING_CONTACT,
+    REMINDER_NAME,
     RETRY,
     WHAT_HAPPENED,
 )
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_constants import (
     ERROR_NO_RECIPIENT,
     ERROR_UNEXPECTED,
@@ -29,6 +30,7 @@ from app.core.rent_reminder_constants import (
     PHONE_FAILED_CODE_PREFIX,
     SMS_RELAY_CODE_PREFIX,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_send_repo
@@ -37,8 +39,6 @@ from app.services.rent import rent_reminder_message as message
 from app.services.system import email_service
 
 logger = logging.getLogger(__name__)
-
-_SMS = "sms"
 
 
 async def operator_email(db, user_id: uuid.UUID) -> str | None:
@@ -54,13 +54,13 @@ def _settled_text(*, tenant: str, code: str) -> tuple[str, str]:
     subject = f"{tenant}'s rent text definitely didn't go out"
     body = (
         f"{subject}. Earlier it looked like it might have reached them. "
-        f"{_what_happened(channel=_SMS, code=code)} It definitely didn't go out, "
+        f"{_what_happened(channel=RENT_REMINDER_CHANNEL_SMS, code=code)} It definitely didn't go out, "
         "so you can send it again with Send now on the tenant's Rent reminders card."
     )
     return subject, body
 
 
-def _what_happened(*, channel: str, code: str) -> str:
+def _what_happened(*, channel: RentReminderChannel, code: str) -> str:
     """Why the reminder failed, as the operator would put it, and what to fix
     first, if anything."""
     if code == ERROR_NO_RECIPIENT:
@@ -78,11 +78,11 @@ def _what_happened(*, channel: str, code: str) -> str:
     return f"Reason: {code}."
 
 
-def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
-    what = "rent text" if channel == _SMS else "rent reminder email"
+def _alert_text(*, tenant: str, channel: RentReminderChannel, code: str) -> tuple[str, str]:
+    what = REMINDER_NAME[channel]
     if code in MAY_STILL_ARRIVE_ERRORS:
         subject = f"{tenant}'s {what} may already have been sent"
-        check = CHECK_TEXT if channel == _SMS else CHECK_EMAIL
+        check = CHECK_WHETHER_SENT[channel]
         next_step = f"It may already have reached them, so {check} before sending it again. {RETRY}"
     else:
         subject = f"{tenant}'s {what} didn't go out"

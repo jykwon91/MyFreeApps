@@ -1125,6 +1125,7 @@
         "backend/app/services/system/sms_service.py",
         "backend/app/api/rent_reminders.py",
         "backend/app/core/rent_reminder_enums.py",
+        "backend/app/core/rent_reminder_channel.py",
         "backend/app/core/rent_reminder_constants.py",
         "backend/app/core/rent_reminder_alert_messages.py",
         "backend/app/core/rent_reminder_request_id.py",
@@ -1148,7 +1149,8 @@
         "test_rent_reminder_codes_match_api_client.py",
         "test_rent_reminder_request_id.py",
         "test_cross_org_isolation_http_2.py",
-        "test_rent_reminder_send_audit.py"
+        "test_rent_reminder_send_audit.py",
+        "test_rent_reminder_channels.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx"

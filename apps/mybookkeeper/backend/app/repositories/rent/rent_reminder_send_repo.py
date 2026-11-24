@@ -11,6 +11,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_constants import MAX_ERROR_CODE_LENGTH
 from app.models.rent.rent_reminder_send import RentReminderSend
 
@@ -24,7 +25,7 @@ def _now() -> _dt.datetime:
 
 
 async def get_by_key(
-    db: AsyncSession, *, plan_id: uuid.UUID, due_date: _dt.date, channel: str,
+    db: AsyncSession, *, plan_id: uuid.UUID, due_date: _dt.date, channel: RentReminderChannel,
 ) -> RentReminderSend | None:
     result = await db.execute(
         select(RentReminderSend).where(
@@ -44,7 +45,7 @@ async def claim(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     due_date: _dt.date,
-    channel: str,
+    channel: RentReminderChannel,
     amount: Decimal,
     message_body: str,
 ) -> RentReminderSend:

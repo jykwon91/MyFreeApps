@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Literal
+
+from app.core.rent_reminder_channel import RentReminderChannel
 
 
 @dataclass(frozen=True)
@@ -13,7 +14,7 @@ class ReminderOutbound:
     send_id: uuid.UUID
     # The row's try number, sent to httpSMS in the request id.
     attempt: int
-    channel: Literal["email", "sms"]
+    channel: RentReminderChannel
     subject: str
     body: str
     tenant_email: str | None
