@@ -16,6 +16,7 @@ from platform_shared.core.smtp_reply_constants import (
 )
 from platform_shared.services.email_failure_kind import EmailFailureKind
 from platform_shared.services.email_send_error import EmailSendError
+from platform_shared.services.smtp_send_stage import SmtpSendStage
 
 SmtpFailure = smtplib.SMTPException | OSError | email.errors.MessageError | UnicodeError
 
@@ -24,6 +25,29 @@ def _kind_for_reply(code: int, permanent: EmailFailureKind) -> EmailFailureKind:
     if code >= FIRST_PERMANENT_REPLY_CODE:
         return permanent
     return "transient"
+
+
+def _permanent_reply_kind(stage: SmtpSendStage) -> EmailFailureKind:
+    """What a permanent reply outside ``CONFIG_REPLY_ERRORS`` means. While the
+    session is opening it can only be the server refusing STARTTLS, which an
+    operator must fix; after that, the server refused the message."""
+    if stage == "opening":
+        return "misconfigured"
+    return "message_rejected"
+
+
+def _unencodable_setting(exc: UnicodeError) -> str:
+    """Which setting a ``UnicodeError`` while the session is opening points at,
+    without the exception's text: for a non-ASCII password, that quotes a
+    character of the password and its position."""
+    if isinstance(exc, UnicodeEncodeError) and exc.encoding == "ascii":
+        # smtplib sends every command as ASCII: the login, and the EHLO name.
+        return (
+            "smtplib couldn't send a command as ASCII. SMTP_USER and SMTP_PASSWORD "
+            "must be ASCII only (so must this machine's host name, sent in EHLO)"
+        )
+    # Looking the host up, and checking its TLS certificate, encode it as IDNA.
+    return "SMTP_HOST isn't a valid host name"
 
 
 def _refused_codes(refused: Mapping[str, tuple[int, bytes]]) -> dict[str, int]:
@@ -89,23 +113,36 @@ def error_from_refused_recipients(
 
 
 def error_from_smtp_exception(
-    exc: SmtpFailure, *, recipient_count: int, failed_before_handover: bool,
+    exc: SmtpFailure, *, recipient_count: int, stage: SmtpSendStage,
 ) -> EmailSendError:
     """Classify an exception from an SMTP send.
 
-    ``failed_before_handover`` says the exception came before the message was
-    handed to the server (connecting, starting TLS, logging in), so a timeout or
-    dropped connection then is a definite failure rather than an unconfirmed one.
-    ``SMTPSenderRefused`` and ``SMTPRecipientsRefused`` always count as before
-    the hand-over, whatever is passed: smtplib raises them before it sends the
-    message.
+    ``stage`` says where the send was (see ``SmtpSendStage``). Before the
+    message is handed to the server (building it, or opening the session:
+    connecting, starting TLS, logging in), nobody can have it, so a timeout or
+    dropped connection then is a definite failure rather than an unconfirmed
+    one. ``SMTPSenderRefused`` and ``SMTPRecipientsRefused`` always count as
+    before the hand-over: smtplib raises them before it sends the message.
+
+    ``stage`` also decides ``kind`` twice. While the session is opening, a
+    ``UnicodeError`` (a host or login smtplib can't encode) and a permanent
+    reply outside ``CONFIG_REPLY_ERRORS`` (the server refusing STARTTLS) are
+    ``misconfigured``, since nothing then depends on the message.
     """
+    failed_before_handover = stage != "handing_over"
     if isinstance(exc, smtplib.SMTPRecipientsRefused):
         return error_from_refused_recipients(
             exc.recipients, recipient_count=recipient_count, sent_to_the_rest=False,
         )
     if isinstance(exc, smtplib.SMTPSenderRefused):
         failed_before_handover = True
+
+    if isinstance(exc, UnicodeError) and stage == "opening":
+        return EmailSendError(
+            f"SMTP is misconfigured: {_unencodable_setting(exc)} ({type(exc).__name__}).",
+            kind="misconfigured",
+            failed_before_handover=failed_before_handover,
+        )
 
     if isinstance(exc, (email.errors.MessageError, UnicodeError)):
         # ``str``, not ``repr``: a UnicodeEncodeError's repr quotes the whole
@@ -132,7 +169,7 @@ def error_from_smtp_exception(
     ):
         return EmailSendError(
             f"SMTP server replied {exc.smtp_code}: {exc}",
-            kind=_kind_for_reply(exc.smtp_code, "message_rejected"),
+            kind=_kind_for_reply(exc.smtp_code, _permanent_reply_kind(stage)),
             smtp_code=exc.smtp_code,
             failed_before_handover=failed_before_handover,
         )

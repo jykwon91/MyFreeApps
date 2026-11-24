@@ -16,9 +16,9 @@ class EmailSendError(RuntimeError):
     refusal (see ``smtp_replies.is_refusal``), even when only one refused
     recipient's reply wasn't. ``failed_before_handover`` is True when the send
     failed before the message was handed to the server, so nobody can have
-    received it: connecting, starting TLS, logging in, or smtplib reporting the
-    sender refused (``SMTPSenderRefused``) or the recipients refused
-    (``SMTPRecipientsRefused``).
+    received it: writing the message out, connecting, starting TLS, logging in,
+    or smtplib reporting the sender refused (``SMTPSenderRefused``) or the
+    recipients refused (``SMTPRecipientsRefused``).
 
     ``refused_recipients`` maps each address the server refused to its reply
     code, and is empty when it refused none. When it is non-empty, ``kind`` and
