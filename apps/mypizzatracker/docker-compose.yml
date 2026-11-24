@@ -87,6 +87,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      # Without a grace period Docker marks the API unhealthy after ~30s (3
+      # failed checks 10s apart). Startup (imports, boot guards, bucket init)
+      # can exceed that on a busy host, and `docker compose up` then aborts the
+      # deploy before caddy starts, leaving the site on 502 while the API is
+      # fine. Failed checks inside start_period don't count toward retries.
+      start_period: 60s
 
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
