@@ -23,6 +23,10 @@ routes:
     not_on_mobile: New in this release; the phone screen follows once accounts sync from the bank.
   /net-worth:
     not_on_mobile: New in this release, built on the accounts screen that is web-only for now; the phone screen follows with it.
+  /budget:
+    not_on_mobile: New in this release, built on the bank-synced transactions that are web-only for now; the phone screen follows with the accounts screen.
+  /cash-flow:
+    not_on_mobile: New in this release, a month-by-month chart built on the web-only accounts; the phone screen follows with the accounts screen.
   /plaid-oauth:
     not_on_mobile: The return page of the website's bank-connect flow; bank linking is web-only for now.
   /spending-categories:

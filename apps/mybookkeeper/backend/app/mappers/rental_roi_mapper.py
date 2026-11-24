@@ -5,8 +5,9 @@ understate every target by up to a cent per figure.
 """
 import uuid
 from collections.abc import Sequence
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
+from app.core.cents import to_cents
 from app.core.rental_roi_enums import GAP_BASIS_BREAK_EVEN, GAP_BASIS_TARGET
 from app.models.mortgage.mortgage import Mortgage
 from app.schemas.analytics.rental_roi_cost_breakdown import RentalRoiCostBreakdown
@@ -16,14 +17,6 @@ from app.schemas.analytics.rental_roi_summary import RentalRoiSummary
 from app.services.analytics.rental_roi_cost_line import RentalRoiCostLine
 from app.services.analytics.rental_roi_figures import RentalRoiFigures
 from app.services.analytics.rental_roi_loan import RentalRoiLoan
-
-_HUNDRED = Decimal(100)
-_WHOLE = Decimal(1)
-
-
-def to_cents(dollars: Decimal) -> int:
-    return int((dollars * _HUNDRED).quantize(_WHOLE, rounding=ROUND_HALF_UP))
-
 
 def _optional_cents(dollars: Decimal | None) -> int | None:
     return None if dollars is None else to_cents(dollars)

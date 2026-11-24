@@ -2761,7 +2761,8 @@
         "api-client/src/store/netWorthApi.ts",
         "api-client/src/types/net-worth/",
         "api-client/src/constants/netWorth.ts",
-        "api-client/src/utils/netWorthChartRows.ts"
+        "api-client/src/utils/netWorthChartRows.ts",
+        "frontend/src/shared/components/ui/SegmentedControl.tsx"
       ],
       "backend_tests": [
         "test_net_worth_lines.py",
@@ -2778,6 +2779,57 @@
       ],
       "e2e_specs": [
         "mocked/net-worth-mock.spec.ts"
+      ]
+    },
+    "budgets": {
+      "source_paths": [
+        "backend/app/core/budget_constants.py",
+        "backend/app/core/month_text.py",
+        "backend/app/core/cents.py",
+        "backend/app/models/budgets/",
+        "backend/app/repositories/budgets/",
+        "backend/app/repositories/cash_flow/",
+        "backend/app/repositories/transactions/counted_filters.py",
+        "backend/app/services/budgets/",
+        "backend/app/services/cash_flow/",
+        "backend/app/schemas/budgets/",
+        "backend/app/schemas/cash_flow/",
+        "backend/app/mappers/spending_budget_mapper.py",
+        "backend/app/api/budgets.py",
+        "backend/app/api/cash_flow.py",
+        "backend/alembic/versions/budget261124_spending_budgets.py",
+        "frontend/src/app/pages/Budget.tsx",
+        "frontend/src/app/pages/CashFlow.tsx",
+        "frontend/src/app/features/budget/",
+        "frontend/src/app/features/cash-flow/",
+        "frontend/src/shared/lib/budget-messages.ts",
+        "frontend/src/shared/lib/budget-pages.ts",
+        "frontend/src/shared/lib/cash-flow-messages.ts",
+        "frontend/src/shared/components/ui/SegmentedControl.tsx",
+        "api-client/src/store/budgetApi.ts",
+        "api-client/src/types/budget/",
+        "api-client/src/types/cash-flow/",
+        "api-client/src/constants/budget.ts",
+        "api-client/src/utils/monthText.ts",
+        "api-client/src/utils/cashFlowChartRows.ts"
+      ],
+      "backend_tests": [
+        "test_month_text.py",
+        "test_budget_month.py",
+        "test_cash_flow_months.py",
+        "test_budget_service.py",
+        "test_budgets_api.py",
+        "test_summary_from_transactions.py"
+      ],
+      "frontend_tests": [
+        "BudgetBody.test.tsx",
+        "BudgetAmountEditor.test.tsx",
+        "CashFlowBody.test.tsx",
+        "CashFlowControls.test.tsx",
+        "cashFlowSearchParams.test.ts"
+      ],
+      "e2e_specs": [
+        "mocked/budget-cash-flow-mock.spec.ts"
       ]
     }
   },

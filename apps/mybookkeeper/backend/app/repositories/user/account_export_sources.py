@@ -30,6 +30,7 @@ from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.applicants.reference import Reference
 from app.models.applicants.screening_result import ScreeningResult
 from app.models.applicants.video_call_note import VideoCallNote
+from app.models.budgets.spending_budget import SpendingBudget
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 from app.models.calendar.calendar_listing_blocklist import CalendarListingBlocklist
 from app.models.classification.classification_rule import ClassificationRule
@@ -200,6 +201,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(PlaidItem, Scope.WORKSPACE_MEMBER),
     Source(BalanceSnapshot, Scope.WORKSPACE_MEMBER),
     Source(SpendingCategory, Scope.WORKSPACE),
+    Source(SpendingBudget, Scope.WORKSPACE),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),
     Source(WelcomeManualRoom, Scope.CHILD, WelcomeManual, "manual_id"),

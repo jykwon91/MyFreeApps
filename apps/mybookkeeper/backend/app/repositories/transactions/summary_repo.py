@@ -3,13 +3,13 @@ import uuid
 from collections.abc import Sequence
 from datetime import date, datetime
 
-from sqlalchemy import select, func, and_, extract, Row
+from sqlalchemy import ColumnElement, select, func, and_, extract, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
-from app.core.tags import TRANSACTION_TYPE_TRANSFER
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
+from app.repositories.transactions.counted_filters import counted_transaction_filters
 
 
 def _build_txn_filters(
@@ -21,15 +21,12 @@ def _build_txn_filters(
     tax_year: int | None = None,
     tax_relevant_only: bool = False,
     exclude_capital_improvements: bool = False,
-) -> list:
+) -> list[ColumnElement[bool]]:
     filters = [
-        Transaction.organization_id == organization_id,
-        Transaction.deleted_at.is_(None),
-        Transaction.status == "approved",
-        # Moving money between your own accounts is neither earned nor spent.
-        # Category-set sums would skip it anyway; this keeps every figure built
-        # on these filters (by-tag, by-month, years with data) honest too.
-        Transaction.transaction_type != TRANSACTION_TYPE_TRANSFER,
+        # Category-set sums would skip transfers anyway; leaving them out here
+        # keeps every figure built on these filters (by-tag, by-month, years
+        # with data) honest too.
+        *counted_transaction_filters(organization_id),
         # Personal spending is never on a tax form; exclude it from every
         # financial summary and analytics figure.
         Transaction.transaction_scope != TRANSACTION_SCOPE_PERSONAL,
