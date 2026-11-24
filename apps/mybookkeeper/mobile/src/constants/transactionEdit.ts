@@ -1,11 +1,3 @@
-import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-
-// What the website switches to when the type changes.
-export const DEFAULT_CATEGORY: Record<TransactionType, string> = {
-  income: "rental_revenue",
-  expense: "maintenance",
-};
-
 export const NONE_OPTION_VALUE = "none";
 
 export const TRANSACTION_EDIT_SHEET = {

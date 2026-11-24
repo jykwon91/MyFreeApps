@@ -1,4 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import { DEFAULT_CATEGORY_FOR_TYPE } from "@mybookkeeper/api-client/constants/transactionTypes";
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChange";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -9,7 +10,7 @@ import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { PICKER_LOAD_MESSAGES } from "../../constants/pickerLoad";
-import { DEFAULT_CATEGORY, NONE_OPTION_VALUE, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
+import { NONE_OPTION_VALUE, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
 import { SAVED_VENDOR_MESSAGES, TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import { pickerLoadError } from "../../lib/pickerLoadError";
@@ -79,7 +80,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
     const category = type === original.transaction_type ? original.category : values.category;
     const fits = type === original.transaction_type || categoryFitsType(type, category);
     setCategoryWasReset(!fits);
-    update({ type, category: fits ? category : DEFAULT_CATEGORY[type] });
+    update({ type, category: fits ? category : DEFAULT_CATEGORY_FOR_TYPE[type] });
   }
 
   async function save(approve: boolean): Promise<void> {
@@ -211,7 +212,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
           onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.paymentMethod)}
           valueLabel={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)}
         />
-        <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
+        {values.type === "transfer" ? null : (
+          <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
+        )}
 
         {values.type === "expense" && (
           <SwitchRow

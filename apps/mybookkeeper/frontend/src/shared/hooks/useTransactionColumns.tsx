@@ -11,6 +11,8 @@ import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { SELECTING_ALL_LABEL } from "@/shared/lib/transaction-list-messages";
 import type { SelectAllControl } from "@/shared/types/select-all-control";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { transactionAccountLabel } from "@mybookkeeper/api-client/utils/transactionAccountLabel";
+import { TRANSACTION_ACCOUNT_MESSAGES as ACCOUNT_MSG } from "@/shared/lib/transaction-account-messages";
 import { Button, RowPrimaryAction } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
@@ -34,8 +36,12 @@ interface ColumnActions {
 
 const columnHelper = createColumnHelper<AppTableFeatures, Transaction>();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<AppTableFeatures, Transaction, any>[] {
+export function useTransactionColumns(
+  propertyMap: ReadonlyMap<string, string>,
+  accountMap: ReadonlyMap<string, string>,
+  actions: ColumnActions,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): ColumnDef<AppTableFeatures, Transaction, any>[] {
   const { onOpen, onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll, onToggleRow } = actions;
 
   return useMemo(() => [
@@ -143,6 +149,15 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         <span className="text-muted-foreground">{getValue() ? (propertyMap.get(getValue()!) ?? "\u2014") : "\u2014"}</span>
       ),
     }),
+    columnHelper.accessor("account_id", {
+      header: "Account",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {transactionAccountLabel(row.original, accountMap, ACCOUNT_MSG.unknown) ?? "\u2014"}
+        </span>
+      ),
+    }),
     columnHelper.accessor("tax_relevant", {
       header: () => <span title="Whether this transaction is included in your Tax Report. Set automatically based on category.">Tax</span>,
       cell: ({ getValue }) => (getValue() ? "Yes" : "No"),
@@ -182,5 +197,5 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         );
       },
     }),
-  ], [propertyMap, onOpen, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll, onToggleRow]);
+  ], [propertyMap, accountMap, onOpen, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll, onToggleRow]);
 }

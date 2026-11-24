@@ -2277,7 +2277,9 @@
         "test_tax_return_staleness.py",
         "test_reported_amount.py",
         "test_upload_read_caps.py",
-        "test_audited_writes_records.py"
+        "test_audited_writes_records.py",
+        "test_transaction_transfers.py",
+        "test_bank_csv_account_import.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -2318,7 +2320,9 @@
         "ReconciliationDelete.test.tsx",
         "BankStatementImport.test.tsx",
         "CapitalImprovementCheckbox.test.tsx",
-        "TransactionPanelTaxYear.test.tsx"
+        "TransactionPanelTaxYear.test.tsx",
+        "TransactionAccountFields.test.tsx",
+        "TransactionTypeBadge.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",
@@ -2331,6 +2335,63 @@
         "analytics.spec.ts",
         "tax-return-detail.spec.ts",
         "bank-statement-import.spec.ts"
+      ]
+    },
+    "financial_accounts": {
+      "source_paths": [
+        "backend/app/models/financial_accounts/",
+        "backend/app/repositories/financial_accounts/",
+        "backend/app/schemas/financial_accounts/",
+        "backend/app/services/financial_accounts/",
+        "backend/app/api/financial_accounts.py",
+        "backend/app/core/financial_account_enums.py",
+        "backend/app/mappers/financial_account_mapper.py",
+        "backend/app/services/transactions/transfer_rules.py",
+        "backend/app/services/transactions/bank_csv_account_scope.py",
+        "backend/app/mappers/export/financial_account_export_mappers.py",
+        "backend/alembic/versions/finacct261123_create_financial_accounts.py",
+        "frontend/src/app/pages/FinancialAccounts.tsx",
+        "frontend/src/app/features/financial-accounts/",
+        "frontend/src/shared/lib/financial-account-messages.ts",
+        "frontend/src/shared/lib/transaction-account-messages.ts",
+        "frontend/src/shared/lib/transaction-type-badge-classes.ts",
+        "frontend/src/app/features/transactions/TransactionAccountFields.tsx",
+        "frontend/src/app/features/transactions/TransactionAccountSelect.tsx",
+        "frontend/src/test/financial-account-fixture.ts",
+        "frontend/src/test/empty-financial-accounts.ts",
+        "api-client/src/store/financialAccountsApi.ts",
+        "api-client/src/types/financial-account/",
+        "api-client/src/constants/financialAccountTypes.ts",
+        "api-client/src/constants/transactionTypes.ts",
+        "api-client/src/utils/financialAccountForm.ts",
+        "api-client/src/utils/financialAccountLabel.ts",
+        "api-client/src/utils/financialAccountFormat.ts",
+        "api-client/src/utils/groupFinancialAccounts.ts",
+        "api-client/src/utils/bankCsvImportParams.ts",
+        "api-client/src/utils/transactionAccountLabel.ts",
+        "api-client/src/utils/categoriesForType.ts"
+      ],
+      "backend_tests": [
+        "test_financial_accounts_service.py",
+        "test_financial_accounts_api.py",
+        "test_financial_account_mapper.py",
+        "test_transaction_transfers.py",
+        "test_bank_csv_account_import.py",
+        "test_account_export_domains.py"
+      ],
+      "frontend_tests": [
+        "FinancialAccountsBody.test.tsx",
+        "AddFinancialAccountDialog.test.tsx",
+        "TransactionAccountFields.test.tsx",
+        "TransactionTypeBadge.test.tsx",
+        "TransactionFilterBar.test.tsx",
+        "BankStatementImport.test.tsx",
+        "TransactionFormSource.test.tsx",
+        "TransactionVendorPicker.test.tsx"
+      ],
+      "e2e_specs": [
+        "financial-accounts.spec.ts",
+        "financial-accounts-layout.spec.ts"
       ]
     },
     "attribution": {

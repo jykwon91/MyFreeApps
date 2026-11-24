@@ -1,4 +1,4 @@
-"""Reject a property, activity or vendor the caller's organization does not own.
+"""Reject a property, activity, vendor or account the caller does not own.
 
 ``property_id``, ``activity_id`` and ``vendor_id`` arrive straight from the
 client. The foreign keys only prove the rows exist, so without this check one
@@ -13,6 +13,7 @@ from typing import Mapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories import activity_repo
+from app.repositories.financial_accounts import financial_account_repo
 from app.repositories.properties import property_repo
 from app.repositories.vendors import vendor_repo
 from app.services.transactions.foreign_reference_error import ForeignReferenceError
@@ -45,3 +46,14 @@ async def assert_references_owned(
         user_id=user_id,
     ) is None:
         raise ForeignReferenceError("vendor_id does not name a vendor")
+
+    # Accounts are one person's, like vendors: org AND user.
+    for field in ("account_id", "transfer_to_account_id"):
+        account_id = fields.get(field)
+        if isinstance(account_id, uuid.UUID) and await financial_account_repo.get(
+            db,
+            account_id=account_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        ) is None:
+            raise ForeignReferenceError(f"{field} does not name an account")

@@ -8,6 +8,8 @@ export interface TransactionListParams {
   property_id?: string;
   unassigned?: boolean;
   applicant_id?: string;
+  /** Rows in this financial account, including transfers into it. */
+  account_id?: string;
   status?: string;
   /** Pending, needs review or unverified: the rows someone still has to look at. */
   to_review?: boolean;

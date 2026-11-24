@@ -1,5 +1,6 @@
 import { DEFAULT_TRANSACTION_SORT_DIRECTION, DEFAULT_TRANSACTION_SORT_FIELD } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
+import { TRANSACTION_TYPES as ALL_TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@mybookkeeper/api-client/constants/transactionTypes";
 import type { TransactionFilters } from "../types/TransactionFilters";
 import type { TransactionPeriod } from "../types/TransactionPeriod";
 import type { TransactionView } from "../types/TransactionView";
@@ -52,7 +53,13 @@ export const TRANSACTION_PERIODS: readonly { value: TransactionPeriod; label: st
   { value: "lastYear", label: "Last year" },
 ];
 
-export const TRANSACTION_TYPES: readonly { value: TransactionType; label: string }[] = [
-  { value: "income", label: "Income" },
-  { value: "expense", label: "Expense" },
-];
+/** How the list's summary line names a type filter. */
+export const TYPE_FILTER_SUMMARY: Record<TransactionType, string> = {
+  income: "Income",
+  expense: "Expenses",
+  transfer: "Transfers",
+};
+
+export const TRANSACTION_TYPES: readonly { value: TransactionType; label: string }[] = ALL_TRANSACTION_TYPES.map(
+  (value) => ({ value, label: TRANSACTION_TYPE_LABELS[value] }),
+);

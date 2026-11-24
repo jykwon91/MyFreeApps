@@ -3,6 +3,9 @@ from typing import Final
 
 from app.mappers.export.account_export_mappers import ACCOUNT_EXPORT_MAPPERS
 from app.mappers.export.applicant_export_mappers import APPLICANT_EXPORT_MAPPERS
+from app.mappers.export.financial_account_export_mappers import (
+    FINANCIAL_ACCOUNT_EXPORT_MAPPERS,
+)
 from app.mappers.export.inquiry_export_mappers import INQUIRY_EXPORT_MAPPERS
 from app.mappers.export.insurance_export_mappers import INSURANCE_EXPORT_MAPPERS
 from app.mappers.export.lease_export_mappers import LEASE_EXPORT_MAPPERS
@@ -27,6 +30,7 @@ EXPORT_MAPPERS: Final[dict[str, TableExportMapper]] = {
         *LEASE_EXPORT_MAPPERS,
         *RENT_EXPORT_MAPPERS,
         *TRANSACTION_EXPORT_MAPPERS,
+        *FINANCIAL_ACCOUNT_EXPORT_MAPPERS,
         *TAX_EXPORT_MAPPERS,
         *INSURANCE_EXPORT_MAPPERS,
         *WELCOME_MANUAL_EXPORT_MAPPERS,

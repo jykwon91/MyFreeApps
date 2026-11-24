@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPE_LABELS } from "@mybookkeeper/api-client/constants/transactionTypes";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { useDeleteTransactionMutation, useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
@@ -121,7 +122,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
             {displayAmount(transaction)}
           </Text>
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-            {transaction.transaction_type === "income" ? "Income" : "Expense"}
+            {TRANSACTION_TYPE_LABELS[transaction.transaction_type]}
           </Text>
         </View>
 

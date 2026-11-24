@@ -34,6 +34,7 @@ function earlierDate(a: string, b: string): string {
 export function toFilterBarParams(filters: Filters): TransactionListParams {
   const params: TransactionListParams = {};
   if (filters.property_id) params.property_id = filters.property_id;
+  if (filters.account_id) params.account_id = filters.account_id;
   if (filters.status) params.status = filters.status;
   if (filters.transaction_type) params.transaction_type = filters.transaction_type;
   if (filters.category) params.category = filters.category;

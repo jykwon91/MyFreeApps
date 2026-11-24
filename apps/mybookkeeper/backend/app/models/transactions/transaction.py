@@ -35,6 +35,21 @@ class Transaction(Base):
         ForeignKey("vendors.id", ondelete="SET NULL", name="fk_txn_vendor"),
         nullable=True,
     )
+    # The account the money moved through (Financial Accounts). On a transfer
+    # it is the account the money LEFT; ``transfer_to_account_id`` is where it
+    # arrived. One row per transfer, not one per leg, so nothing that counts
+    # rows can count a transfer twice. SET NULL: deleting an account keeps the
+    # history, it just stops saying which account it was.
+    account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_accounts.id", ondelete="SET NULL", name="fk_txn_account"),
+        nullable=True,
+    )
+    transfer_to_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("financial_accounts.id", ondelete="SET NULL", name="fk_txn_transfer_to_account"),
+        nullable=True,
+    )
     # Tenant who made this payment — set by the attribution pipeline or manually
     # by the host. ON DELETE SET NULL — deleting an applicant preserves history.
     applicant_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -108,7 +123,7 @@ class Transaction(Base):
     __table_args__ = (
         CheckConstraint("amount > 0", name="chk_txn_amount_positive"),
         CheckConstraint(
-            "transaction_type IN ('income', 'expense')",
+            "transaction_type IN ('income', 'expense', 'transfer')",
             name="chk_txn_type",
         ),
         CheckConstraint(
@@ -123,7 +138,7 @@ class Transaction(Base):
             "'taxes', 'channel_fee', 'advertising', 'legal_professional', 'travel', "
             "'furnishings', 'other_expense', 'uncategorized', 'security_deposit', "
             "'supplies', 'home_office', 'meals', 'vehicle_expenses', "
-            "'health_insurance', 'education_training'"
+            "'health_insurance', 'education_training', 'transfer'"
             ")",
             name="chk_txn_category",
         ),
@@ -187,9 +202,29 @@ class Transaction(Base):
             "'uncategorized', 'security_deposit'"
             ")) OR "
             "(transaction_type = 'expense' AND category NOT IN ("
-            "'rental_revenue', 'cleaning_fee_revenue', 'business_income', 'security_deposit'"
-            "))",
+            "'rental_revenue', 'cleaning_fee_revenue', 'business_income', 'security_deposit', "
+            "'transfer'"
+            ")) OR "
+            "(transaction_type = 'transfer' AND category = 'transfer')",
             name="chk_txn_type_category",
+        ),
+        # Only a transfer has a destination account.
+        CheckConstraint(
+            "transfer_to_account_id IS NULL OR transaction_type = 'transfer'",
+            name="chk_txn_transfer_to_only_transfer",
+        ),
+        CheckConstraint(
+            "account_id IS NULL OR transfer_to_account_id IS NULL"
+            " OR account_id <> transfer_to_account_id",
+            name="chk_txn_transfer_distinct_accounts",
+        ),
+        # Moving your own money is not a tax event, so a transfer can never
+        # reach a tax form or a depreciation schedule.
+        CheckConstraint(
+            "transaction_type <> 'transfer' OR ("
+            "NOT tax_relevant AND schedule_e_line IS NULL AND NOT is_capital_improvement"
+            ")",
+            name="chk_txn_transfer_not_tax",
         ),
         Index(
             "ix_txn_org_date", "organization_id", "transaction_date",
@@ -249,6 +284,16 @@ class Transaction(Base):
         Index(
             "ix_txn_vendor_id_partial", "vendor_id",
             postgresql_where=text("vendor_id IS NOT NULL"),
+        ),
+        # The account filter on Transactions matches either side of a
+        # transfer, so both FKs are indexed. Most rows have no account yet.
+        Index(
+            "ix_txn_account_id_partial", "account_id",
+            postgresql_where=text("account_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_txn_transfer_to_account_id_partial", "transfer_to_account_id",
+            postgresql_where=text("transfer_to_account_id IS NOT NULL"),
         ),
         # Partial index on the applicant FK — only attributed transactions.
         Index(

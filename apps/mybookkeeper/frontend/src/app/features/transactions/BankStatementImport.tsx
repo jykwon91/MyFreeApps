@@ -3,6 +3,10 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Upload, FileSpreadsheet, X, Loader2 } from "lucide-react";
 import { useImportBankCsvMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import type { FinancialAccount } from "@mybookkeeper/api-client/types/financial-account/financial-account";
+import { financialAccountLabel } from "@mybookkeeper/api-client/utils/financialAccountLabel";
+import { selectableFinancialAccounts } from "@mybookkeeper/api-client/utils/groupFinancialAccounts";
+import { TRANSACTION_ACCOUNT_MESSAGES as ACCOUNT_MSG } from "@/shared/lib/transaction-account-messages";
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
 import { bankImportSummary } from "@mybookkeeper/api-client/utils/bankImportSummary";
@@ -11,15 +15,18 @@ import Select from "@/shared/components/ui/Select";
 
 export interface BankStatementImportProps {
   properties: readonly Property[];
+  /** The accounts a statement can be from; picking one files every row under it. */
+  accounts: readonly FinancialAccount[];
   onClose: () => void;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
 
-export default function BankStatementImport({ properties, onClose, onSuccess, onError }: BankStatementImportProps) {
+export default function BankStatementImport({ properties, accounts, onClose, onSuccess, onError }: BankStatementImportProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [propertyId, setPropertyId] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [importBankCsv, { isLoading: importing }] = useImportBankCsvMutation();
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -34,13 +41,17 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
     const form = new FormData();
     form.append("file", file);
     try {
-      const imported = await importBankCsv({ form, propertyId: propertyId || undefined }).unwrap();
+      const imported = await importBankCsv({
+        form,
+        propertyId: propertyId || undefined,
+        accountId: accountId || undefined,
+      }).unwrap();
       setResult(imported);
       onSuccess(bankImportSummary(imported));
     } catch (err: unknown) {
       onError(bankImportFailure(err));
     }
-  }, [file, propertyId, importBankCsv, onSuccess, onError]);
+  }, [file, propertyId, accountId, importBankCsv, onSuccess, onError]);
 
   return (
     <ModalDialog
@@ -83,6 +94,18 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
             )}
           </button>
         </div>
+
+        {accounts.length > 0 ? (
+          <div>
+            <label className="text-sm font-medium mb-1 block" htmlFor="bank-import-account">{ACCOUNT_MSG.importLabel}</label>
+            <Select id="bank-import-account" value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full" data-testid="bank-import-account-select">
+              <option value="">{ACCOUNT_MSG.none}</option>
+              {selectableFinancialAccounts(accounts, null).map((account) => (
+                <option key={account.id} value={account.id}>{financialAccountLabel(account)}</option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
         <div>
           <label className="text-sm font-medium mb-1 block">Property (optional)</label>

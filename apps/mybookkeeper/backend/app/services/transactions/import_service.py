@@ -5,6 +5,7 @@ from app.core.context import RequestContext
 from app.db.session import unit_of_work
 from app.repositories.transactions import transaction_repo
 from app.schemas.transactions.imports import ImportResult, TransactionPreview
+from app.services.transactions.bank_csv_account_scope import dedupe_keys, scoped_external_id
 from app.services.transactions.bank_csv_parser import detect_bank_format, parse_bank_csv
 from app.services.transactions.reference_ownership import assert_references_owned
 
@@ -21,6 +22,7 @@ async def import_bank_csv_file(
     content_bytes: bytes,
     filename: str,
     property_id: uuid.UUID | None,
+    account_id: uuid.UUID | None = None,
 ) -> ImportResult:
     """Parse a bank CSV and import non-duplicate transactions.
 
@@ -28,7 +30,7 @@ async def import_bank_csv_file(
         ImportResult with counts and preview of parsed transactions.
 
     Raises:
-        ForeignReferenceError: If ``property_id`` is not one of the caller's properties.
+        ForeignReferenceError: If ``property_id`` or ``account_id`` is not the caller's.
         ValueError: If file is too large, not a CSV, unrecognized format, or empty.
     """
     if not filename.lower().endswith(".csv"):
@@ -46,7 +48,15 @@ async def import_bank_csv_file(
     if not parsed:
         raise ValueError("No transactions found in CSV")
 
-    external_ids = [t.external_id for t in parsed if t.external_id]
+    # Every key that could mean "already imported", per row, before the row's
+    # own key is replaced by the account-scoped one.
+    row_keys = [dedupe_keys(account_id, t.external_id) if t.external_id else () for t in parsed]
+    if account_id is not None:
+        for txn in parsed:
+            txn.account_id = account_id
+            if txn.external_id:
+                txn.external_id = scoped_external_id(account_id, txn.external_id)
+    external_ids = [key for keys in row_keys for key in keys]
     imported = 0
     skipped = 0
 
@@ -55,14 +65,14 @@ async def import_bank_csv_file(
             db,
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
-            fields={"property_id": property_id},
+            fields={"property_id": property_id, "account_id": account_id},
         )
         existing_ids = await transaction_repo.get_existing_external_ids(
             db, ctx.organization_id, "bank_csv", external_ids,
         )
 
-        for txn in parsed:
-            if txn.external_id in existing_ids:
+        for txn, keys in zip(parsed, row_keys):
+            if any(key in existing_ids for key in keys):
                 skipped += 1
                 continue
             await transaction_repo.create(db, txn)

@@ -1,3 +1,5 @@
+import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
+
 export interface TransactionFormValues {
   vendor: string;
   // Host-curated link to the Vendors rolodex (PR 4.2). Empty string means
@@ -6,7 +8,7 @@ export interface TransactionFormValues {
   vendor_id: string;
   description: string;
   amount: string;
-  transaction_type: "income" | "expense";
+  transaction_type: TransactionType;
   category: string;
   property_id: string;
   tax_relevant: boolean;
@@ -15,4 +17,7 @@ export interface TransactionFormValues {
   channel: string;
   transaction_date: string;
   tax_year: number;
+  // Empty string means no account; the panel sends it as null.
+  account_id: string;
+  transfer_to_account_id: string;
 }

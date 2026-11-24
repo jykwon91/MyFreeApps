@@ -22,6 +22,13 @@ describe("amounts", () => {
     expect(isMoneyIn(refund)).toBe(true);
   });
 
+  it("shows a transfer unsigned, as neither money in nor out", () => {
+    const transfer = aTransaction({ transaction_type: "transfer", category: "transfer", amount: "500.00" });
+    expect(displayAmount(transfer)).toBe("$500.00");
+    expect(isMoneyIn(transfer)).toBe(false);
+    expect(rowAccessibilityLabel(transfer, null).startsWith("Transfer, ")).toBe(true);
+  });
+
   it("says money in words", () => {
     expect(spokenMoney(84.2)).toBe("84 dollars and 20 cents");
     expect(spokenMoney(1)).toBe("1 dollar");
@@ -383,4 +390,15 @@ describe("bulk approve", () => {
     expect(bulkDeleteFailureMessage({ status: 500, data: { detail: "boom" } })).toBe("I couldn't delete those. Want to try again?");
   });
 
+});
+
+describe("transfers", () => {
+  it("offers only the transfer category for a transfer", () => {
+    expect(categoryChoices("transfer", "transfer")).toEqual(["transfer"]);
+  });
+
+  it("reads a transfer type filter back from the link", () => {
+    expect(filtersFromParams({ type: "transfer" }).type).toBe("transfer");
+    expect(filtersFromParams({ type: "bogus" }).type).toBeNull();
+  });
 });

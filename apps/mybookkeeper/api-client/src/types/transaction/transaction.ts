@@ -56,4 +56,8 @@ export interface Transaction {
   external_source: string | null;
   is_pending: boolean;
   activity_id: string | null;
+  /** The financial account the money moved in; for a transfer, the one it left. */
+  account_id: string | null;
+  /** A transfer's receiving account. Null on anything that isn't a transfer. */
+  transfer_to_account_id: string | null;
 }

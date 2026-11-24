@@ -49,6 +49,8 @@ function buildDefaults(t: Transaction): TransactionFormValues {
     channel: t.channel ?? "",
     transaction_date: t.transaction_date,
     tax_year: t.tax_year,
+    account_id: t.account_id ?? "",
+    transfer_to_account_id: t.transfer_to_account_id ?? "",
   };
 }
 

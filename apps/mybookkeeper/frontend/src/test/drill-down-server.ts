@@ -49,6 +49,8 @@ export function aDrillDownTransaction(index: number, overrides: Partial<Transact
     external_source: null,
     is_pending: false,
     activity_id: null,
+    account_id: null,
+    transfer_to_account_id: null,
     review_reason: null,
     applicant_id: null,
     attribution_source: null,

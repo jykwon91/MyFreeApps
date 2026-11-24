@@ -7,6 +7,14 @@ UTILITY_UNTYPED_BUCKET = "other"
 
 REVENUE_TAGS = frozenset({"rental_revenue", "cleaning_fee_revenue", "business_income"})
 NEUTRAL_TAGS = frozenset({"security_deposit"})
+# Money moving between two of the user's own accounts — paying the card from
+# checking, sweeping savings into a brokerage. Neither earned nor spent, so it
+# is never income, never an expense, and never on a tax form. It is both a
+# category and a transaction_type, and the two always travel together.
+TRANSFER_CATEGORY = "transfer"
+TRANSACTION_TYPE_INCOME = "income"
+TRANSACTION_TYPE_EXPENSE = "expense"
+TRANSACTION_TYPE_TRANSFER = "transfer"
 EXPENSE_TAGS = frozenset({
     "channel_fee", "cleaning_expense", "maintenance", "management_fee",
     "mortgage_interest", "mortgage_principal", "insurance", "utilities",
@@ -49,6 +57,7 @@ CATEGORY_TO_SCHEDULE_E: dict[str, str | None] = {
     "health_insurance":      None,
     "education_training":    None,
     "business_income":       None,
+    "transfer":              None,
 }
 
 # Rental ROI: what a rental earns, and what it costs to carry each month.
@@ -84,6 +93,7 @@ CATEGORY_TO_SCHEDULE_C: dict[str, str | None] = {
     "mortgage_principal":    None,
     "uncategorized":         None,
     "security_deposit":      None,
+    "transfer":              None,
 }
 
 
@@ -114,14 +124,17 @@ CATEGORY_TO_SCHEDULE_A: dict[str, str | None] = {
     "business_income":       None,
     "rental_revenue":        None,
     "cleaning_fee_revenue":  None,
+    "transfer":              None,
 }
 
 
 def transaction_type_for_category(category: str) -> str:
     """Return the correct transaction_type for a given category."""
+    if category == TRANSFER_CATEGORY:
+        return TRANSACTION_TYPE_TRANSFER
     if category in REVENUE_TAGS or category in NEUTRAL_TAGS:
-        return "income"
-    return "expense"
+        return TRANSACTION_TYPE_INCOME
+    return TRANSACTION_TYPE_EXPENSE
 
 
 def sanitize_tags(tags: list[str]) -> list[str]:

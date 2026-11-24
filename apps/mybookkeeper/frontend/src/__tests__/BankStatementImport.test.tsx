@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import BankStatementImport from "@/app/features/transactions/BankStatementImport";
 import { BANK_IMPORT_FAILURE_MESSAGES } from "@mybookkeeper/api-client/constants/bankImport";
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
+import { aFinancialAccount } from "@/test/financial-account-fixture";
 
 const importBankCsv = vi.fn();
 let isLoading = false;
@@ -20,7 +21,7 @@ const RESULT: ImportResult = {
 function renderImport() {
   const handlers = { onClose: vi.fn(), onSuccess: vi.fn(), onError: vi.fn() };
   const view = render(
-    <BankStatementImport properties={[{ id: "p1", name: "Oak Street" } as never]} {...handlers} />,
+    <BankStatementImport properties={[{ id: "p1", name: "Oak Street" } as never]} accounts={[]} {...handlers} />,
   );
   const input = view.baseElement.querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(["a,b\n"], "statement.csv", { type: "text/csv" })] } });
@@ -42,7 +43,7 @@ describe("BankStatementImport", () => {
   });
 
   it("keeps Import disabled until a file is chosen", () => {
-    render(<BankStatementImport properties={[]} onClose={vi.fn()} onSuccess={vi.fn()} onError={vi.fn()} />);
+    render(<BankStatementImport properties={[]} accounts={[]} onClose={vi.fn()} onSuccess={vi.fn()} onError={vi.fn()} />);
     expect(screen.getByRole("button", { name: /^import$/i })).toBeDisabled();
   });
 
@@ -87,5 +88,21 @@ describe("BankStatementImport", () => {
     isLoading = true;
     renderImport();
     expect(screen.getByRole("button", { name: /importing/i })).toBeDisabled();
+  });
+  it("files the statement under the account picked, and offers no closed account", async () => {
+    resolveWith(RESULT);
+    const handlers = { onClose: vi.fn(), onSuccess: vi.fn(), onError: vi.fn() };
+    const accounts = [aFinancialAccount(), aFinancialAccount({ id: "acct-9", name: "Old Card", closed_on: "2026-01-01" })];
+    const view = render(<BankStatementImport properties={[]} accounts={accounts} {...handlers} />);
+    const input = view.baseElement.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["a,b\n"], "statement.csv", { type: "text/csv" })] } });
+
+    const select = screen.getByTestId("bank-import-account-select") as HTMLSelectElement;
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual(["No account", "Chase Checking ··4821"]);
+    fireEvent.change(select, { target: { value: "acct-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^import$/i }));
+
+    await waitFor(() => expect(handlers.onSuccess).toHaveBeenCalled());
+    expect((importBankCsv.mock.calls[0][0] as { accountId?: string }).accountId).toBe("acct-1");
   });
 });

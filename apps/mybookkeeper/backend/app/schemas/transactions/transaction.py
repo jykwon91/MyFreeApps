@@ -28,7 +28,7 @@ def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
     return model
 
 
-TransactionType = Literal["income", "expense"]
+TransactionType = Literal["income", "expense", "transfer"]
 TransactionStatus = Literal["pending", "approved", "needs_review", "duplicate", "unverified"]
 # Same values as the chk_txn_category constraint: a row the database accepts has
 # to survive being read back.
@@ -39,7 +39,7 @@ TransactionCategory = Literal[
     "taxes", "channel_fee", "advertising", "legal_professional", "travel",
     "furnishings", "other_expense", "uncategorized",
     "supplies", "home_office", "meals", "vehicle_expenses",
-    "health_insurance", "education_training",
+    "health_insurance", "education_training", "transfer",
 ]
 SubCategory = Literal["electricity", "water", "gas", "internet", "trash", "sewer"]
 UsageUnit = Literal["kwh", "therm", "ccf", "mcf", "gallon", "kgal"]
@@ -67,6 +67,10 @@ class TransactionRead(BaseModel):
     applicant_id: uuid.UUID | None = None
     attribution_source: str | None = None
     payer_name: str | None = None
+    # Financial Accounts. On a transfer, ``account_id`` is where the money left
+    # and ``transfer_to_account_id`` where it arrived.
+    account_id: uuid.UUID | None = None
+    transfer_to_account_id: uuid.UUID | None = None
 
     transaction_date: date
     tax_year: int
@@ -124,6 +128,8 @@ class TransactionRead(BaseModel):
 
 class TransactionCreate(BaseModel):
     property_id: uuid.UUID | None = None
+    account_id: uuid.UUID | None = None
+    transfer_to_account_id: uuid.UUID | None = None
     transaction_date: date
     tax_year: int | None = None
     vendor: str | None = None
@@ -162,6 +168,7 @@ class ScheduleELineItem(BaseModel):
 # Optional on the row and meaningful when empty: no property, no vendor name.
 _CLEARABLE_FIELDS = (
     "property_id", "vendor_id", "vendor", "description", "channel", "payment_method",
+    "account_id", "transfer_to_account_id",
 )
 
 
@@ -169,6 +176,8 @@ class TransactionUpdate(BaseModel):
     property_id: uuid.UUID | None = None
     # Host-curated link to a Vendors rolodex row (PR 4.2).
     vendor_id: uuid.UUID | None = None
+    account_id: uuid.UUID | None = None
+    transfer_to_account_id: uuid.UUID | None = None
     transaction_date: date | None = None
     tax_year: int | None = None
     vendor: str | None = None

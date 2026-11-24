@@ -6,6 +6,7 @@ from datetime import date, datetime
 from sqlalchemy import select, func, and_, extract, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tags import TRANSACTION_TYPE_TRANSFER
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 
@@ -24,6 +25,10 @@ def _build_txn_filters(
         Transaction.organization_id == organization_id,
         Transaction.deleted_at.is_(None),
         Transaction.status == "approved",
+        # Moving money between your own accounts is neither earned nor spent.
+        # Category-set sums would skip it anyway; this keeps every figure built
+        # on these filters (by-tag, by-month, years with data) honest too.
+        Transaction.transaction_type != TRANSACTION_TYPE_TRANSFER,
     ]
     if start_date is not None:
         filters.append(Transaction.transaction_date >= start_date)

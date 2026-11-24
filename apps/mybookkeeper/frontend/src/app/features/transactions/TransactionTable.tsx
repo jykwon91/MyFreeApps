@@ -8,6 +8,8 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { transactionAccountLabel } from "@mybookkeeper/api-client/utils/transactionAccountLabel";
+import { TRANSACTION_ACCOUNT_MESSAGES as ACCOUNT_MSG } from "@/shared/lib/transaction-account-messages";
 import type { FilterOptions } from "@/shared/types/transaction/filter-options";
 import { PAGE_SIZE_OPTIONS, TAG_COLORS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
@@ -30,13 +32,14 @@ export interface TransactionTableProps {
   editingId: string | null;
   filterOptions?: FilterOptions;
   propertyMap?: ReadonlyMap<string, string>;
+  accountMap?: ReadonlyMap<string, string>;
   /** What the body shows. While another page, filter or order loads it holds placeholders, and after that load failed nothing (the page shows the error). */
   mode: ListLoadMode;
   /** Rows are on their way: for the shown page and filters (a refetch), or for others (with `mode` "loading"). */
   isRefreshing?: boolean;
 }
 
-export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap, mode, isRefreshing = false }: TransactionTableProps) {
+export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap, accountMap, mode, isRefreshing = false }: TransactionTableProps) {
   const { pageIndex, pageSize } = table.state.pagination;
   // The server pages the rows, so the count is every matching row, not just this page's.
   const totalRows = table.getRowCount();
@@ -71,6 +74,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
             const t = row.original;
             const isActive = editingId === t.id;
             const propertyName = t.property_id ? propertyMap?.get(t.property_id) : null;
+            const accountName = accountMap ? transactionAccountLabel(t, accountMap, ACCOUNT_MSG.unknown) : null;
             const categoryColor = TAG_COLORS[t.category] ?? "#94a3b8";
             return (
               <button
@@ -105,6 +109,9 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                   {t.is_capital_improvement ? <CapitalImprovementBadge /> : null}
                   {propertyName && (
                     <span className="text-xs text-muted-foreground">{propertyName}</span>
+                  )}
+                  {accountName && (
+                    <span className="text-xs text-muted-foreground" data-testid="transaction-card-account">{accountName}</span>
                   )}
                 </div>
               </button>

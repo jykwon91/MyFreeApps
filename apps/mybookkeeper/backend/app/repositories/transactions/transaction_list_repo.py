@@ -85,6 +85,8 @@ def _filtered(
         stmt = stmt.where(Transaction.property_id.is_(None))
     if (applicant_id := filters.get("applicant_id")) is not None:
         stmt = stmt.where(Transaction.applicant_id == applicant_id)
+    if (account_id := filters.get("account_id")) is not None:
+        stmt = stmt.where(or_(Transaction.account_id == account_id, Transaction.transfer_to_account_id == account_id))
     if (status := filters.get("status")) is not None:
         stmt = stmt.where(Transaction.status == status)
     if filters.get("to_review"):

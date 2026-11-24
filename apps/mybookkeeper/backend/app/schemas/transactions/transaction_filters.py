@@ -26,6 +26,8 @@ class TransactionFilters(BaseModel):
     property_id: uuid.UUID | None = None
     unassigned: bool = False
     applicant_id: uuid.UUID | None = None
+    # Rows that moved money through this account, on either side of a transfer.
+    account_id: uuid.UUID | None = None
     status: str | None = None
     to_review: bool = False
     transaction_type: str | None = None

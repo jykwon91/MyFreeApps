@@ -1,3 +1,4 @@
+import { TRANSACTION_TYPES as ALL_TRANSACTION_TYPES } from "@mybookkeeper/api-client/constants/transactionTypes";
 import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
 import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
@@ -90,7 +91,7 @@ export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilt
     month: params.month && MONTH_PATTERN.test(params.month) ? params.month : null,
     startDate: isCustom ? from : null,
     endDate: isCustom ? to : null,
-    type: params.type === "income" || params.type === "expense" ? params.type : null,
+    type: ALL_TRANSACTION_TYPES.find((type) => type === params.type) ?? null,
     propertyId: params.property || null,
     category: params.category || null,
     vendor: params.vendor ?? "",

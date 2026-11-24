@@ -1,5 +1,9 @@
 import { formatTag } from "@/shared/utils/tag";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import type { FinancialAccount } from "@mybookkeeper/api-client/types/financial-account/financial-account";
+import { TRANSACTION_TYPE_LABELS } from "@mybookkeeper/api-client/constants/transactionTypes";
+import { financialAccountLabel } from "@mybookkeeper/api-client/utils/financialAccountLabel";
+import { TRANSACTION_ACCOUNT_MESSAGES as ACCOUNT_MSG } from "@/shared/lib/transaction-account-messages";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import { TRANSACTION_STATUS_OPTIONS } from "@mybookkeeper/api-client/constants/transactionStatusOptions";
 import { TYPE_OPTIONS, ALL_CATEGORIES, EMPTY_FILTERS } from "@/shared/lib/transaction-config";
@@ -10,9 +14,11 @@ export interface TransactionFilterBarProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
   properties: readonly Property[];
+  /** Every account, closed ones included: old rows are still filed under them. */
+  accounts: readonly FinancialAccount[];
 }
 
-export default function TransactionFilterBar({ filters, onChange, properties }: TransactionFilterBarProps) {
+export default function TransactionFilterBar({ filters, onChange, properties, accounts }: TransactionFilterBarProps) {
   function update(field: keyof Filters, value: string) {
     onChange({ ...filters, [field]: value });
   }
@@ -28,6 +34,15 @@ export default function TransactionFilterBar({ filters, onChange, properties }: 
         ))}
       </Select>
 
+      {accounts.length > 0 ? (
+        <Select aria-label={ACCOUNT_MSG.filterLabel} value={filters.account_id} onChange={(e) => update("account_id", e.target.value)} className="text-xs py-1.5">
+          <option value="">{ACCOUNT_MSG.allAccounts}</option>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>{financialAccountLabel(account)}</option>
+          ))}
+        </Select>
+      ) : null}
+
       <Select aria-label="Filter by status" value={filters.status} onChange={(e) => update("status", e.target.value)} className="text-xs py-1.5">
         <option value="">All Statuses</option>
         {TRANSACTION_STATUS_OPTIONS.map((option) => (
@@ -38,7 +53,7 @@ export default function TransactionFilterBar({ filters, onChange, properties }: 
       <Select aria-label="Filter by type" value={filters.transaction_type} onChange={(e) => update("transaction_type", e.target.value)} className="text-xs py-1.5">
         <option value="">All Types</option>
         {TYPE_OPTIONS.map((t) => (
-          <option key={t} value={t}>{t === "income" ? "Income" : "Expense"}</option>
+          <option key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</option>
         ))}
       </Select>
 

@@ -68,9 +68,13 @@ export function spokenDate(isoDate: string): string {
   return localDate(isoDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-/** Money in is positive. An expense with a negative amount is a refund, so it's money in. */
+/**
+ * Money in is positive. An expense with a negative amount is a refund, so it's money in.
+ * A transfer moves your own money between your accounts: neither in nor out, so zero.
+ */
 function signedAmount(transaction: Transaction): number {
   const amount = Number(transaction.amount);
+  if (transaction.transaction_type === "transfer") return 0;
   return transaction.transaction_type === "income" ? amount : -amount;
 }
 
@@ -88,7 +92,9 @@ export function signedMoney(value: number): string {
   return `${sign}${formatCurrency(Math.abs(value))}`;
 }
 
+/** A transfer shows its plain amount, unsigned. */
 export function displayAmount(transaction: Transaction): string {
+  if (transaction.transaction_type === "transfer") return formatCurrency(Math.abs(Number(transaction.amount)));
   return signedMoney(signedAmount(transaction));
 }
 
@@ -113,6 +119,8 @@ export function spokenAmount(transaction: Transaction): string {
 
 /** Screen readers skip or misread a minus sign, so the words carry the direction. */
 export function spokenKind(transaction: Transaction): string {
+  // A transfer's only category is "Transfer": saying the type too would repeat it.
+  if (transaction.transaction_type === "transfer") return categoryLabel(transaction.category);
   const isRefund = transaction.transaction_type === "expense" && Number(transaction.amount) < 0;
   return `${categoryLabel(transaction.category)} ${isRefund ? "refund" : transaction.transaction_type}`;
 }

@@ -1,6 +1,7 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { DEFAULT_CATEGORY_FOR_TYPE } from "@mybookkeeper/api-client/constants/transactionTypes";
 import { NONE_CHOICE } from "../../constants/transactionCreateOptions";
-import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transactionEdit";
+import { NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import { isoFromDate } from "../../lib/localDate";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
@@ -17,7 +18,7 @@ export function blankCreateValues(today: Date): TransactionCreateValues {
     amount: "",
     vendor: "",
     description: "",
-    category: DEFAULT_CATEGORY.expense,
+    category: DEFAULT_CATEGORY_FOR_TYPE.expense,
     propertyId: null,
     channel: "",
     paymentMethod: "",

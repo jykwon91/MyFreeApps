@@ -29,6 +29,7 @@ from app.services.transactions.duplicate_absorb import absorb_duplicates
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
 from app.services.transactions.reference_ownership import assert_references_owned
+from app.services.transactions.transfer_rules import transfer_overrides
 
 # Union of all possible value types in a Transaction field dict
 # (from TransactionCreate.model_dump() or TransactionUpdate.model_dump())
@@ -39,6 +40,8 @@ TransactionFieldValue = (
 UPDATABLE_FIELDS = frozenset({
     "property_id",
     "vendor_id",
+    "account_id",
+    "transfer_to_account_id",
     "applicant_id",
     "attribution_source",
     "payer_name",
@@ -139,6 +142,16 @@ async def create_manual_transaction(
         data["tax_year"] = data["transaction_date"].year
     if data.get("schedule_e_line") is None:
         data["schedule_e_line"] = CATEGORY_TO_SCHEDULE_E.get(data["category"])
+    account_id = data.get("account_id")
+    transfer_to_account_id = data.get("transfer_to_account_id")
+    data.update(transfer_overrides(
+        transaction_type=str(data["transaction_type"]),
+        category=str(data["category"]),
+        account_id=account_id if isinstance(account_id, uuid.UUID) else None,
+        transfer_to_account_id=(
+            transfer_to_account_id if isinstance(transfer_to_account_id, uuid.UUID) else None
+        ),
+    ))
     data["placed_in_service_date"] = placed_in_service_date_for(
         bool(data.get("is_capital_improvement")),
         data.get("placed_in_service_date"),
@@ -194,6 +207,13 @@ async def update_transaction(
             db, organization_id=ctx.organization_id, user_id=ctx.user_id, fields=updates,
         )
         for field, value in updates.items():
+            setattr(txn, field, value)
+        for field, value in transfer_overrides(
+            transaction_type=txn.transaction_type,
+            category=txn.category,
+            account_id=txn.account_id,
+            transfer_to_account_id=txn.transfer_to_account_id,
+        ).items():
             setattr(txn, field, value)
         assert_metered_usage_consistent(txn)
         txn.placed_in_service_date = placed_in_service_date_for(
@@ -415,6 +435,20 @@ async def merge_transactions(
         survivor.schedule_e_line = schedule_e_line_after_category_change(
             survivor.schedule_e_line, old_category, survivor.category,
         )
+        # Two copies of one payment ran through the same account, so whichever
+        # copy knows the account keeps it — the same "prefer non-null" the
+        # other merge fields follow.
+        if survivor.account_id is None:
+            survivor.account_id = loser.account_id
+        if survivor.transfer_to_account_id is None:
+            survivor.transfer_to_account_id = loser.transfer_to_account_id
+        for field, value in transfer_overrides(
+            transaction_type=survivor.transaction_type,
+            category=survivor.category,
+            account_id=survivor.account_id,
+            transfer_to_account_id=survivor.transfer_to_account_id,
+        ).items():
+            setattr(survivor, field, value)
 
         # Mark the survivor as approved and reviewed
         survivor.status = COUNTED_STATUS

@@ -24,6 +24,9 @@ import {
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import { useListFinancialAccountsQuery } from "@mybookkeeper/api-client/store/financialAccountsApi";
+import type { FinancialAccount } from "@mybookkeeper/api-client/types/financial-account/financial-account";
+import { financialAccountLabel } from "@mybookkeeper/api-client/utils/financialAccountLabel";
 import { useToast } from "@/shared/hooks/useToast";
 import { EMPTY_FILTERS, INITIAL_TRANSACTION_PAGINATION } from "@/shared/lib/transaction-config";
 import { DEFAULT_TRANSACTION_SORTING } from "@/shared/lib/transaction-sort-columns";
@@ -102,6 +105,9 @@ export interface TransactionPageState {
   // Properties
   properties: Property[];
   propertyMap: Map<string, string>;
+  accounts: readonly FinancialAccount[];
+  /** Account id to its label, for the Account column. */
+  accountMap: ReadonlyMap<string, string>;
 
   // Duplicates
   duplicatePairs: DuplicatePair[];
@@ -154,6 +160,7 @@ export function useTransactionPageState(): TransactionPageState {
   const [showClassificationRules, setShowClassificationRules] = useState(false);
 
   const { data: properties = [] } = useGetPropertiesQuery();
+  const { data: accountList } = useListFinancialAccountsQuery();
   const { data: duplicateData, isLoading: isDuplicatesLoading } = useGetDuplicatesQuery(undefined, {
     skip: activeTab !== "duplicates",
   });
@@ -243,6 +250,11 @@ export function useTransactionPageState(): TransactionPageState {
   const propertyMap = useMemo(
     () => new Map(properties.map((p) => [p.id, p.name])),
     [properties],
+  );
+  const accounts = useMemo(() => accountList?.items ?? [], [accountList]);
+  const accountMap = useMemo(
+    () => new Map(accounts.map((account) => [account.id, financialAccountLabel(account)])),
+    [accounts],
   );
 
   const handleApprove = useCallback(
@@ -449,6 +461,8 @@ export function useTransactionPageState(): TransactionPageState {
     setShowClassificationRules,
     properties,
     propertyMap,
+    accounts,
+    accountMap,
     duplicatePairs,
     isDuplicatesLoading,
     dupCount,
