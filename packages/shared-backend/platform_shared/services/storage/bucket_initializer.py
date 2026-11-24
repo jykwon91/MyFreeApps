@@ -3,8 +3,8 @@
 Storage is a hard requirement for any consuming app — listing photos,
 lease attachments, applicant documents (MBK) or resume files (MJH) all
 depend on MinIO. If env vars are missing or MinIO is unreachable at boot,
-the app MUST refuse to start so the deploy healthcheck fails and the
-rollout aborts.
+the app MUST refuse to start so the deploy's health check fails. Nothing
+rolls back on its own (see platform_shared.core.boot_guards).
 
 Previous behavior (graceful degradation) hid environmental
 misconfiguration as ``presigned_url=null`` in API responses, with no
@@ -47,7 +47,7 @@ def ensure_bucket(
     The lifespan calls this at startup. If ``get_storage()`` raises
     (env vars missing, etc.) or ``ensure_bucket()`` raises (MinIO
     unreachable), the exception propagates and FastAPI startup fails.
-    The deploy healthcheck catches this and rolls back.
+    The deploy's health check then fails; nothing rolls back.
 
     Args:
         get_storage: The app's storage-client builder (e.g.

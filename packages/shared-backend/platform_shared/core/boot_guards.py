@@ -3,13 +3,19 @@
 These are checks that should crash the app at startup — not silently
 warn — when a security-critical setting is missing in a production-like
 environment. The lifespan calls them right after init_sentry() so any
-RuntimeError they raise is captured in Sentry and surfaced via the
-healthcheck → deploy rollback chain.
+RuntimeError they raise is captured in Sentry and fails the deploy's
+health check. Nothing rolls back on its own: the new containers have already replaced
+the old ones, so the app stays down until the setting is fixed or the
+operator brings back the previous image (``IMAGE_TAG=<previous-sha>``).
 
 Each guard takes its inputs as explicit kwargs so platform_shared has
 no transitive dependency on per-app settings modules.
 """
 
+from platform_shared.core.smtp_setting_faults import (
+    non_ascii_smtp_settings,
+    unset_smtp_settings,
+)
 from platform_shared.services.email_backend import EmailBackend
 from platform_shared.services.sms_not_configured_error import SmsNotConfiguredError
 
@@ -97,19 +103,20 @@ def check_turnstile_configured(
 
 
 class EmailNotConfiguredError(RuntimeError):
-    """Raised at boot when the email backend is missing creds in a non-dev environment."""
+    """Raised at boot when email can't be sent in a non-dev environment."""
 
 
 def check_email_configured(
     *,
     email_backend: EmailBackend,
+    smtp_host: str,
     smtp_user: str,
     smtp_password: str,
     environment: str,
 ) -> None:
     """Fail loud at boot if email delivery isn't usable in a non-dev environment.
 
-    Two failure modes guarded:
+    Three failure modes guarded:
 
     1. ``email_backend == "console"`` in production / staging.
        Console-mode emails go to stdout — fine for dev/CI where the
@@ -120,18 +127,28 @@ def check_email_configured(
        email was logged to docker stdout, and the user could never
        finish signup).
 
-    2. ``email_backend == "smtp"`` with empty ``SMTP_USER`` or
-       ``SMTP_PASSWORD``. The ``EmailService`` silently returns
-       ``False`` on send when creds are empty — an operator who
-       forgot to set them would only notice when users complain.
+    2. ``email_backend == "smtp"`` with an empty ``SMTP_HOST``,
+       ``SMTP_USER`` or ``SMTP_PASSWORD``. Every send would fail
+       (``send_or_raise`` raises; the best-effort ``send`` logs a
+       warning and returns ``False``), and an operator who forgot one
+       would only notice when users complain.
 
-    Both modes silently break critical-path flows (verification,
+    3. ``email_backend == "smtp"`` with an ``SMTP_USER`` or
+       ``SMTP_PASSWORD`` that isn't ASCII. Python's smtplib sends the
+       login as ASCII, so it raises before logging in and every send
+       fails.
+
+    All three break critical-path flows (verification,
     password reset, organization invites). Crash the lifespan so the
-    healthcheck catches the misconfig before users hit it.
+    deploy fails loudly, instead of every email failing quietly. Modes 2
+    and 3 are reported together, so one failed deploy names every
+    setting to fix.
 
     Args:
         email_backend: ``"console"`` (dev/CI default — only log each send)
             or ``"smtp"`` (production — send via SMTP).
+        smtp_host: SMTP server host name. Required for
+            ``email_backend == "smtp"``.
         smtp_user: SMTP authentication username. Required for
             ``email_backend == "smtp"``.
         smtp_password: SMTP authentication password. Required for
@@ -143,7 +160,9 @@ def check_email_configured(
     Raises:
         EmailNotConfiguredError: If ``environment`` is not dev/test and
             either (a) ``email_backend == "console"``, or (b)
-            ``email_backend == "smtp"`` with empty credentials.
+            ``email_backend == "smtp"`` with an empty host or credentials,
+            or credentials that aren't ASCII. The message names every
+            setting at fault, never its value.
     """
     if environment in _DEV_ENVIRONMENTS:
         return
@@ -153,16 +172,30 @@ def check_email_configured(
             "environments — verification emails, password resets, and other "
             "transactional emails would silently log to stdout instead of "
             "reaching users (this is how the 2026-05-05 MJH verification-email "
-            "outage happened). Set EMAIL_BACKEND=smtp and configure SMTP_USER "
-            "/ SMTP_PASSWORD, or set ENVIRONMENT=development."
+            "outage happened). Set EMAIL_BACKEND=smtp with SMTP_HOST, SMTP_USER "
+            "and SMTP_PASSWORD."
         )
-    if email_backend == "smtp" and not (smtp_user and smtp_password):
-        raise EmailNotConfiguredError(
-            "EMAIL_BACKEND='smtp' requires both SMTP_USER and SMTP_PASSWORD "
-            "to be set in non-development environments. Without them the "
-            "EmailService silently no-ops and transactional emails never "
-            "reach users. Set the credentials or set ENVIRONMENT=development."
-        )
+    if email_backend == "smtp":
+        unset = unset_smtp_settings(host=smtp_host, user=smtp_user, password=smtp_password)
+        not_ascii = non_ascii_smtp_settings(user=smtp_user, password=smtp_password)
+        problems: list[str] = []
+        if unset:
+            problems.append(
+                f"Not set: {', '.join(unset)}. EMAIL_BACKEND='smtp' needs a host, "
+                "user and password outside development and test; without all three "
+                "no email can be sent, so verification, password-reset and invite "
+                "emails never reach users."
+            )
+        if not_ascii:
+            problems.append(
+                f"Not ASCII: {', '.join(not_ascii)}. Python's smtplib sends the SMTP "
+                "login as ASCII, so with any other character every send fails at "
+                "login. Retype each listed value by hand: a non-breaking space, "
+                "curly quote or invisible character picked up when pasting is the "
+                "usual cause."
+            )
+        if problems:
+            raise EmailNotConfiguredError(" ".join(problems))
 
 
 def check_sms_configured(

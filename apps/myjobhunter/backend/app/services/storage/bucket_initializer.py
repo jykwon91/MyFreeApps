@@ -10,7 +10,7 @@ admin-promotion test escape hatch so the single flag is enough.
 
 Storage is a hard requirement for MJH — resume files all depend on MinIO.
 If env vars are missing or MinIO is unreachable at boot, the app MUST refuse
-to start so the deploy healthcheck fails and the rollout aborts.
+to start so the deploy's health check fails. Nothing rolls back on its own.
 """
 from platform_shared.services.storage.bucket_initializer import (
     ensure_bucket as _shared_ensure_bucket,

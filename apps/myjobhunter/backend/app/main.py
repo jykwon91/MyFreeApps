@@ -39,7 +39,7 @@ async def _on_startup() -> None:
     stale fetches.
 
     1. Embedding model load — a missing / corrupt fastembed cache fails
-       the lifespan before we touch the DB, so the deploy rolls back
+       the lifespan before we touch the DB, so the deploy fails loudly
        instead of booting an API whose post-fetch embed task crashes.
     2. Reap stale ``discovery_fetches`` rows from a previous crash so
        the operator's dashboard doesn't show zombie 'running' rows.

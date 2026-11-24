@@ -77,8 +77,8 @@ logger = logging.getLogger(__name__)
 class EmbeddingModelLoadError(RuntimeError):
     """Raised when fastembed cannot load the embedding model.
 
-    Surfaces during the boot guard (which then fails the lifespan and
-    triggers a deploy rollback) and during runtime embed calls (which
+    Surfaces during the boot guard (which then fails the lifespan and the
+    deploy's health check) and during runtime embed calls (which
     log to Sentry + bail). Never silently caught — per
     ``rules/no-bandaid-solutions.md`` a missing model is an
     infrastructure bug, not a graceful-degrade scenario.
@@ -174,9 +174,9 @@ def load_model_eager() -> None:
 
     Calling this at lifespan start means an OOM / missing-binary /
     corrupt-cache failure surfaces at boot rather than on the first
-    discovery fetch hours later. The lifespan then fails, the
-    healthcheck times out, and the deploy rolls back to the previous
-    image.
+    discovery fetch hours later. The lifespan then fails and the
+    health check times out. Nothing rolls back on its own: the operator
+    brings back the previous image.
 
     Raises:
         EmbeddingModelLoadError: Same conditions as ``_get_model``.

@@ -8,8 +8,9 @@ unchanged while the actual SDK init logic lives here, in platform_shared.
 In production (``environment="production"``), a missing DSN is a
 deployment-time fault — not a graceful degradation. The FastAPI lifespan
 calls ``init_sentry()`` at boot; if the DSN is absent in prod, it raises
-``SentryNotConfiguredError`` which crashes the lifespan, fails the
-healthcheck, and triggers a deploy rollback.
+``SentryNotConfiguredError`` which crashes the lifespan and fails the
+deploy's health check. Nothing rolls back on its own: the app stays down
+until the DSN is set or the operator brings back the previous image.
 
 In non-production environments (``development``, ``test``, etc.), Sentry is
 optional — ``init_sentry()`` exits silently when the DSN is empty.

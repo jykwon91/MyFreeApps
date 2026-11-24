@@ -20,8 +20,9 @@ Boot order (rationale documented inline below):
                                     Optional — apps that don't need error
                                     monitoring omit it (see init_sentry arg)
   2. check_turnstile_configured() — fail loud on missing CAPTCHA in prod
-  3. check_email_configured()     — fail loud on missing SMTP creds /
-                                    console mode in prod
+  3. check_email_configured()     — fail loud on a missing SMTP host or
+                                    creds, non-ASCII creds, or console
+                                    mode in prod
   4. register_audit_listeners()   — verify the app's AuditConfig (shared
                                     baseline present, every name real) and wire
                                     the SQLAlchemy listener before any
@@ -109,12 +110,16 @@ class _SettingsProtocol(Protocol):
     environment: str
     turnstile_secret_key: str
     email_backend: EmailBackend
+    smtp_host: str
     smtp_user: str
     smtp_password: str
     sms_backend: str
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_from_number: str
+    httpsms_api_key: str
+    httpsms_from_number: str
+    httpsms_webhook_signing_key: str
     transparency_primary: bool
     kofi_verification_token: str
 
@@ -146,9 +151,9 @@ def create_app_lifespan(
 
     Args:
         settings: An object exposing the BaseAppSettings shape — used to
-            thread sentry_dsn, environment, turnstile_secret_key,
-            email_backend, smtp_user, smtp_password through the boot
-            guards.
+            thread the environment, the Sentry DSN and each guarded
+            setting (Turnstile, email, SMS, transparency) through the
+            boot guards.
         audit_config: The app's ``AUDIT_CONFIG`` from ``app/core/audit.py``
             — what the audit listener masks and skips. Every app passes it
             (tests/test_app_conformance.py enforces this). None is the
@@ -177,7 +182,8 @@ def create_app_lifespan(
             forgot-password Turnstile widget). MBK / MJH leave this True.
         email_required: When True (default), the lifespan runs
             ``check_email_configured()`` so the app fails loud in
-            production if SMTP creds are missing / console mode is set. Set
+            production if the SMTP host or creds are missing, the creds
+            aren't ASCII, or console mode is set. Set
             False for an app/mode that sends no transactional email (e.g.
             MGA's serve_only deployment has no auth → no verify / reset /
             login email). MBK / MJH leave this True.
@@ -215,8 +221,8 @@ def create_app_lifespan(
 
         # 2. Boot guards — fail loud in non-dev environments. Each
         #    raises a subclass of RuntimeError that crashes the
-        #    lifespan, fails the healthcheck, and triggers a deploy
-        #    rollback.
+        #    lifespan and fails the deploy's health check. Nothing
+        #    rolls back (see boot_guards' module docstring).
         if turnstile_required:
             check_turnstile_configured(
                 turnstile_secret_key=settings.turnstile_secret_key,
@@ -225,6 +231,7 @@ def create_app_lifespan(
         if email_required:
             check_email_configured(
                 email_backend=settings.email_backend,
+                smtp_host=settings.smtp_host,
                 smtp_user=settings.smtp_user,
                 smtp_password=settings.smtp_password,
                 environment=settings.environment,

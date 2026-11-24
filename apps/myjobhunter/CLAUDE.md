@@ -175,8 +175,9 @@ uv lock --check
 sudo bash apps/myjobhunter/scripts/seed-env-from-mbk.sh
 # Then fill in the MJH-specific blanks:
 vim apps/myjobhunter/backend/.env.docker
-# Required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY
-# Optional: TAVILY_API_KEY (Phase 4), SMTP_* (currently uses console backend)
+# Required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY,
+#   EMAIL_BACKEND=smtp with SMTP_HOST, SMTP_USER and SMTP_PASSWORD (ASCII)
+# Optional: TAVILY_API_KEY (Phase 4)
 ```
 
 The seed script reads safe-to-reuse keys from MBK's running config (Anthropic API key, lockout

@@ -37,13 +37,14 @@ def _permanent_reply_kind(stage: SmtpSendStage) -> EmailFailureKind:
 
 def _unencodable_setting(exc: UnicodeError) -> str:
     """Which setting a ``UnicodeError`` while the session is opening points at,
-    without the exception's text: for a non-ASCII password, that quotes a
-    character of the password and its position."""
+    without the exception's text, which quotes the character it couldn't
+    encode and its position."""
     if isinstance(exc, UnicodeEncodeError) and exc.encoding == "ascii":
-        # smtplib sends every command as ASCII: the login, and the EHLO name.
+        # smtplib sends every command as ASCII. EmailService refuses a non-ASCII
+        # login before it connects, so what's left is the EHLO name.
         return (
-            "smtplib couldn't send a command as ASCII. SMTP_USER and SMTP_PASSWORD "
-            "must be ASCII only (so must this machine's host name, sent in EHLO)"
+            "smtplib couldn't send a command as ASCII. This machine's host name, "
+            "which it sends in EHLO, must be ASCII only"
         )
     # Looking the host up, and checking its TLS certificate, encode it as IDNA.
     return "SMTP_HOST isn't a valid host name"
@@ -124,7 +125,7 @@ def error_from_smtp_exception(
     before the hand-over: smtplib raises them before it sends the message.
 
     ``stage`` also decides ``kind`` twice. While the session is opening, a
-    ``UnicodeError`` (a host or login smtplib can't encode) and a permanent
+    ``UnicodeError`` (a host or EHLO name smtplib can't encode) and a permanent
     reply outside ``CONFIG_REPLY_ERRORS`` (the server refusing STARTTLS) are
     ``misconfigured``, since nothing then depends on the message.
     """

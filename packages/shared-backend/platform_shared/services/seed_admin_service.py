@@ -230,13 +230,13 @@ def build_seed_admin_hook(
             ``role`` column (see ``platform_shared.core.permissions``).
         required: When True, production boot FAILS LOUD while the env vars
             are blank — same posture as the other boot guards, for apps whose
-            deploy contract says the admin must exist (the deploy healthcheck
-            fails and the rollout rolls back). When False (default), blank
+            deploy contract says the admin must exist (the deploy's health
+            check fails; nothing rolls back). When False (default), blank
             vars skip the seed silently so apps that never adopted the
             standard are unaffected.
 
     Validation order: presence → email format → hash format. In production
-    every failure raises (deploy rolls back); in dev it logs and skips so a
+    every failure raises (the deploy fails); in dev it logs and skips so a
     half-configured local env still boots.
     """
 

@@ -133,6 +133,32 @@ class TestSendOrRaise:
         with pytest.raises(EmailNotConfiguredError):
             service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
 
+    def test_raises_email_not_configured_when_host_missing(self) -> None:
+        # Not smtplib's "please run connect() first", which reads as retryable.
+        service = EmailService(smtp_user="user@example.com", smtp_password="s3cr3t")
+        with patch("smtplib.SMTP") as smtp, pytest.raises(EmailNotConfiguredError):
+            service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        smtp.assert_not_called()
+
+    def test_raises_email_not_configured_on_a_non_ascii_login(self) -> None:
+        # Not a UnicodeEncodeError from inside smtplib's login, which names no setting.
+        service = EmailService(
+            smtp_host="smtp.example.com",
+            smtp_user="user@example.com",
+            smtp_password="p\u00e4ss-SENTINEL",
+        )
+        assert service.is_configured() is False
+        with patch("smtplib.SMTP") as smtp, pytest.raises(EmailNotConfiguredError) as exc:
+            service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        smtp.assert_not_called()
+        message = str(exc.value)
+        assert "not ASCII: SMTP_PASSWORD" in message
+        assert message.isascii() and "SENTINEL" not in message
+
+    def test_unknown_backend_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="Unknown email backend"):
+            EmailService(backend="smpt")  # type: ignore[arg-type]
+
     def test_raises_value_error_for_empty_recipients(self) -> None:
         service = _configured_service()
         with pytest.raises(ValueError):
@@ -404,9 +430,9 @@ class TestConsoleBackend:
     def test_smtp_backend_without_creds_is_not_configured(self) -> None:
         assert EmailService(backend="smtp").is_configured() is False
 
-    def test_unknown_backend_is_refused(self) -> None:
-        with pytest.raises(ValueError, match="Unknown email backend"):
-            EmailService(backend="smpt")  # type: ignore[arg-type]
+    def test_smtp_backend_without_a_host_is_not_configured(self) -> None:
+        service = EmailService(smtp_user="user@example.com", smtp_password="s3cr3t")
+        assert service.is_configured() is False
 
 
 class TestFromSettings:

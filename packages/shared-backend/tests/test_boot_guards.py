@@ -1,5 +1,7 @@
 """Unit tests for platform_shared.core.boot_guards."""
 
+import smtplib
+
 import pytest
 
 from platform_shared.core.boot_guards import (
@@ -54,6 +56,7 @@ class TestCheckEmailConfigured:
     def test_dev_with_console_passes(self) -> None:
         check_email_configured(
             email_backend="console",
+            smtp_host="smtp.example.com",
             smtp_user="",
             smtp_password="",
             environment="development",
@@ -62,6 +65,7 @@ class TestCheckEmailConfigured:
     def test_test_with_console_passes(self) -> None:
         check_email_configured(
             email_backend="console",
+            smtp_host="smtp.example.com",
             smtp_user="",
             smtp_password="",
             environment="test",
@@ -70,6 +74,7 @@ class TestCheckEmailConfigured:
     def test_dev_with_smtp_and_empty_creds_passes(self) -> None:
         check_email_configured(
             email_backend="smtp",
+            smtp_host="smtp.example.com",
             smtp_user="",
             smtp_password="",
             environment="development",
@@ -79,17 +84,21 @@ class TestCheckEmailConfigured:
         with pytest.raises(EmailNotConfiguredError) as exc:
             check_email_configured(
                 email_backend="console",
+                smtp_host="smtp.example.com",
                 smtp_user="",
                 smtp_password="",
                 environment="production",
             )
-        assert "console" in str(exc.value).lower()
-        assert "verification" in str(exc.value).lower()
+        message = str(exc.value)
+        assert "console" in message.lower()
+        assert "verification" in message.lower()
+        assert "SMTP_HOST" in message and "SMTP_USER" in message and "SMTP_PASSWORD" in message
 
     def test_staging_with_console_raises(self) -> None:
         with pytest.raises(EmailNotConfiguredError):
             check_email_configured(
                 email_backend="console",
+                smtp_host="smtp.example.com",
                 smtp_user="",
                 smtp_password="",
                 environment="staging",
@@ -99,29 +108,154 @@ class TestCheckEmailConfigured:
         with pytest.raises(EmailNotConfiguredError) as exc:
             check_email_configured(
                 email_backend="smtp",
+                smtp_host="smtp.example.com",
                 smtp_user="",
                 smtp_password="x" * 16,
                 environment="production",
             )
-        assert "SMTP_USER" in str(exc.value)
+        message = str(exc.value)
+        assert "Not set: SMTP_USER." in message
+        assert "SMTP_HOST" not in message and "SMTP_PASSWORD" not in message
 
     def test_production_with_smtp_and_empty_password_raises(self) -> None:
         with pytest.raises(EmailNotConfiguredError) as exc:
             check_email_configured(
                 email_backend="smtp",
+                smtp_host="smtp.example.com",
                 smtp_user="user@example.com",
                 smtp_password="",
                 environment="production",
             )
-        assert "SMTP_PASSWORD" in str(exc.value)
+        message = str(exc.value)
+        assert "Not set: SMTP_PASSWORD." in message
+        assert "SMTP_HOST" not in message and "SMTP_USER" not in message
 
     def test_production_with_smtp_and_full_creds_passes(self) -> None:
         check_email_configured(
             email_backend="smtp",
+            smtp_host="smtp.example.com",
             smtp_user="user@example.com",
             smtp_password="x" * 16,
             environment="production",
         )
+
+    def test_production_with_smtp_and_empty_host_raises(self) -> None:
+        with pytest.raises(EmailNotConfiguredError) as exc:
+            check_email_configured(
+                email_backend="smtp",
+                smtp_host="",
+                smtp_user="user@example.com",
+                smtp_password="x" * 16,
+                environment="production",
+            )
+        message = str(exc.value)
+        assert "Not set: SMTP_HOST." in message
+        assert "SMTP_USER" not in message and "SMTP_PASSWORD" not in message
+
+    @pytest.mark.parametrize(
+        ("smtp_user", "smtp_password", "named", "not_named"),
+        [
+            pytest.param(
+                "user-SENTINEL@example.com", "p\u00e4ss-SENTINEL", ["SMTP_PASSWORD"], ["SMTP_USER"],
+                id="password",
+            ),
+            pytest.param(
+                "j\u00f6rg-SENTINEL@example.com", "ascii-SENTINEL-pw", ["SMTP_USER"], ["SMTP_PASSWORD"],
+                id="user",
+            ),
+            pytest.param(
+                "j\u00f6rg-SENTINEL@example.com", "p\u00e4ss-SENTINEL", ["SMTP_USER", "SMTP_PASSWORD"], [],
+                id="both",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("environment", ["production", "staging"])
+    def test_non_dev_with_smtp_and_non_ascii_creds_raises(
+        self,
+        smtp_user: str,
+        smtp_password: str,
+        named: list[str],
+        not_named: list[str],
+        environment: str,
+    ) -> None:
+        """smtplib can't log in with them, so every send would fail."""
+        with pytest.raises(EmailNotConfiguredError) as exc:
+            check_email_configured(
+                email_backend="smtp",
+                smtp_host="smtp.example.com",
+                smtp_user=smtp_user,
+                smtp_password=smtp_password,
+                environment=environment,
+            )
+        message = str(exc.value)
+        assert all(name in message for name in named)
+        assert not any(name in message for name in not_named)
+        # The message names the setting, never its value or a character of it.
+        assert message.isascii()
+        assert "SENTINEL" not in message
+        assert "\\x" not in message and "\\u" not in message
+        assert "position" not in message
+
+    @pytest.mark.parametrize(
+        ("smtp_host", "smtp_user", "smtp_password", "expected", "not_named"),
+        [
+            pytest.param(
+                "smtp.example.com", "", "p\u00e4ss-SENTINEL",
+                ["Not set: SMTP_USER.", "Not ASCII: SMTP_PASSWORD."], ["SMTP_HOST"],
+                id="user-empty-password-not-ascii",
+            ),
+            pytest.param(
+                "", "j\u00f6rg-SENTINEL@example.com", "",
+                ["Not set: SMTP_HOST, SMTP_PASSWORD.", "Not ASCII: SMTP_USER."], [],
+                id="host-and-password-empty-user-not-ascii",
+            ),
+            pytest.param(
+                "", "", "", ["Not set: SMTP_HOST, SMTP_USER, SMTP_PASSWORD."], ["Not ASCII"],
+                id="all-empty",
+            ),
+        ],
+    )
+    def test_production_with_smtp_names_every_setting_at_fault(
+        self,
+        smtp_host: str,
+        smtp_user: str,
+        smtp_password: str,
+        expected: list[str],
+        not_named: list[str],
+    ) -> None:
+        """One failed deploy shows every fix, not one fix per failed deploy."""
+        with pytest.raises(EmailNotConfiguredError) as exc:
+            check_email_configured(
+                email_backend="smtp",
+                smtp_host=smtp_host,
+                smtp_user=smtp_user,
+                smtp_password=smtp_password,
+                environment="production",
+            )
+        message = str(exc.value)
+        assert all(part in message for part in expected)
+        assert not any(part in message for part in not_named)
+        assert message.isascii()
+        assert "SENTINEL" not in message
+
+    @pytest.mark.parametrize("environment", ["development", "test"])
+    def test_dev_with_smtp_and_non_ascii_creds_passes(self, environment: str) -> None:
+        check_email_configured(
+            email_backend="smtp",
+            smtp_host="smtp.example.com",
+            smtp_user="j\u00f6rg@example.com",
+            smtp_password="p\u00e4ssword-not-real",
+            environment=environment,
+        )
+
+    def test_smtplib_still_sends_the_login_as_ascii(self) -> None:
+        """Why the ASCII rule exists. If this fails, smtplib accepts a non-ASCII
+        login: drop the rule from check_email_configured."""
+        # No host, so it never connects; a local name, so it never looks one up.
+        smtp = smtplib.SMTP(local_hostname="localhost")
+        smtp.user, smtp.password = "user@example.com", "p\u00e4ss"
+        with pytest.raises(UnicodeEncodeError):
+            smtp.auth("PLAIN", smtp.auth_plain)
 
     def test_inherits_from_runtime_error(self) -> None:
         assert issubclass(EmailNotConfiguredError, RuntimeError)
