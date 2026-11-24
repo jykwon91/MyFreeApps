@@ -28,8 +28,8 @@ GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
 from app.core.plaid_boot_guard import check_plaid_configured
-from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
+from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket

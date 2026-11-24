@@ -40,6 +40,7 @@ from app.core.rent_reminder_constants import (
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_ERROR_CODES,
 )
+from app.core.config import settings
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNELS
 from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_charge import RentCharge
@@ -49,6 +50,7 @@ from app.models.rent.rent_schedule import RentSchedule
 from app.repositories.rent import rent_reminder_send_repo
 from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
 from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
+from app.services.rent.rent_reminder_sms_permission import may_send_texts
 from app.services.rent import (
     rent_ledger_service,
     rent_reminder_alert_service as alerts,
@@ -837,6 +839,25 @@ class TestOwnerWhoMayNotText:
             organization_id=ORG, user_id=USER, applicant_id=applicant_id,
         )
         assert (overview.sms.available, overview.sms.allowed) == (True, False)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("configured", "allowed"),
+        [(str(USER), True), (str(uuid.uuid4()), False), ("", False)],
+        ids=["owner_is_the_sender", "another_account_is_the_sender", "no_sender_set"],
+    )
+    async def test_the_overview_reads_the_configured_sender(
+        self, db: AsyncSession, wired, configured: str, allowed: bool,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        with (
+            patch("app.services.rent.rent_reminder_service.may_send_texts", may_send_texts),
+            patch.object(settings, "sms_sender_user_id", configured),
+        ):
+            overview = await rent_reminder_service.get_overview(
+                organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+            )
+        assert overview.sms.allowed is allowed
 
 
 def _plan_request(**fields) -> RentReminderPlanRequest:

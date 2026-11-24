@@ -84,7 +84,6 @@ from platform_shared.workers.wait_or_stop import wait_or_stop
 from app.core.config import settings
 from app.core.observability import init_sentry
 from app.core.plaid_boot_guard import check_plaid_configured
-from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
 from app.core.scheduler_worker_constants import (
     GMAIL_SYNC_CANCEL_GRACE_SECONDS,
@@ -92,6 +91,7 @@ from app.core.scheduler_worker_constants import (
     HEARTBEAT_INTERVAL_SECONDS,
     HEARTBEAT_PATH,
 )
+from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.db.session import AsyncSessionLocal, engine
 from app.models.integrations.gmail_sync_run import GmailSyncRun
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
