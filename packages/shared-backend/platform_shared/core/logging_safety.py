@@ -31,12 +31,16 @@ printable backslash form:
 Horizontal tab is left alone: it is common in legitimate log payloads and
 cannot forge a record boundary.
 
+The same characters are escaped in the text of a logged exception: each
+``Type: message`` line and its notes, for every exception in the chain
+(see ``escaped_traceback``). An exception's message often carries request
+data.
+
 What is NOT escaped
 ===================
-The formatter's own layout (timestamp, level, logger name) and the exception
-traceback appended by ``Formatter.format``. Tracebacks are multi-line by
-nature and are produced by the interpreter, not by user input. Only
-``record.getMessage()`` is rewritten.
+The formatter's own layout (timestamp, level, logger name), and the
+traceback's stack frames, which keep their line breaks: they come from source
+files, not from user input.
 
 What is NOT changed
 ===================
@@ -59,6 +63,8 @@ from __future__ import annotations
 
 import copy
 import logging
+
+from platform_shared.core.escaped_traceback import format_exception_escaped
 
 __all__ = [
     "CRLFSafeLogFilter",
@@ -118,11 +124,14 @@ class CRLFSafeLogFilter(logging.Filter):
     app log calls originate.
 
     When the interpolated message holds a character ``escape_log_controls``
-    rewrites, this returns a copy of the record whose ``msg`` is the escaped
-    text and whose ``args`` are empty. Since Python 3.12 a filter may return a
-    replacement record, and ``logging.Handler.handle`` emits it in the
-    record's place; a handler that overrides ``handle`` and emits the record
-    it was given would write the original.
+    rewrites, or the record carries an exception, this returns a copy of the
+    record whose ``msg`` is the escaped text, whose ``args`` are empty, and
+    whose ``exc_text`` is the traceback with each exception's text escaped
+    (so a formatter's own ``formatException`` override isn't used). Since
+    Python 3.12 a filter may return a replacement record, and
+    ``logging.Handler.handle`` emits it in the record's place; a handler that
+    overrides ``handle`` and emits the record it was given would write the
+    original.
 
     The record itself is left as it was. Sentry's logging integration reads
     it after every handler has run, and sends its template and arguments: an
@@ -142,12 +151,34 @@ class CRLFSafeLogFilter(logging.Filter):
             # report; never let sanitisation swallow the record.
             return True
         safe = escape_log_controls(message)
-        if safe == message:
+        exc_text = _escaped_exception_text(record)
+        if safe == message and exc_text is None:
             return True
         escaped = copy.copy(record)
         escaped.msg = safe
         escaped.args = ()
+        if exc_text is not None:
+            # Formatter.format writes exc_text when it is set, instead of
+            # formatting exc_info itself.
+            escaped.exc_text = exc_text
         return escaped
+
+
+def _escaped_exception_text(record: logging.LogRecord) -> str | None:
+    """The record's traceback with each exception's text escaped, or None
+    when it carries no exception.
+
+    A filter that raises takes down the caller's ``logger.exception`` (3.12's
+    ``Handler.handle`` doesn't catch it), so a traceback that can't be
+    formatted becomes one escaped line instead.
+    """
+    if not record.exc_info or record.exc_info[1] is None:
+        return None
+    try:
+        return format_exception_escaped(record.exc_info, escape_log_controls)
+    except Exception:  # noqa: BLE001 - logging must not raise into the caller
+        name = type(record.exc_info[1]).__name__
+        return escape_log_controls(f"{name}: <traceback could not be formatted>")
 
 
 def install_crlf_safe_logging(logger: logging.Logger | None = None) -> None:
