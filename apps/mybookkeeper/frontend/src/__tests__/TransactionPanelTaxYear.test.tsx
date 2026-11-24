@@ -9,6 +9,11 @@ import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 const updateUnwrap = vi.fn();
 const updateTransaction = vi.fn((_args: { id: string; data: Partial<Transaction> }) => ({ unwrap: updateUnwrap }));
 
