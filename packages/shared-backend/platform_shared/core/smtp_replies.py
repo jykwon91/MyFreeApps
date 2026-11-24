@@ -1,8 +1,11 @@
-"""Read what smtplib reports: which reply codes really refuse, and which
-exceptions smtplib raised itself rather than relaying a server's reply."""
+"""Read what smtplib reports: which reply codes really refuse, which
+exceptions smtplib raised itself rather than relaying a server's reply, and
+which failures no retry can fix."""
 import smtplib
 
+from platform_shared.core.dns_failures import is_temporary_dns_failure
 from platform_shared.core.smtp_reply_constants import (
+    CONFIG_ERRORS,
     FIRST_INVALID_REPLY_CODE,
     FIRST_TRANSIENT_REPLY_CODE,
     SMTPLIB_LINE_TOO_LONG,
@@ -45,3 +48,13 @@ def is_bare_smtp_exception(exc: BaseException) -> bool:
     """smtplib raises plain ``SMTPException`` (no subclass) only for setup
     faults, e.g. "No suitable authentication method found" from ``login``."""
     return type(exc) is smtplib.SMTPException
+
+
+def is_config_fault(exc: BaseException) -> bool:
+    """Whether no retry can fix this failure: an SMTP host that doesn't
+    resolve, no TLS / AUTH support, an untrusted certificate (``CONFIG_ERRORS``)
+    or smtplib's own setup errors. A host lookup that failed only for now is a
+    ``socket.gaierror`` too, but a retry may fix it."""
+    if is_temporary_dns_failure(exc):
+        return False
+    return isinstance(exc, CONFIG_ERRORS) or is_bare_smtp_exception(exc)

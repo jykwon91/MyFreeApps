@@ -31,9 +31,11 @@ CONFIG_REPLY_ERRORS: Final = (
     smtplib.SMTPHeloError,
 )
 
-# Failures that no retry can fix: an unresolvable host, no TLS / AUTH support
-# or an untrusted certificate. (No AUTH mechanism we can use raises a plain
-# ``SMTPException``, which ``smtp_replies.is_bare_smtp_exception`` spots.)
+# Failures that no retry can fix: an SMTP host that doesn't resolve, no TLS /
+# AUTH support or an untrusted certificate. Read them through
+# ``smtp_replies.is_config_fault``, which leaves out a lookup that failed only
+# for now (a ``socket.gaierror`` too, which a retry may fix) and adds the plain
+# ``SMTPException`` smtplib raises when there's no AUTH mechanism we can use.
 CONFIG_ERRORS: Final = (
     socket.gaierror,
     smtplib.SMTPNotSupportedError,

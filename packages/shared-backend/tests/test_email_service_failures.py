@@ -122,6 +122,21 @@ class TestClassification:
             _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
         assert exc.value.kind == "transient"
 
+    def test_a_host_lookup_that_failed_for_now_is_transient(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # A container's DNS resolver briefly unreachable; the host does exist.
+        blip = socket.gaierror(socket.EAI_AGAIN, "Temporary failure in name resolution")
+        with patch("smtplib.SMTP", side_effect=blip), caplog.at_level(logging.WARNING), \
+                pytest.raises(EmailSendError) as exc:
+            _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
+        assert (exc.value.kind, exc.value.smtp_code) == ("transient", None)
+        assert exc.value.failed_before_handover
+        assert not exc.value.delivery_unconfirmed
+        assert "Temporary failure in name resolution" in str(exc.value)
+        record = next(r for r in caplog.records if "SMTP send failed" in r.getMessage())
+        assert record.levelno == logging.WARNING
+
     def test_bugs_are_not_disguised_as_send_failures(self) -> None:
         server = _server()
         server.login.side_effect = TypeError("bug")
@@ -910,7 +925,7 @@ class TestConfigFaults:
         assert setting in str(error)
 
     def test_unknown_host_is_misconfigured(self, caplog: pytest.LogCaptureFixture) -> None:
-        unknown_host = socket.gaierror(8, "nodename nor servname provided")
+        unknown_host = socket.gaierror(socket.EAI_NONAME, "nodename nor servname provided")
         with patch("smtplib.SMTP", side_effect=unknown_host), caplog.at_level(logging.WARNING), \
                 pytest.raises(EmailSendError) as exc:
             _service().send_or_raise(["x@example.com"], "subj", "<p>b</p>")
