@@ -43,7 +43,6 @@ def _plaid(handler: _Handler, *, client_id: str = "client-1", secret: str = "sec
         patch.object(settings, "plaid_client_id", client_id),
         patch.object(settings, "plaid_secret", secret),
         patch.object(settings, "plaid_env", "sandbox"),
-        patch.object(settings, "plaid_redirect_uri", "https://books.example/plaid-oauth"),
         patch.object(settings, "frontend_url", "https://books.example"),
         patch.object(plaid_client.httpx, "AsyncClient", _client),
     ):

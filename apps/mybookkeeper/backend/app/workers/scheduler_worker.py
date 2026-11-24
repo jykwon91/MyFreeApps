@@ -366,7 +366,7 @@ async def run_scheduler(stop: asyncio.Event) -> None:
         environment=settings.environment,
         plaid_client_id=settings.plaid_client_id,
         plaid_secret=settings.plaid_secret,
-        plaid_redirect_uri=settings.plaid_redirect_uri,
+        frontend_url=settings.frontend_url,
     )
     full_interval = settings.gmail_poll_interval_minutes * 60
     tick = min(REMINDER_TICK_MINUTES * 60, full_interval)

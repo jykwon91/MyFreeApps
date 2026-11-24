@@ -25,6 +25,7 @@ from app.core.plaid_constants import (
     PLAID_ERROR_MUTATION_DURING_PAGINATION,
     PLAID_HTTP_TIMEOUT_SECONDS,
     PLAID_LANGUAGE,
+    PLAID_OAUTH_REDIRECT_PATH,
     PLAID_PRODUCTS,
     PLAID_SYNC_MAX_RESTARTS,
     PLAID_SYNC_PAGE_SIZE,
@@ -55,10 +56,10 @@ def is_configured() -> bool:
     return bool(settings.plaid_client_id and settings.plaid_secret)
 
 
-def _webhook_url() -> str | None:
-    """Plaid only delivers to a public https origin; local dev gets none."""
+def _public_url(path: str) -> str | None:
+    """Plaid only uses a public https origin; local dev gets none."""
     origin = settings.frontend_url.rstrip("/")
-    return f"{origin}{PLAID_WEBHOOK_PATH}" if origin.startswith("https://") else None
+    return f"{origin}{path}" if origin.startswith("https://") else None
 
 
 async def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -123,11 +124,12 @@ async def create_link_token(
         body["transactions"] = {"days_requested": PLAID_TRANSACTIONS_DAYS_REQUESTED}
     else:
         body["access_token"] = access_token
-    webhook = _webhook_url()
+    webhook = _public_url(PLAID_WEBHOOK_PATH)
     if webhook:
         body["webhook"] = webhook
-    if settings.plaid_redirect_uri:
-        body["redirect_uri"] = settings.plaid_redirect_uri
+    redirect_uri = _public_url(PLAID_OAUTH_REDIRECT_PATH)
+    if redirect_uri:
+        body["redirect_uri"] = redirect_uri
     endpoint = "/link/token/create"
     return _parse(PlaidWireLinkTokenResponse, endpoint, await _post(endpoint, body))
 

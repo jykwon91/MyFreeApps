@@ -129,14 +129,13 @@ class Settings(BaseAppSettings):
 
     # ------------------------------------------------------------------
     # Plaid bank sync. Required outside development and test
-    # (``app/core/plaid_boot_guard.py``). PLAID_REDIRECT_URI is the web
-    # route Plaid sends OAuth banks (Chase) back to; it must be registered
-    # in the Plaid dashboard as well.
+    # (``app/core/plaid_boot_guard.py``). OAuth banks (Chase) come back to
+    # FRONTEND_URL + /plaid-oauth, which must be registered in the Plaid
+    # dashboard as well.
     # ------------------------------------------------------------------
     plaid_env: PlaidEnvironment = "sandbox"
     plaid_client_id: str = ""
     plaid_secret: str = ""
-    plaid_redirect_uri: str = ""
 
     # ------------------------------------------------------------------
     # Analytics

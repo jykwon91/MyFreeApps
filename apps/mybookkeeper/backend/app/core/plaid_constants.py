@@ -34,6 +34,11 @@ PLAID_HTTP_TIMEOUT_SECONDS: Final = 30.0
 # (``FRONTEND_URL``). Docker Caddy strips ``/api`` before the backend sees it.
 PLAID_WEBHOOK_PATH: Final = "/api/plaid/webhook"
 
+# The page OAuth banks (Chase) send the person back to, behind the same
+# origin. ``FRONTEND_URL`` + this path must be registered in the Plaid
+# dashboard (Team Settings > API > Allowed redirect URIs).
+PLAID_OAUTH_REDIRECT_PATH: Final = "/plaid-oauth"
+
 # Webhook verification (https://plaid.com/docs/api/webhooks/webhook-verification/).
 PLAID_VERIFICATION_HEADER: Final = "Plaid-Verification"
 PLAID_WEBHOOK_JWT_ALGORITHM: Final = "ES256"

@@ -316,7 +316,7 @@ Conflicts between top-level pins and transitive requirements (the `python-multip
 - `SECRET_KEY` — JWT signing
 - `ENCRYPTION_KEY` — OAuth token encryption
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Gmail OAuth
-- `PLAID_ENV` / `PLAID_CLIENT_ID` / `PLAID_SECRET` / `PLAID_REDIRECT_URI` — bank sync. `app/core/plaid_boot_guard.py` fails the api and scheduler at boot when any is missing outside `ENVIRONMENT=development|test`. `PLAID_REDIRECT_URI` must be registered in the Plaid dashboard (`https://<host>/plaid-oauth`); it is the page that resumes Link after an OAuth bank. Bank sync runs on Sync now, on Plaid's `SYNC_UPDATES_AVAILABLE` webhook (`POST /plaid/webhook`, JWT-verified), and once a day from the scheduler
+- `PLAID_ENV` / `PLAID_CLIENT_ID` / `PLAID_SECRET` — bank sync. `app/core/plaid_boot_guard.py` fails the api and scheduler at boot when any is missing (or `FRONTEND_URL` isn't https) outside `ENVIRONMENT=development|test`. OAuth banks return to `<FRONTEND_URL>/plaid-oauth`, which must be registered in the Plaid dashboard; it is the page that resumes Link after an OAuth bank. Bank sync runs on Sync now, on Plaid's `SYNC_UPDATES_AVAILABLE` webhook (`POST /plaid/webhook`, JWT-verified), and once a day from the scheduler
 
 ## Testing
 

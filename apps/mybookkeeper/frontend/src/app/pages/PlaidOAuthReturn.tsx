@@ -12,7 +12,7 @@ const ACCOUNTS_PATH = "/financial-accounts";
 /**
  * Where an OAuth bank (Chase) sends the person back mid-Link. Resumes the
  * Link session started on Financial Accounts with the address the bank
- * returned, then goes back there. The path is PLAID_REDIRECT_URI, registered
+ * returned, then goes back there. FRONTEND_URL + this path is registered
  * in the Plaid dashboard.
  */
 export default function PlaidOAuthReturn() {

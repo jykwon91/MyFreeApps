@@ -69,7 +69,7 @@ async def _on_startup() -> None:
         environment=settings.environment,
         plaid_client_id=settings.plaid_client_id,
         plaid_secret=settings.plaid_secret,
-        plaid_redirect_uri=settings.plaid_redirect_uri,
+        frontend_url=settings.frontend_url,
     )
     if settings.run_upload_worker:
         async def _run_worker() -> None:
