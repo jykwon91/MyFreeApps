@@ -1135,6 +1135,8 @@
         "api-client/src/store/rentRemindersApi.ts",
         "api-client/src/constants/rentReminderErrorCodes.ts",
         "api-client/src/utils/rentReminderError.ts",
+        "api-client/src/utils/rentReminderChannelWords.ts",
+        "api-client/src/utils/rentReminderPossiblySent.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [
@@ -1150,7 +1152,10 @@
       "frontend_tests": [
         "RentReminderCard.test.tsx"
       ],
-      "e2e_specs": []
+      "e2e_specs": [
+        "mocked/rent-reminder-time-zone-mock.spec.ts",
+        "mocked/rent-reminder-unknown-outcome-mock.spec.ts"
+      ]
     },
     "insurance": {
       "source_paths": [
