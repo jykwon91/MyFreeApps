@@ -58,6 +58,7 @@ from platform_shared.core.sms_constants import (
     SMS_PROVIDER_CODE_OUTCOME_UNKNOWN,
     TWILIO_HTTP_TIMEOUT_SECONDS,
 )
+from platform_shared.services.sms_not_configured_error import SmsNotConfiguredError
 
 if TYPE_CHECKING:
     # twilio is an optional import — apps that don't use SMS don't need
@@ -67,15 +68,6 @@ if TYPE_CHECKING:
     from twilio.rest import Client as _TwilioClient
 
 logger = logging.getLogger(__name__)
-
-
-class SmsNotConfiguredError(RuntimeError):
-    """Raised when Twilio credentials are missing.
-
-    Use platform_shared.core.boot_guards.check_sms_configured() at
-    lifespan startup so deploys fail loud instead of operators silently
-    losing every ready-text in production.
-    """
 
 
 class SmsSendError(RuntimeError):

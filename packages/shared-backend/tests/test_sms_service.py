@@ -32,6 +32,7 @@ from urllib3.exceptions import (
     SSLError,
 )
 
+from platform_shared.core import boot_guards
 from platform_shared.core.sms_constants import TWILIO_HTTP_TIMEOUT_SECONDS
 from platform_shared.services.sms_service import (
     SmsNotConfiguredError,
@@ -346,6 +347,20 @@ class TestSend:
 class TestInheritance:
     def test_not_configured_is_runtime_error(self) -> None:
         assert issubclass(SmsNotConfiguredError, RuntimeError)
+
+    def test_the_boot_guard_and_a_send_raise_the_same_error(self) -> None:
+        # Imported from either module, it catches what the other raises.
+        assert boot_guards.SmsNotConfiguredError is SmsNotConfiguredError
+        with pytest.raises(SmsNotConfiguredError):
+            boot_guards.check_sms_configured(
+                sms_backend="console",
+                twilio_account_sid="",
+                twilio_auth_token="",
+                twilio_from_number="",
+                environment="production",
+            )
+        with pytest.raises(boot_guards.SmsNotConfiguredError):
+            SmsService().send_or_raise("+15559876543", "body")
 
     def test_send_error_is_runtime_error(self) -> None:
         assert issubclass(SmsSendError, RuntimeError)

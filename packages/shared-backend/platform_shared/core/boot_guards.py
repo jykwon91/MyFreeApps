@@ -11,6 +11,7 @@ no transitive dependency on per-app settings modules.
 """
 
 from platform_shared.services.email_backend import EmailBackend
+from platform_shared.services.sms_not_configured_error import SmsNotConfiguredError
 
 _DEV_ENVIRONMENTS = ("development", "test")
 
@@ -164,10 +165,6 @@ def check_email_configured(
         )
 
 
-class SmsNotConfiguredError(RuntimeError):
-    """Raised at boot when SMS is required but Twilio is not configured."""
-
-
 def check_sms_configured(
     *,
     sms_backend: str,
@@ -182,8 +179,9 @@ def check_sms_configured(
     """Fail loud at boot if SMS isn't usable in a non-dev environment.
 
     Only apps that opt in to SMS (via ``create_app_lifespan(sms_required=True)``)
-    invoke this guard; apps that never text users (MBK, MJH) skip it
-    entirely so they don't need to set Twilio env vars.
+    invoke this guard. The others don't need to set Twilio env vars: MJH never
+    texts, and MBK's texts are optional, so it checks its sender's
+    ``is_configured()`` before offering them.
 
     Three failure modes guarded:
 
