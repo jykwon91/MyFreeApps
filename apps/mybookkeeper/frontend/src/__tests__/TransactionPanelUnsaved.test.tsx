@@ -48,6 +48,11 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 import { useDrillDownPages } from "@mybookkeeper/api-client/hooks/useDrillDownPages";
 import type { DrillDownPagesState } from "@mybookkeeper/api-client/types/transaction/DrillDownPagesState";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 const TXN = {
   id: "00000000-0000-0000-0000-000000000001",
   vendor: "Test Plumber",

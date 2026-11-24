@@ -106,6 +106,11 @@ import {
 } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 function renderPage() {
   return render(
     <Provider store={store}>

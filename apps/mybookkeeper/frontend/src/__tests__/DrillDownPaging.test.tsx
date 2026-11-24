@@ -16,6 +16,11 @@ import { restoreApi, stubApi } from "@/test/api-stub";
 import { aDrillDownTransaction, answerDrillDownPage } from "@/test/drill-down-server";
 import { renderWithStore } from "@/test/render-with-store";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 /**
  * A test-sized page, so each page draws a handful of rows rather than a hundred. The real page size is what
  * DrillDownPanel.test.tsx and the api-client's drillDownPages test check is sent.

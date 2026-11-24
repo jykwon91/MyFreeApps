@@ -8,6 +8,11 @@ import ManualEntryForm from "@/app/features/transactions/ManualEntryForm";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 const updateUnwrap = vi.fn();
 const updateTransaction = vi.fn(() => ({ unwrap: updateUnwrap }));
 const createUnwrap = vi.fn();

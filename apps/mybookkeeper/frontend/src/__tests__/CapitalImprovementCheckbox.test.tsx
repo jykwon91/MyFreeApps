@@ -6,6 +6,11 @@ import { store } from "@/shared/store";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 const updateUnwrap = vi.fn();
 const updateTransaction = vi.fn(() => ({ unwrap: updateUnwrap }));
 

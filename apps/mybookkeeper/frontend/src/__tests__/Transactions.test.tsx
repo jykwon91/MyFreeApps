@@ -146,6 +146,11 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   })),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/financialAccountsApi", async () => {
+  const { EMPTY_FINANCIAL_ACCOUNTS_QUERY } = await import("@/test/empty-financial-accounts");
+  return { useListFinancialAccountsQuery: () => EMPTY_FINANCIAL_ACCOUNTS_QUERY };
+});
+
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useListTenantPagesInfiniteQuery: vi.fn(() => ({
     ...infiniteQueryData({ items: [], total: 0, has_more: false }),
