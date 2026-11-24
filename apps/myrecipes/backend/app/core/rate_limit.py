@@ -4,6 +4,12 @@ Thin wrappers around ``platform_shared`` services that close over app-local
 ``settings``. Public registration is open, so the Turnstile gate guards both
 registration and forgot-password.
 
+Auth gates (login, TOTP, registration) are keyed by client IP — the caller is
+not yet authenticated. The paid Claude endpoints (photo import, web discovery)
+are keyed by user id via ``check_user_rate_limit``: they are bearer-gated, and
+an IP key would let one user rotate IPs for unlimited spend while making many
+users behind one carrier NAT share a single budget.
+
 Mirrors apps/myjobhunter/backend/app/core/rate_limit.py (name + thresholds only).
 """
 
@@ -14,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
+    check_user_rate_limit,
     make_check_account_not_locked,
     make_check_login_ip_limit,
     make_check_json_login_not_locked,
@@ -22,8 +29,10 @@ from platform_shared.core.rate_limit import (
 from platform_shared.core.request_utils import get_client_ip
 from platform_shared.services.turnstile_service import verify_turnstile_token
 
+from app.core.auth import current_active_user
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.user.user import User
 # Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
 from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
 
@@ -66,14 +75,14 @@ totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 # almost certainly abuse.
 register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 
-# Per-IP web-discovery throttle. Unlike the auth limiters this one is not
+# Per-user web-discovery throttle. Unlike the auth limiters this one is not
 # about credential stuffing — every discovery call runs a multi-search Claude
 # turn that costs real money, so the budget is a spend ceiling. 20/hour is
 # far above normal browsing (a session is a handful of searches) and well
 # below what a script could burn unattended.
 discovery_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 
-# Per-IP photo-import throttle. Same reasoning as discovery: every
+# Per-user photo-import throttle. Same reasoning as discovery: every
 # ``POST /recipes/extract`` is a paid Claude vision call, so this is a spend
 # ceiling. 20/hour covers importing a whole cookbook chapter in one sitting
 # and is well below what a script could burn unattended.
@@ -125,23 +134,22 @@ async def check_register_rate_limit(request: Request) -> None:
     register_limiter.check(get_client_ip(request))
 
 
-async def _check_spend_limit(limiter: RateLimiter, request: Request) -> None:
-    """Per-IP throttle for endpoints that spend money at Anthropic.
+async def check_discovery_rate_limit(user: User = Depends(current_active_user)) -> None:
+    """Per-user throttle on the paid web-discovery endpoints (429 when spent).
 
-    Raises HTTP 429 when the budget is exhausted. No DB write — there is no
-    per-account audit dimension here, unlike the login throttle.
+    Depends on ``current_active_user`` so it runs after auth resolves and
+    before the handler does any paid work.
     """
-    limiter.check(get_client_ip(request))
+    check_user_rate_limit(user.id, discovery_limiter)
 
 
-async def check_discovery_rate_limit(request: Request) -> None:
-    """Per-IP throttle on the paid web-discovery endpoints."""
-    await _check_spend_limit(discovery_limiter, request)
+async def check_photo_import_rate_limit(user: User = Depends(current_active_user)) -> None:
+    """Per-user throttle on the paid photo-import (Claude vision) endpoint (429 when spent).
 
-
-async def check_photo_import_rate_limit(request: Request) -> None:
-    """Per-IP throttle on the paid photo-import (Claude vision) endpoint."""
-    await _check_spend_limit(extract_limiter, request)
+    Depends on ``current_active_user`` so it runs after auth resolves and
+    before the upload is read or Claude is called.
+    """
+    check_user_rate_limit(user.id, extract_limiter)
 
 
 _check_totp_ip_limit = make_check_login_ip_limit(totp_limiter, extra_metadata={"gate": "totp"})

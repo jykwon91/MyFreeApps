@@ -4,7 +4,7 @@ Two routers, split by what can carry a bearer token:
 
 ``router`` — ``Depends(current_active_user)`` at the ROUTER level (never
     per-handler, so a newly added route cannot regress to "no auth"), plus a
-    per-IP throttle, because each call spends real money at Anthropic:
+    per-user throttle, because each call spends real money at Anthropic:
         POST /discovery/search    query    -> ranked candidates
         POST /discovery/detail    url      -> full draft + context
 

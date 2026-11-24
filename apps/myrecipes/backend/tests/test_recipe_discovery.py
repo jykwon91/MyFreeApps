@@ -322,6 +322,47 @@ class TestSearch:
                 await authed.post("/discovery/search", json={"query": "flan"})
             ).status_code == 429
 
+    @pytest.mark.asyncio
+    async def test_users_behind_one_ip_get_separate_budgets(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        """Many users behind one carrier NAT must not share one budget."""
+        _mock_research(monkeypatch, data=_GOOD_RESULTS)
+        shared_ip = {"X-Forwarded-For": "203.0.113.7"}
+        first, second = await user_factory(), await user_factory()
+        async with await as_user(first) as authed:
+            for _ in range(20):
+                await authed.post("/discovery/search", json={"query": "flan"}, headers=shared_ip)
+            assert (
+                await authed.post("/discovery/search", json={"query": "flan"}, headers=shared_ip)
+            ).status_code == 429
+        async with await as_user(second) as authed:
+            assert (
+                await authed.post("/discovery/search", json={"query": "flan"}, headers=shared_ip)
+            ).status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_rotating_ips_does_not_reset_the_budget(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        """One user switching IPs (VPN, mobile handoff) still has one budget."""
+        _mock_research(monkeypatch, data=_GOOD_RESULTS)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for i in range(20):
+                resp = await authed.post(
+                    "/discovery/search",
+                    json={"query": "flan"},
+                    headers={"X-Forwarded-For": f"198.51.100.{i + 1}"},
+                )
+                assert resp.status_code == 200
+            resp = await authed.post(
+                "/discovery/search",
+                json={"query": "flan"},
+                headers={"X-Forwarded-For": "198.51.100.250"},
+            )
+        assert resp.status_code == 429
+
 
 class TestSearchCoercion:
     """The model's JSON is schema-valid but its *values* came off the web."""

@@ -222,7 +222,7 @@ async def extract_recipe_photo(
     The image is a transient input — it is never stored. The returned draft is
     for the user to review and edit; saving happens through ``POST /recipes``.
     Status codes: 413 too large (bytes or pixels), 415 unsupported type, 422 unreadable / no
-    recipe found, 429 per-IP budget spent, 503 photo import not available.
+    recipe found, 429 per-user budget spent, 503 photo import not available.
     """
     limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
     content = await read_upload_or_reject(

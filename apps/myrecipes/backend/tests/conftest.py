@@ -54,7 +54,7 @@ def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiters():
-    """Clear per-IP limiter buckets before + after every test.
+    """Clear every limiter's buckets (per-IP and per-user) before + after every test.
 
     The limiters hold bucket state in module-level dicts; without this the
     buckets accumulate across the session and exhaust the budget, causing

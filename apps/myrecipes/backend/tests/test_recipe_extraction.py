@@ -18,6 +18,7 @@ from httpx import AsyncClient
 from PIL import Image, UnidentifiedImageError
 
 from app.core.config import settings
+from app.core.rate_limit import discovery_limiter
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from app.services.recipe import photo_extraction_service as pes
 from platform_shared.extraction import (
@@ -258,14 +259,53 @@ class TestExtractRateLimit:
     async def test_budget_is_isolated_from_discovery(
         self, user_factory, as_user, monkeypatch
     ) -> None:
-        from app.core.rate_limit import discovery_limiter
-
         mock_extraction(monkeypatch)
-        for _ in range(20):
-            discovery_limiter.check("127.0.0.1")
         user = await user_factory()
+        for _ in range(20):
+            discovery_limiter.check(str(user["id"]))
         async with await as_user(user) as authed:
             assert (await authed.post("/recipes/extract", files=photo_files())).status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_users_behind_one_ip_get_separate_budgets(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        """Many users behind one carrier NAT must not share one budget."""
+        mock_extraction(monkeypatch)
+        shared_ip = {"X-Forwarded-For": "203.0.113.7"}
+        first, second = await user_factory(), await user_factory()
+        async with await as_user(first) as authed:
+            for _ in range(20):
+                await authed.post("/recipes/extract", files=photo_files(), headers=shared_ip)
+            assert (
+                await authed.post("/recipes/extract", files=photo_files(), headers=shared_ip)
+            ).status_code == 429
+        async with await as_user(second) as authed:
+            assert (
+                await authed.post("/recipes/extract", files=photo_files(), headers=shared_ip)
+            ).status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_rotating_ips_does_not_reset_the_budget(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        """One user switching IPs (VPN, mobile handoff) still has one budget."""
+        mock_extraction(monkeypatch)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for i in range(20):
+                resp = await authed.post(
+                    "/recipes/extract",
+                    files=photo_files(),
+                    headers={"X-Forwarded-For": f"198.51.100.{i + 1}"},
+                )
+                assert resp.status_code == 200
+            resp = await authed.post(
+                "/recipes/extract",
+                files=photo_files(),
+                headers={"X-Forwarded-For": "198.51.100.250"},
+            )
+        assert resp.status_code == 429
 
 
 class TestPhotoFormats:
