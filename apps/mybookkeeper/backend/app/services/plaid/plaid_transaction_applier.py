@@ -33,11 +33,13 @@ from app.core.plaid_category_constants import PFC_TRANSFER_PRIMARIES
 from app.core.plaid_constants import PLAID_MIN_TRANSACTION_YEAR, PLAID_TRANSFER_MATCH_WINDOW_DAYS
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.core.tags import TRANSACTION_TYPE_TRANSFER, TRANSFER_CATEGORY
+from app.core.tax_total_inputs import tax_total_inputs
 from app.mappers import plaid_account_mapper, plaid_transaction_mapper
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.integrations.plaid_item import PlaidItem
 from app.models.transactions.transaction import Transaction
 from app.repositories.financial_accounts import financial_account_repo
+from app.repositories.tax import tax_return_repo
 from app.repositories.transactions import plaid_transaction_repo, transaction_repo
 from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
@@ -134,8 +136,10 @@ async def _apply_added(
             linked_account_ids=linked_account_ids, claimed=claimed,
         )
         if other_leg is not None:
+            old_tax_inputs = tax_total_inputs(other_leg)
             _merge_into_transfer(other_leg, new_leg_account=account, new_leg_date=txn.date)
             await transaction_repo.update(db, other_leg)
+            await tax_return_repo.flag_unfiled_if_totals_moved(db, other_leg, old_tax_inputs)
             claimed.add(other_leg.id)
             counts.transfers_matched += 1
             return
@@ -219,12 +223,14 @@ async def _apply_modified(
         # or since deleted by the person — nothing to update.
         return False
     row = rows[0]
+    old_tax_inputs = tax_total_inputs(row)
     row.transaction_date = txn.date
     row.tax_year = txn.date.year
     row.amount = abs(txn.amount)
     row.vendor = plaid_transaction_mapper.vendor_for(txn)
     row.description = plaid_transaction_mapper.description_for(txn) or None
     await transaction_repo.update(db, row)
+    await tax_return_repo.flag_unfiled_if_totals_moved(db, row, old_tax_inputs)
     return True
 
 

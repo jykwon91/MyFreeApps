@@ -5,7 +5,8 @@ Pinned here: added / modified / removed rows land as created / updated /
 soft-deleted; the cursor is stored and sent back next time; a repeat id, a
 bank-CSV row already on file and a pending row are never added; the second
 leg of a transfer between two connected accounts becomes one transfer row;
-personal spending gets the obvious category; balances update; and a Plaid
+personal spending gets the obvious category; a bank edit to a row an unfiled
+tax return counts marks that return out of date; balances update; and a Plaid
 refusal (ITEM_LOGIN_REQUIRED) is stored on the item instead of raised.
 """
 from __future__ import annotations
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.integrations.plaid_item import PlaidItem
 from app.models.organization.organization import Organization
+from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.spending_category import SpendingCategory
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
@@ -417,6 +419,43 @@ class TestCategoriesAndBalances:
         await db.refresh(account)
         assert account.current_balance_cents == 123456
         assert account.balance_as_of is not None
+
+
+class TestTaxReturnStaleness:
+    async def _counted_rental_row(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> tuple[PlaidItem, TaxReturn]:
+        item = await _item(db, test_org, test_user)
+        await _account(db, test_org, test_user, item, scope="rental")
+        await _sync(db, item, _batch(added=[_txn("t-1", amount="80.00")]))
+        row = (await _rows(db, test_org))[0]
+        row.status = "approved"
+        row.tax_relevant = True
+        row.category = "maintenance"
+        draft = TaxReturn(organization_id=test_org.id, tax_year=_DAY.year, needs_recompute=False)
+        db.add(draft)
+        await db.commit()
+        return item, draft
+
+    async def test_a_bank_edit_to_a_counted_row_marks_the_unfiled_return_out_of_date(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        item, draft = await self._counted_rental_row(db, test_user, test_org)
+
+        await _sync(db, item, _batch(modified=[_txn("t-1", amount="95.00")]))
+
+        await db.refresh(draft)
+        assert draft.needs_recompute is True
+
+    async def test_a_bank_edit_that_moves_no_total_leaves_the_return_alone(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        item, draft = await self._counted_rental_row(db, test_user, test_org)
+
+        await _sync(db, item, _batch(modified=[_txn("t-1", amount="80.00", name="Corner Store #2")]))
+
+        await db.refresh(draft)
+        assert draft.needs_recompute is False
 
 
 class TestErrors:
