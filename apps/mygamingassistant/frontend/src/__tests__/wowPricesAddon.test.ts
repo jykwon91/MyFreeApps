@@ -56,6 +56,16 @@ describe("addonPriceLua", () => {
   });
 });
 
+describe("the cheapest routes in Data.lua", () => {
+  it("writes a priced profession's route per house with prices, and none for a profession that isn't priced", async () => {
+    const data = addonPriceLua(HOUSES, await loadAllCraftingData());
+    expect(data).toContain("      routes = {");
+    expect(data).toMatch(/\n {8}tailoring = \{/);
+    expect(data).not.toMatch(/\n {8}alchemy = \{/);
+    expect(data).toContain("source =");
+  });
+});
+
 describe("the reload reminder", () => {
   const TICKER = "C_Timer = { NewTicker = function(_, f) tick = f end }; ";
   const remind = (age: number) =>

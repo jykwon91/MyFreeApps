@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-24",
+    "title": "MGA Professions addon shows the cheapest Tailoring and Enchanting route at today's prices",
+    "summary": "With MGA Prices installed, the Route tab picks each recipe from your faction's auction house prices, the same pick the site makes, and says when those prices were updated. The hourly updater refreshes it. Without MGA Prices it shows the built-in route as before.",
+    "to": "/wow-forever/professions"
+  },
+  {
+    "date": "2026-11-24",
     "title": "Tailoring and Enchanting routes now use the guide's own patterns when picking the cheapest",
     "summary": "The cheapest route used to skip any recipe you had to buy a pattern for unless you ticked it, so stretches like Runecloth Cloak versus Boots were never priced from the auction house. The patterns the guide's own route already sends you to get now count without a tick, so those stretches are picked from today's prices. Other patterns still need a tick.",
     "to": "/wow-forever/professions"
