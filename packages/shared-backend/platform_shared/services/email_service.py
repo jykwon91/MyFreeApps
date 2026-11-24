@@ -60,7 +60,7 @@ from email.mime.text import MIMEText
 from typing import get_args
 
 from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
-from platform_shared.core.email_header_utils import strip_line_breaks
+from platform_shared.core.email_header_utils import strip_line_breaks, unique_addresses
 from platform_shared.core.recipient_log import describe_recipients
 from platform_shared.core.settings import BaseAppSettings
 from platform_shared.services.email_attachment import EmailAttachment
@@ -163,6 +163,10 @@ class EmailService:
         host sending a guest welcome guide wants the guest's reply to
         land in the host's own inbox, not the system SMTP account.
 
+        An address repeated exactly in ``to`` (compared after line breaks and
+        surrounding spaces are stripped) is sent once. Addresses that differ
+        in any way, such as letter case or a display name, are sent as given.
+
         Raises:
             ValueError: If ``to`` is empty.
             EmailNotConfiguredError: If SMTP creds are missing.
@@ -173,6 +177,12 @@ class EmailService:
         """
         if not to:
             raise ValueError("Recipients list cannot be empty")
+        # Each address once. smtplib keys refused recipients by address, so a
+        # repeated one is listed once, as refused if any copy was. With every
+        # copy refused it then skips its "all refused" raise and goes on to
+        # DATA; with some refused, the error counts a repeat among those who
+        # got the email.
+        to = unique_addresses(to)
         if self.backend == "console":
             logger.info(
                 "[email:console] to=%s body_chars=%d attachments=%d",
@@ -188,7 +198,6 @@ class EmailService:
                 "instance has empty creds."
             )
 
-        to = [strip_line_breaks(address) for address in to]
         subject = strip_line_breaks(subject)
         sender = strip_line_breaks(self.smtp_user)
 
@@ -290,7 +299,8 @@ class EmailService:
             # carries the masked reason.
             logger.warning(
                 "Best-effort email send failed to %s (%s: %s)",
-                describe_recipients(to),
+                # As sent: no repeats, and no line break to start a fake log line.
+                describe_recipients(unique_addresses(to)),
                 type(exc).__name__,
                 exc,
             )
