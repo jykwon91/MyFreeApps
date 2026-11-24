@@ -5,7 +5,20 @@ from typing import Literal
 #                          STARTTLS/AUTH unsupported, TLS certificate rejected).
 #                          Retrying won't help; an operator must fix the config.
 #   "recipient_rejected" — the server permanently refused one or more recipients.
+#                          It is "transient" instead when another recipient's
+#                          reply wasn't a clear refusal (if the rest got the
+#                          email, so may they; if nobody did, a retry can still
+#                          reach them), or when nobody got the email and another
+#                          was refused only for now (a retry can still reach
+#                          them, and can't duplicate the email). When the rest
+#                          got it, a retry to everyone would duplicate it, so a
+#                          permanent refusal sums it up even beside a 4xx; each
+#                          code is in ``refused_recipients``.
 #   "message_rejected"   — the server permanently refused the message itself.
-#   "transient"          — timeout, dropped connection, or a 4xx reply. A retry
-#                          later may succeed.
+#   "transient"          — timeout, dropped connection, a 4xx reply, or a reply
+#                          that was unreadable or wasn't a clear refusal. A retry
+#                          later may succeed, unless ``delivery_unconfirmed``
+#                          says the email may already have arrived. When the
+#                          server took it for the other recipients, retry only
+#                          ``refused_recipients`` (see ``EmailSendError``).
 EmailFailureKind = Literal["misconfigured", "recipient_rejected", "message_rejected", "transient"]

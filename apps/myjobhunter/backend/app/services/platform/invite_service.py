@@ -257,8 +257,8 @@ async def create_and_send_invite(
             the server couldn't be reached or logged in to, or email is not
             configured). The row is deleted so the admin can retry the same
             address straight away.
-        InviteEmailUnconfirmedError: SMTP timed out or dropped while the email
-            was being handed over, so it may have arrived. The row is kept
+        InviteEmailUnconfirmedError: the email may have arrived anyway (see
+            ``EmailSendError.delivery_unconfirmed``). The row is kept
             (deleting it would leave a working link with no invite behind it);
             the admin can cancel and resend.
     """
