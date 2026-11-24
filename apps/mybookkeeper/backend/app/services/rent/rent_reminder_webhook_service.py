@@ -55,6 +55,7 @@ from app.core.rent_reminder_constants import (
     ERROR_SMS_OUTCOME_UNKNOWN,
     PHONE_FAILED_CODE_PREFIX,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_SMS
 from app.core.rent_reminder_request_id import parse_reminder_request_id
 from app.db.session import unit_of_work
 from app.models.rent.rent_reminder_send import RentReminderSend
@@ -64,7 +65,6 @@ from app.services.system import sms_service
 
 logger = logging.getLogger(__name__)
 
-_SMS = "sms"
 _STATUS_RANK: dict[str, int] = {"queued": 0, "sent_to_phone": 1, "sent": 2, "delivered": 3}
 _CONFIRMED_STATUS: dict[str, str] = {
     HTTPSMS_EVENT_PHONE_SENT: "sent",
@@ -104,7 +104,7 @@ async def _find_row(
     if parsed is not None:
         send_id, attempt = parsed
         row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is not None and row.channel == _SMS:
+        if row is not None and row.channel == RENT_REMINDER_CHANNEL_SMS:
             return row, attempt
     if event.message_id:
         row = await rent_reminder_send_repo.get_by_provider_message_id(

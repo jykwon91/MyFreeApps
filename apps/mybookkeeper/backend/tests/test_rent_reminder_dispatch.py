@@ -29,7 +29,12 @@ from platform_shared.services.sms_service import SmsSendError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.rent_reminder_alert_messages import MISSING_CONTACT, WHAT_HAPPENED
+from app.core.rent_reminder_alert_messages import (
+    CHECK_WHETHER_SENT,
+    MISSING_CONTACT,
+    REMINDER_NAME,
+    WHAT_HAPPENED,
+)
 from app.core.rent_reminder_constants import (
     ERROR_NO_RECIPIENT,
     MAY_STILL_ARRIVE_ERRORS,
@@ -736,6 +741,29 @@ class TestSendNow:
         with pytest.raises(dispatch.ReminderAlreadySentError):
             await _send_now(applicant_id)
         wired["sms"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_refused_when_texts_are_not_set_up(self, db: AsyncSession, wired) -> None:
+        """Email and text go together, so the email must not go out alone."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+
+        with patch.object(sms_service, "is_configured", lambda: False):
+            with pytest.raises(rent_reminder_service.SmsUnavailableError):
+                await _send_now(applicant_id)
+        wired["email"].assert_not_called()
+        wired["sms"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_an_email_only_plan_sends_without_texts_set_up(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+
+        with patch.object(sms_service, "is_configured", lambda: False):
+            [sent] = await _send_now(applicant_id)
+        assert (sent.channel, sent.status) == ("email", "sent")
 
     @pytest.mark.asyncio
     async def test_says_when_rent_is_due_counting_from_today(self, db: AsyncSession, wired) -> None:
@@ -1675,7 +1703,10 @@ class TestAlertWording:
 
     def test_every_code_with_a_fixed_spelling_has_its_own_words(self) -> None:
         assert set(WHAT_HAPPENED) | {ERROR_NO_RECIPIENT} == REMINDER_ERROR_CODES
-        assert set(MISSING_CONTACT) == set(RENT_REMINDER_CHANNELS)
+
+    def test_every_channel_has_its_own_words(self) -> None:
+        for words in (MISSING_CONTACT, REMINDER_NAME, CHECK_WHETHER_SENT):
+            assert set(words) == set(RENT_REMINDER_CHANNELS), words
 
     @pytest.mark.parametrize(
         ("channel", "code", "expected_subject", "said"),

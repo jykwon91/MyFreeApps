@@ -2,8 +2,11 @@
 
 String + ``CheckConstraint`` per RENTALS_PLAN.md §4.1, never SQLAlchemy
 ``Enum``. Referenced by the models, the migration DDL, the request schemas,
-and mirrored as TypeScript unions in ``frontend/src/shared/types/rent/``.
+and mirrored as TypeScript unions in ``api-client/src/types/rent/``.
 """
+from typing import get_args
+
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.sql_in_list import sql_in_list
 
 
@@ -12,7 +15,9 @@ from app.core.sql_in_list import sql_in_list
 # plan whose amount is that month's charge split across its Sundays.
 RENT_REMINDER_FREQUENCIES: tuple[str, ...] = ("weekly", "monthly")
 
-RENT_REMINDER_CHANNELS: tuple[str, ...] = ("email", "sms")
+RENT_REMINDER_CHANNEL_EMAIL: RentReminderChannel = "email"
+RENT_REMINDER_CHANNEL_SMS: RentReminderChannel = "sms"
+RENT_REMINDER_CHANNELS: tuple[RentReminderChannel, ...] = get_args(RentReminderChannel)
 
 # Lifecycle of one reminder on one channel.
 #

@@ -38,6 +38,7 @@ from platform_shared.services.phone_number import to_e164
 from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
 from app.core.datetime_utils import as_utc
+from app.core.rent_reminder_channel import RentReminderChannel
 from app.core.rent_reminder_request_id import format_reminder_request_id
 from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
@@ -52,6 +53,7 @@ from app.core.rent_reminder_constants import (
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
     SMS_RELAY_CODE_PREFIX,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_plan_repo, rent_reminder_send_repo
@@ -74,8 +76,6 @@ from app.services.system import email_service, sms_service
 
 logger = logging.getLogger(__name__)
 
-_EMAIL = "email"
-_SMS = "sms"
 _ALREADY_SENT_MESSAGE = (
     "This reminder already went out. Email and text always go together, "
     "so nothing more is sent until the next due date."
@@ -122,7 +122,7 @@ def _now() -> _dt.datetime:
 
 async def _send(outbound: ReminderOutbound) -> str | None:
     """Push one reminder out. Returns the httpSMS id for SMS, else ``None``."""
-    if outbound.channel == _EMAIL:
+    if outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
         recipient = (outbound.tenant_email or "").strip()
         if not recipient:
             raise _Undeliverable(ERROR_NO_RECIPIENT)
@@ -199,7 +199,7 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
                 db, row=row, error_code=error_code,
                 seen_status="queued", seen_attempt=outbound.attempt,
             )
-        elif outbound.channel == _EMAIL:
+        elif outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
             recorded = await rent_reminder_send_repo.mark_sent(
                 db, row=row, attempt=outbound.attempt,
             )
@@ -385,7 +385,7 @@ async def send_now(
     expected_due_date: _dt.date,
     expected_amount: Decimal,
     expected_message: str,
-    expected_channels: list[str],
+    expected_channels: list[RentReminderChannel],
     confirmed_possibly_sent: list[RentReminderPossiblySent] | None = None,
     now: _dt.datetime | None = None,
 ) -> list[RentReminderSendResponse]:
@@ -430,7 +430,7 @@ async def send_now(
             raise ReminderChangedError(_CHANGED_MESSAGE)
         if applicant.tenant_ended_at is not None:
             raise TenancyEndedError("This tenancy has ended, so reminders don't go out.")
-        if _SMS in channels and not sms_service.is_configured():
+        if RENT_REMINDER_CHANNEL_SMS in channels and not sms_service.is_configured():
             raise SmsUnavailableError(SMS_UNAVAILABLE_MESSAGE)
         rendered = planner.render_for_send_now(
             plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,

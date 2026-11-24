@@ -7,13 +7,15 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.rent_reminder_channel import RentReminderChannel
+
 
 class RentReminderSendResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     due_date: _dt.date
-    channel: str
+    channel: RentReminderChannel
     status: str
     amount: Decimal
     error_code: str | None = None
