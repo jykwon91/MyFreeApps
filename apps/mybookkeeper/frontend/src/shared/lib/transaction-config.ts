@@ -14,6 +14,7 @@ export const EMPTY_FILTERS: Filters = {
   vendor: "",
   start_date: "",
   end_date: "",
+  transaction_scope: "",
 };
 
 /** The transactions table opens on its first page of 25 rows. */

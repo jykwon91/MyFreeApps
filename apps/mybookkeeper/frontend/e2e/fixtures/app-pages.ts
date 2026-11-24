@@ -24,6 +24,7 @@ export const APP_PAGES = [
   "/reconciliation",
   "/reply-templates",
   "/security",
+  "/spending-categories",
   "/tax",
   "/tax-documents",
   "/tax-returns",

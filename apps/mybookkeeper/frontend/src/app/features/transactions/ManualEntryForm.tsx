@@ -16,7 +16,9 @@ import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError"
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
 import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@platform/ui/constants/number-input-decimal-separator";
+import PersonalCategorySelect from "./PersonalCategorySelect";
 import TransactionAccountFields from "./TransactionAccountFields";
+import TransactionScopeSelect from "./TransactionScopeSelect";
 
 export interface ManualEntryFormProps {
   properties: readonly Property[];
@@ -45,6 +47,8 @@ function buildDefaults(): TransactionFormValues {
     payment_method: "",
     account_id: "",
     transfer_to_account_id: "",
+    transaction_scope: "rental",
+    spending_category_id: "",
   };
 }
 
@@ -58,12 +62,14 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
   });
 
   const transactionType = watch("transaction_type");
+  const transactionScope = watch("transaction_scope");
   const amount = watch("amount");
   const transactionDate = watch("transaction_date");
   const category = watch("category");
 
   const categories = categoriesForType(transactionType);
   const isTransfer = transactionType === "transfer";
+  const isPersonal = transactionScope === "personal";
   const isValid = moneyInputError(amount, NUMBER_INPUT_DECIMAL_SEPARATOR) === undefined && transactionDate && category;
 
   async function onSubmit(data: TransactionFormValues) {
@@ -83,6 +89,8 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
         channel: data.channel || null,
         payment_method: data.payment_method || null,
         is_manual: true,
+        transaction_scope: data.transaction_scope,
+        spending_category_id: isPersonal ? (data.spending_category_id || null) : null,
       } as Partial<Transaction>).unwrap();
 
       onSuccess();
@@ -138,6 +146,9 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
         </FormField>
 
         <TransactionAccountFields register={register} watch={watch} />
+
+        <TransactionScopeSelect register={register} value={transactionScope} dirty={false} />
+        {isPersonal ? <PersonalCategorySelect register={register} value={watch("spending_category_id")} dirty={false} /> : null}
 
         <FormField label="Amount" required>
           {(field) => (

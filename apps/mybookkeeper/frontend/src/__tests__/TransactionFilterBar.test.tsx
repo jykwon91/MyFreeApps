@@ -18,10 +18,10 @@ describe("TransactionFilterBar", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
     expect(panel).toHaveClass("hidden", "md:flex");
-    for (const name of ["Filter by property", "Filter by status", "Filter by type", "Filter by category"]) {
+    for (const name of ["Filter by property", "Filter by status", "Filter by type", "Filter by category", "Filter by scope"]) {
       expect(within(panel).getByRole("combobox", { name })).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("combobox")).toHaveLength(4);
+    expect(screen.getAllByRole("combobox")).toHaveLength(5);
     expect(screen.getAllByRole("textbox", { name: "Filter by vendor" })).toHaveLength(1);
     expect(screen.getAllByLabelText("Filter from date")).toHaveLength(1);
     expect(screen.getAllByLabelText("Filter to date")).toHaveLength(1);

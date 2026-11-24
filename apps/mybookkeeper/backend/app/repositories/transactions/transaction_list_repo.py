@@ -115,6 +115,10 @@ def _filtered(
         stmt = stmt.where(Transaction.category.in_(categories))
     if property_ids := filters.get("property_ids"):
         stmt = stmt.where(_any_property(property_ids))
+    if (transaction_scope := filters.get("transaction_scope")) is not None:
+        stmt = stmt.where(Transaction.transaction_scope == transaction_scope)
+    if (spending_category_id := filters.get("spending_category_id")) is not None:
+        stmt = stmt.where(Transaction.spending_category_id == spending_category_id)
     return stmt
 
 

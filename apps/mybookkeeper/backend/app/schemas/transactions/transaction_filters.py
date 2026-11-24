@@ -12,7 +12,7 @@ from app.core.transaction_sort_constants import (
     SortDirection,
     TransactionSortField,
 )
-from app.schemas.transactions.transaction import TransactionCategory, TransactionStatus, TransactionType
+from app.schemas.transactions.transaction import TransactionCategory, TransactionScope, TransactionStatus, TransactionType
 from app.schemas.transactions.transaction_sort_key import TransactionSortKey, parse_sort_key
 
 
@@ -38,6 +38,10 @@ class TransactionFilters(BaseModel):
     tax_year: int | None = None
     # Whether the row counts towards the tax report; None leaves both in.
     tax_relevant: bool | None = None
+    # Narrow to a single scope: rental / business / personal.
+    transaction_scope: TransactionScope | None = None
+    # Narrow to a specific personal spending category.
+    spending_category_id: uuid.UUID | None = None
     # Opt-in: only the categories the dashboard summary adds up as revenue or as expenses.
     summary_kind: Literal["revenue", "expenses"] | None = None
     # Any-of filters (the web table's column filters). Each narrows on top of the single-value

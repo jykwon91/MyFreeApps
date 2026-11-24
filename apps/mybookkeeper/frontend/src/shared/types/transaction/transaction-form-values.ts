@@ -1,3 +1,4 @@
+import type { TransactionScope } from "@mybookkeeper/api-client/types/transaction/TransactionScope";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 
 export interface TransactionFormValues {
@@ -20,4 +21,8 @@ export interface TransactionFormValues {
   // Empty string means no account; the panel sends it as null.
   account_id: string;
   transfer_to_account_id: string;
+  // Scope and personal spending category.
+  transaction_scope: TransactionScope;
+  // Empty string means no spending category; the panel sends it as null.
+  spending_category_id: string;
 }

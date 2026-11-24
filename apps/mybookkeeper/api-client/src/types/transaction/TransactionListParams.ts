@@ -1,4 +1,5 @@
 import type { SortDirection } from "../sort/SortDirection";
+import type { TransactionScope } from "./TransactionScope";
 import type { TransactionSortField } from "./TransactionSortField";
 import type { TransactionSortKey } from "./TransactionSortKey";
 import type { TransactionStatus } from "./TransactionStatus";
@@ -31,6 +32,10 @@ export interface TransactionListParams {
   transaction_types?: readonly TransactionType[];
   categories?: readonly string[];
   property_ids?: readonly string[];
+  /** Filter to a specific scope: rental, business, or personal. */
+  transaction_scope?: TransactionScope;
+  /** Filter to a specific personal spending category. */
+  spending_category_id?: string;
   /** The server orders newest first unless told otherwise. */
   sort_by?: TransactionSortField;
   sort_dir?: SortDirection;

@@ -10,6 +10,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
+from app.core.spending_category_enums import TRANSACTION_SCOPES_SQL
 from app.core.utility_usage_constants import USAGE_UNITS
 from app.db.base import Base
 
@@ -61,6 +62,21 @@ class Transaction(Base):
     attribution_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # AI-extracted sender name — used by the attribution matcher.
     payer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Whether this transaction is for the rental, the business, or personal
+    # spending.  Personal transactions are excluded from every tax figure and
+    # from analytics; rental and business remain on their respective schedules.
+    # Existing rows default to 'rental' — no data is rewritten.
+    transaction_scope: Mapped[str] = mapped_column(
+        String(10), nullable=False, server_default="rental",
+    )
+    # The personal spending category chosen by the user (e.g. "Groceries",
+    # "Dining").  NULL for rental / business transactions.  SET NULL if the
+    # category is deleted.
+    spending_category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("spending_categories.id", ondelete="SET NULL", name="fk_txn_spending_category"),
+        nullable=True,
+    )
     # AI-extracted stable sender handle (Zelle email/phone, Venmo @user, Cash
     # App $tag) when the payment notification exposed one — NULL otherwise
     # (most Zelle bank alerts show only a name). Informational on the txn; read
@@ -305,6 +321,16 @@ class Transaction(Base):
             "('auto_exact', 'auto_fuzzy_confirmed', 'auto_alias', 'manual')",
             name="chk_txn_attribution_source",
         ),
+        CheckConstraint(
+            f"transaction_scope IN {TRANSACTION_SCOPES_SQL}",
+            name="chk_txn_scope",
+        ),
+        # Personal spending category: only meaningful on personal-scope rows.
+        # NULL on rental / business rows.
+        Index(
+            "ix_txn_spending_category_id_partial", "spending_category_id",
+            postgresql_where=text("spending_category_id IS NOT NULL"),
+        ),
     )
 
     organization = relationship("Organization")
@@ -316,6 +342,7 @@ class Transaction(Base):
     # backref on Vendor — see vendor_id column docstring.
     vendor_rolodex_entry = relationship("Vendor", lazy="noload")
     linked_documents = relationship("TransactionDocument", back_populates="transaction", lazy="noload")
+    spending_category = relationship("SpendingCategory", lazy="noload")
 
     @hybrid_property
     def source_document_id(self) -> object:

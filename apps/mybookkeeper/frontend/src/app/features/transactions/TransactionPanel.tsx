@@ -51,6 +51,8 @@ function buildDefaults(t: Transaction): TransactionFormValues {
     tax_year: t.tax_year,
     account_id: t.account_id ?? "",
     transfer_to_account_id: t.transfer_to_account_id ?? "",
+    transaction_scope: t.transaction_scope,
+    spending_category_id: t.spending_category_id ?? "",
   };
 }
 

@@ -42,6 +42,8 @@ UPDATABLE_FIELDS = frozenset({
     "vendor_id",
     "account_id",
     "transfer_to_account_id",
+    "spending_category_id",
+    "transaction_scope",
     "applicant_id",
     "attribution_source",
     "payer_name",

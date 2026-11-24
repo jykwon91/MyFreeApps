@@ -36,6 +36,8 @@ export function transactionListQuery(params: TransactionListParams): string {
     sort_dir: params.sort_dir,
     sort: params.sort,
     limit: optionalString(params.limit),
+    transaction_scope: params.transaction_scope,
+    spending_category_id: params.spending_category_id,
   };
   return queryString(query);
 }

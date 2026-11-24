@@ -21,8 +21,10 @@ import TransactionDuplicateActions from "@/app/features/transactions/Transaction
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
+import PersonalCategorySelect from "./PersonalCategorySelect";
 import SourcePreviewDialog from "./SourcePreviewDialog";
 import TransactionAccountFields from "./TransactionAccountFields";
+import TransactionScopeSelect from "./TransactionScopeSelect";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -61,8 +63,10 @@ export default function TransactionForm({
   }, []);
 
   const transactionType = watch("transaction_type");
+  const transactionScope = watch("transaction_scope");
   const categories = categoriesForType(transactionType);
   const isTransfer = transactionType === "transfer";
+  const isPersonal = transactionScope === "personal";
 
   // PR 4.2: vendor rolodex for the "Assign vendor" dropdown, every vendor a page at a time.
   const { pages: vendorPages, mode: vendorsMode, options: vendorOptions } = useVendorSelectOptions(transaction.vendor_id ?? null);
@@ -255,6 +259,9 @@ export default function TransactionForm({
       </FormField>
 
       <TransactionAccountFields register={register} watch={watch} selectClass={selectClass} dirtyFields={dirtyFields} />
+
+      <TransactionScopeSelect register={register} value={watch("transaction_scope")} dirty={!!dirtyFields.transaction_scope} />
+      {isPersonal ? <PersonalCategorySelect register={register} value={watch("spending_category_id")} dirty={!!dirtyFields.spending_category_id} /> : null}
 
       <FormField label="Category" dirty={!!dirtyFields.category}>
         {(field) => (

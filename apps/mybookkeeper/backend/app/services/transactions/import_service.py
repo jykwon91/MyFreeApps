@@ -23,6 +23,8 @@ async def import_bank_csv_file(
     filename: str,
     property_id: uuid.UUID | None,
     account_id: uuid.UUID | None = None,
+    transaction_scope: str = "rental",
+    spending_category_id: uuid.UUID | None = None,
 ) -> ImportResult:
     """Parse a bank CSV and import non-duplicate transactions.
 
@@ -44,7 +46,11 @@ async def import_bank_csv_file(
     if fmt == "unknown":
         raise ValueError("Could not detect bank CSV format")
 
-    parsed = parse_bank_csv(content, ctx.organization_id, ctx.user_id, property_id)
+    parsed = parse_bank_csv(
+        content, ctx.organization_id, ctx.user_id, property_id,
+        transaction_scope=transaction_scope,
+        spending_category_id=spending_category_id,
+    )
     if not parsed:
         raise ValueError("No transactions found in CSV")
 

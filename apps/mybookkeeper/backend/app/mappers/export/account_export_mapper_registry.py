@@ -14,6 +14,9 @@ from app.mappers.export.property_export_mappers import PROPERTY_EXPORT_MAPPERS
 from app.mappers.export.rent_export_mappers import RENT_EXPORT_MAPPERS
 from app.mappers.export.table_export_mapper import TableExportMapper
 from app.mappers.export.tax_export_mappers import TAX_EXPORT_MAPPERS
+from app.mappers.export.spending_category_export_mappers import (
+    SPENDING_CATEGORY_EXPORT_MAPPERS,
+)
 from app.mappers.export.transaction_export_mappers import TRANSACTION_EXPORT_MAPPERS
 from app.mappers.export.welcome_manual_export_mappers import (
     WELCOME_MANUAL_EXPORT_MAPPERS,
@@ -31,6 +34,7 @@ EXPORT_MAPPERS: Final[dict[str, TableExportMapper]] = {
         *RENT_EXPORT_MAPPERS,
         *TRANSACTION_EXPORT_MAPPERS,
         *FINANCIAL_ACCOUNT_EXPORT_MAPPERS,
+        *SPENDING_CATEGORY_EXPORT_MAPPERS,
         *TAX_EXPORT_MAPPERS,
         *INSURANCE_EXPORT_MAPPERS,
         *WELCOME_MANUAL_EXPORT_MAPPERS,

@@ -25,3 +25,5 @@ class TransactionFilterArgs(TypedDict, total=False):
     transaction_types: list[str]
     categories: list[str]
     property_ids: list[uuid.UUID | UnassignedPropertyId]
+    transaction_scope: str | None
+    spending_category_id: uuid.UUID | None

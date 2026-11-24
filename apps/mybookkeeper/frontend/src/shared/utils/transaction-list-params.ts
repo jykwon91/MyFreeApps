@@ -41,6 +41,7 @@ export function toFilterBarParams(filters: Filters): TransactionListParams {
   if (filters.vendor) params.vendor = filters.vendor;
   if (filters.start_date) params.start_date = filters.start_date;
   if (filters.end_date) params.end_date = filters.end_date;
+  if (filters.transaction_scope) params.transaction_scope = filters.transaction_scope as "rental" | "business" | "personal";
   return params;
 }
 

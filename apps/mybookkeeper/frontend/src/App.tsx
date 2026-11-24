@@ -41,6 +41,7 @@ import InsurancePolicies from "@/app/pages/InsurancePolicies";
 import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
 import Mortgages from "@/app/pages/Mortgages";
 import FinancialAccounts from "@/app/pages/FinancialAccounts";
+import SpendingCategories from "@/app/pages/SpendingCategories";
 import UtilityPlans from "@/app/pages/UtilityPlans";
 import TaxReport from "@/app/pages/TaxReport";
 import Integrations from "@/app/pages/Integrations";
@@ -147,6 +148,7 @@ export default function App() {
               <Route path="insurance-policies/:policyId" element={<InsurancePolicyDetail />} />
               <Route path="mortgages" element={<Mortgages />} />
               <Route path="financial-accounts" element={<FinancialAccounts />} />
+              <Route path="spending-categories" element={<SpendingCategories />} />
               <Route path="utility-plans" element={<UtilityPlans />} />
               <Route path="reply-templates" element={<ReplyTemplates />} />
               <Route path="reconciliation" element={<Reconciliation />} />
