@@ -1883,7 +1883,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Frost/Ice/Mage Armor, Inner Fire), Warlock Soulstone from 18 (your stone on a
   groupmate expiring → timed from your cast when the client gives no timer;
   else a ready stone in bags; else none in bags, only once Create Soulstone is
-  trained), Well Fed (quiet while
+  trained), Warlock weapon stone (Firestone/Spellstone are main-hand weapon
+  enchants in Forever, not off-hand items: no temporary main-hand enchant per
+  `GetWeaponEnchantInfo` → "Use your <stone> on your weapon" when a stone is in
+  bags — found by item NAME ending Firestone/Spellstone via the bag item link,
+  the item ids aren't in the export — else "No weapon stone: make ..."; any
+  enchant present, oil included, is fine, and one within `minutes` of ending
+  warns; needs Create Firestone/Spellstone known; rechecked on BAG_UPDATE and
+  the player's UNIT_INVENTORY_CHANGED), Well Fed (quiet while
   eating), and Fortitude / Arcane Intellect (by class: not Warriors or Rogues, so shapeshifted Druids keep it) / Mark of the Wild
   / a Paladin Blessing (any of Might/Wisdom/Kings/Light + Greater; missing only,
   never "running out" — 5-minute buff; Forever's client has no Salvation)

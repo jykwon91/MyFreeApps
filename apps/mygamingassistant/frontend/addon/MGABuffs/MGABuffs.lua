@@ -6,6 +6,8 @@
 --   Food:      Well Fed (and the few foods whose buff has another name). Quiet while you eat.
 --   Healthstone: none in your bags. Warlocks who know Create Healthstone make one; everyone else
 --              asks the Warlock in the group.
+--   Weapon stone: Warlocks who know Create Firestone or Create Spellstone: no temporary
+--              main-hand enchant (use the stone in your bags, or make one), or one running out.
 --   Group:     Fortitude, Arcane Intellect (not Warriors or Rogues), Mark of the Wild and a Paladin
 --              Blessing — only when a Priest, Mage, Druid or Paladin is in your group (or you are
 --              one), naming who to ask.
@@ -21,7 +23,7 @@
 --
 --   /mgabuffs                 open the options
 --   /mgabuffs status          what's on, and what's missing right now
---   /mgabuffs armor           turn a check off or on (also: soulstone, healthstone, food, group, party)
+--   /mgabuffs armor           turn a check off or on (also: soulstone, healthstone, stone, food, group, party)
 --   /mgabuffs minutes 5       warn this many minutes before a buff runs out (1-30, default 3)
 --   /mgabuffs sound           turn the sound and mid-screen flash off or on
 --   /mgabuffs unlock | lock   drag the list somewhere else, then lock it
@@ -36,8 +38,8 @@ local ICON_SIZE = 22
 local SOULSTONE_LEVEL = 18
 local SOULSTONE_SECONDS = 30 * 60
 local FOOD_ICON = "Interface\\Icons\\Spell_Misc_Food"
-local CHECKS = { "armor", "soulstone", "healthstone", "food", "group", "party" }
-local DEFAULTS = { armor = true, soulstone = true, healthstone = true, food = true, group = true, party = true, minutes = 3, sound = true, locked = true }
+local CHECKS = { "armor", "soulstone", "healthstone", "stone", "food", "group", "party" }
+local DEFAULTS = { armor = true, soulstone = true, healthstone = true, stone = true, food = true, group = true, party = true, minutes = 3, sound = true, locked = true }
 local PARTY_NAMES_SHOWN = 3
 local DEFAULT_POINT = { "TOP", "TOP", 0, -140 }
 
@@ -62,6 +64,12 @@ local HEALTHSTONE_ITEMS = { 5512, 19004, 19005, 5511, 19006, 19007, 5509, 19008,
 local HEALTHSTONE_ICON = 135230
 local HEALTHSTONE_LEVEL = 10
 local CREATE_HEALTHSTONE = { 6201, 6202, 5699, 11729, 11730, 11731, 20018, 23517, 23518, 23519, 23520, 23521, 23522, 23813, 23814, 23815, 23816, 23817, 23818, 23819, 23820, 23821, 28023 }
+-- Firestone and Spellstone enchant the main-hand weapon (Forever); they are not off-hand items. Their item ids
+-- aren't in the client export, so a stone in your bags is found by name ("Lesser Firestone", "Major Spellstone").
+local CREATE_FIRESTONE = { 6366, 17951, 17952, 17953 }
+local CREATE_SPELLSTONE = { 2362, 17727, 17728 }
+local FIRESTONE_ICON = 134085
+local SPELLSTONE_ICON = 134131
 -- `spells`: every id the client has under the buff's names, so knowing any rank counts as being able to cast it.
 -- `casterOnly`: a talent nobody else can see you have, so only the caster is reminded.
 -- `noExpiring`: a 5-minute buff would always read as "running out", so only a missing one is shown.
@@ -215,6 +223,25 @@ local function knowsAny(ids)
   return false
 end
 
+-- Each Firestone or Spellstone in your bags as { name, icon }, by the name inside the item link.
+local function bagStones()
+  local slotsIn = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
+  local linkAt = (C_Container and C_Container.GetContainerItemLink) or GetContainerItemLink
+  local found = {}
+  if not slotsIn or not linkAt then return found end
+  for bag = 0, NUM_BAG_SLOTS or 4 do
+    for slot = 1, slotsIn(bag) or 0 do
+      local name = (linkAt(bag, slot) or ""):match("%[(.-)%]")
+      if name and name:match("Firestone$") then
+        table.insert(found, { name = name, icon = FIRESTONE_ICON })
+      elseif name and name:match("Spellstone$") then
+        table.insert(found, { name = name, icon = SPELLSTONE_ICON })
+      end
+    end
+  end
+  return found
+end
+
 local function hasAny(inBags, itemIds)
   for _, id in ipairs(itemIds) do
     if inBags[id] then return true end
@@ -290,6 +317,35 @@ local function healthstoneWarning(units, inBags)
       return { key = "healthstone-ask", icon = HEALTHSTONE_ICON, text = "No Healthstone: ask " .. nameOf(unit) .. " (Warlock)" }
     end
   end
+end
+
+-- Seconds left on the main-hand temporary enchant; false when there is none, nil when the client can't say.
+-- An oil takes the same slot, so any enchant counts: we can't tell which one it is.
+local function weaponEnchantLeft()
+  if not GetWeaponEnchantInfo then return nil end
+  local has, ms = GetWeaponEnchantInfo()
+  if not has then return false end
+  return (ms or 0) / 1000
+end
+
+local function stoneWarning()
+  if classOf("player") ~= "WARLOCK" then return nil end
+  local fire, shadow = knowsAny(CREATE_FIRESTONE), knowsAny(CREATE_SPELLSTONE)
+  if not fire and not shadow then return nil end
+  local left = weaponEnchantLeft()
+  if left == nil then return nil end
+  local icon = fire and FIRESTONE_ICON or SPELLSTONE_ICON
+  if left then
+    if left > settings().minutes * 60 then return nil end
+    local m = math.ceil(left / 60)
+    return { key = "stone-expiring", icon = icon, text = "Weapon enchant: " .. (m <= 1 and "under a minute left" or (m .. " min left")) }
+  end
+  local stones = bagStones()
+  if stones[1] then
+    return { key = "stone-use", icon = stones[1].icon, text = "Use your " .. stones[1].name .. " on your weapon", urgent = true }
+  end
+  local which = (fire and shadow) and "a Firestone or Spellstone" or (fire and "a Firestone" or "a Spellstone")
+  return { key = "stone-none", icon = icon, text = "No weapon stone: make " .. which, urgent = true }
 end
 
 local function foodWarning(myBuffs, now)
@@ -385,6 +441,7 @@ local function currentWarnings()
   if myBuffs and s.armor then add(armorWarning(myBuffs, now)) end
   if s.soulstone then add(soulstoneWarning(units, now)) end
   if s.healthstone then add(healthstoneWarning(units, bagItems())) end
+  if s.stone then add(stoneWarning()) end
   if myBuffs and s.food then add(foodWarning(myBuffs, now)) end
   if myBuffs and s.group then
     for _, w in ipairs(groupWarnings(units, myBuffs, now)) do add(w) end
@@ -576,6 +633,7 @@ local OPTION_CHECKS = {
   { key = "armor", label = "Your armor", hint = "Demon Skin or Demon Armor, Frost, Ice or Mage Armor, Inner Fire" },
   { key = "soulstone", label = "Soulstone", hint = "Warlocks from level 18" },
   { key = "healthstone", label = "Healthstone", hint = "None in your bags: make one, or ask the Warlock in your group" },
+  { key = "stone", label = "Weapon stone", hint = "Warlocks: no Firestone or Spellstone enchant on your weapon, or it is running out" },
   { key = "food", label = "Well Fed", hint = "Quiet while you eat" },
   { key = "group", label = "Group buffs on you", hint = "Fortitude, Arcane Intellect, Mark of the Wild, a Blessing, when that class is in your group" },
   { key = "party", label = "Buff your party", hint = "Who in your group is missing a buff you can cast" },
@@ -620,7 +678,7 @@ local function buildOptions(section, top)
   end
   optionsSection = section
   section.refresh()
-  return 460
+  return 490
 end
 
 -- The MGA button's menu: the actions, not the settings.
@@ -684,7 +742,7 @@ SlashCmdList.MGABUFFS = function(message)
     resetPosition()
     say("list back in its starting place.")
   else
-    say("/mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | food | group | party | minutes N | sound | unlock | lock | reset")
+    say("/mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | stone | food | group | party | minutes N | sound | unlock | lock | reset")
   end
 end
 
@@ -695,8 +753,12 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+events:RegisterEvent("UNIT_INVENTORY_CHANGED")
+events:RegisterEvent("BAG_UPDATE")
+local loggedIn = false
 events:SetScript("OnEvent", function(_, event, unit, _, spellId)
   if event == "PLAYER_LOGIN" then
+    loggedIn = true
     place()
     check()
     if C_Timer and C_Timer.NewTicker then
@@ -708,6 +770,8 @@ events:SetScript("OnEvent", function(_, event, unit, _, spellId)
         if waited >= TICK_SECONDS then waited = 0; check() end
       end)
     end
+  elseif (event == "BAG_UPDATE" or (event == "UNIT_INVENTORY_CHANGED" and unit == "player")) and loggedIn then
+    check()
   elseif event == "PLAYER_REGEN_DISABLED" then
     render({})
   elseif event == "UNIT_SPELLCAST_SUCCEEDED" and unit == "player" and SOULSTONE_BUFFS[spellId] then

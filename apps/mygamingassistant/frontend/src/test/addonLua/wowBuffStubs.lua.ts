@@ -9,7 +9,8 @@ import { WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
  * `bags[4] = nil`), `cooldowns[itemId] = { start, duration }`, `inRange[unit] = false`
  * for a groupmate too far away (UnitInRange), `now` (GetTime) and `combat`,
  * then `fire(event, ...)` and `tick()` (the addon's ticker). A buff is
- * `{ name, icon, expires, source, spellId }`. `knownSpells[id] = false`
+ * `{ name, icon, expires, source, spellId }`. `weaponEnchant = { has, ms }` is GetWeaponEnchantInfo
+ * (a lasting enchant by default, so other checks stay quiet); `itemNames[id]` names a bag item for its link. `knownSpells[id] = false`
  * unlearns a spell. `units.<unit>.secret = true` makes the client refuse that unit's aura
  * read the way Forever does when it hides auras; a buff whose name is `SECRET` comes back as a
  * secret value (issecretvalue). `C_UnitAuras = nil` leaves only
@@ -28,6 +29,9 @@ bags = { [4] = { 5509 } }
 inRange = {}
 function UnitInRange(u) return inRange[u] ~= false, true end
 cooldowns = {}
+weaponEnchant = { has = true, ms = 3600000 }
+function GetWeaponEnchantInfo() return weaponEnchant.has, weaponEnchant.ms, 0, 1 end
+itemNames = {}
 NUM_BAG_SLOTS = 4
 
 function unit(class, level, name, extra)
@@ -84,6 +88,10 @@ end
 C_Container = {
   GetContainerNumSlots = function(bag) return bags[bag] and #bags[bag] or 0 end,
   GetContainerItemID = function(bag, slot) return bags[bag] and bags[bag][slot] end,
+  GetContainerItemLink = function(bag, slot)
+    local id = bags[bag] and bags[bag][slot]
+    return id and ("|cffffffff|Hitem:" .. id .. "|h[" .. (itemNames[id] or "Item") .. "]|h|r")
+  end,
   GetItemCooldown = function(id)
     local c = cooldowns[id]
     if not c then return 0, 0, 1 end
