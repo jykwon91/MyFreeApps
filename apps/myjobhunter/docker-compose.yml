@@ -93,6 +93,7 @@ services:
     restart: unless-stopped
     command: ["python", "-m", "app.workers.resume_parser_worker"]
     mem_limit: 768m
+    stop_grace_period: 150s
     cpus: 1.0
     pids_limit: 128
     # format: raw (compose >= 2.30) — values are literal, never interpolated.

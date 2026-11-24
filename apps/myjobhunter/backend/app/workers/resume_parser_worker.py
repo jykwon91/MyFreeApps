@@ -24,6 +24,9 @@ the shared ``ExtractionError.kind``): requeue with exponential backoff up to
 Claude failure is stored as our own copy, never the provider's error text.
 Idempotency: the atomic UPDATE in step 1 ensures only one worker instance
 processes a given job, even when multiple replicas run concurrently.
+
+SIGTERM / SIGINT stop the loop: an idle wait ends at once, and a step in
+progress finishes first (app.yaml's stop_grace_period covers one parse). Errors reach Sentry, as in the API.
 """
 from __future__ import annotations
 
@@ -35,10 +38,12 @@ from datetime import datetime
 from platform_shared.core import async_storage
 from platform_shared.core.audit_actor import audit_actor
 from platform_shared.extraction import is_transient_failure
-from platform_shared.workers.entrypoint import run_worker
+from platform_shared.workers.entrypoint import run_until_signalled, run_worker
+from platform_shared.workers.wait_or_stop import wait_or_stop
 
 from app.core.ai_failure_messages import AI_RETRY_SCHEDULED_MESSAGE
 from app.core.job_failure_messages import RESUME_PARSE_FAILED_MESSAGE
+from app.core.observability import init_sentry
 from app.core.resume_parse_constants import (
     RESUME_PARSE_MAX_RETRIES,
     RESUME_PARSE_RETRY_BASE_SECONDS,
@@ -46,7 +51,7 @@ from app.core.resume_parse_constants import (
 from app.core.retry_backoff import next_retry_at
 from app.core.storage import get_storage
 from app.core.transient_errors import TRANSIENT_WORKER_ERRORS
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
 from app.repositories.profile import skill_repository
@@ -270,31 +275,50 @@ def _build_parsed_fields(claude_response: dict, *, provenance: dict | None = Non
     }
 
 
-async def main() -> None:
-    # Parses refresh the profile embedding, so load the model at boot: a
-    # missing or corrupt model crashes the worker here (same as the
-    # discovery scheduler) instead of on the first resume upload.
-    discovery_embedding_service.load_model_eager()
-
+async def poll_until_stopped(stop: asyncio.Event) -> None:
+    """Parse and prepare, then poll every ``POLL_INTERVAL_SECONDS`` while idle,
+    until ``stop`` is set. A step in progress finishes first; no new step
+    starts after the stop."""
     logger.info(
         "Resume worker started (parse + refinement prepare) — polling every %ds",
         POLL_INTERVAL_SECONDS,
     )
-    while True:
+    while not stop.is_set():
         try:
             found_parse = await process_one()
         except Exception:
             logger.exception("Unexpected error in resume-parse loop")
             found_parse = False
 
+        found_prepare = False
         try:
-            found_prepare = await process_one_session()
+            # A refinement prepare makes several Claude calls; don't start one
+            # once a stop has been asked for.
+            if not stop.is_set():
+                found_prepare = await process_one_session()
         except Exception:
             logger.exception("Unexpected error in refinement-prepare loop")
-            found_prepare = False
 
         if not (found_parse or found_prepare):
-            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            await wait_or_stop(stop, POLL_INTERVAL_SECONDS)
+
+
+async def run_resume_worker(stop: asyncio.Event) -> None:
+    """Boot (fail loud), then poll until ``stop`` is set."""
+    init_sentry()
+    # Parses refresh the profile embedding, so load the model at boot: a
+    # missing or corrupt model crashes the worker here (same as the
+    # discovery scheduler) instead of on the first resume upload.
+    discovery_embedding_service.load_model_eager()
+    try:
+        await poll_until_stopped(stop)
+    finally:
+        await engine.dispose()
+        logger.info("Resume worker stopped")
+
+
+async def main() -> None:
+    await run_until_signalled(run_resume_worker)
 
 
 def run() -> None:
