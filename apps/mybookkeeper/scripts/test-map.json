@@ -1142,6 +1142,13 @@
         "api-client/src/utils/rentReminderPlanChannels.ts",
         "api-client/src/utils/isTextHandedOff.ts",
         "api-client/src/constants/rentReminderLabels.ts",
+        "api-client/src/utils/rentReminderForm.ts",
+        "api-client/src/utils/rentReminderFormat.ts",
+        "api-client/src/utils/rentReminderZone.ts",
+        "api-client/src/utils/reminderMayStillArrive.ts",
+        "api-client/src/utils/mayHaveBeenSentRefusalMessage.ts",
+        "api-client/src/constants/rentReminderDefaults.ts",
+        "api-client/src/constants/rentReminderSend.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [

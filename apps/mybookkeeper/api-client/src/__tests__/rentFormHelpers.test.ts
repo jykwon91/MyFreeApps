@@ -4,6 +4,7 @@ import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import {
   amountOverrideProblem,
   canSaveReminder,
+  hasReminderChannel,
   isAmountOverrideValid,
   isDaysBeforeValid,
   isSendTimeValid,
@@ -116,6 +117,13 @@ describe("rent reminder form helpers", () => {
     expect(amountOverrideProblem("1e3", ".")).toBe("Use dollars and cents, like 84.20.");
     expect(amountOverrideProblem("0", ".")).toBe("Enter an amount above $0.");
     expect(amountOverrideProblem("", ".")).toBeUndefined();
+  });
+
+  it("has a channel when email, text or both are on, and not when both are off", () => {
+    expect(hasReminderChannel({ emailEnabled: true, smsEnabled: false })).toBe(true);
+    expect(hasReminderChannel({ emailEnabled: false, smsEnabled: true })).toBe(true);
+    expect(hasReminderChannel({ emailEnabled: true, smsEnabled: true })).toBe(true);
+    expect(hasReminderChannel({ emailEnabled: false, smsEnabled: false })).toBe(false);
   });
 
   it("needs a channel, a good lead time, a good hour and a good amount to save", () => {

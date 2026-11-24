@@ -222,6 +222,21 @@ describe("setting reminders up", () => {
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
+  it("saves a plan that sends only texts", async () => {
+    const server = await start(NO_PLAN);
+    await openSheet(S.titleNew, S.setUp);
+
+    await fireEvent.press(screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) }));
+    await fireEvent.press(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }));
+
+    expect(screen.queryByText(S.needChannel)).toBeNull();
+    await save(S.saveNew);
+    expect(await screen.findByText(S.savedNew)).toBeTruthy();
+    expect(server.writes).toEqual([
+      expect.objectContaining({ method: "POST", body: expect.objectContaining({ email_enabled: false, sms_enabled: true }) }),
+    ]);
+  });
+
   it("refuses a fixed amount that isn't above zero", async () => {
     await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);

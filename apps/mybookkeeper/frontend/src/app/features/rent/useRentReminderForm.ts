@@ -6,6 +6,7 @@ import {
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import {
   canSaveReminder,
+  hasReminderChannel,
   isDaysBeforeValid,
   isSendTimeValid,
   reminderFormValues,
@@ -49,7 +50,7 @@ export function useRentReminderForm({
 
   const daysValid = isDaysBeforeValid(values.frequency, values.sendDaysBefore);
   const timeValid = isSendTimeValid(values.sendTime);
-  const hasChannel = values.emailEnabled || values.smsEnabled;
+  const hasChannel = hasReminderChannel(values);
   const canSubmit = canSaveReminder(values, NUMBER_INPUT_DECIMAL_SEPARATOR);
 
   async function handleSubmit(event: React.FormEvent) {

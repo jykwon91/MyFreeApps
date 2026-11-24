@@ -41,6 +41,8 @@ const SMS_OFF = {
   webhook_url: "https://example.test/api/rent-reminders/sms/webhook",
 };
 
+const NEED_CHANNEL = "Turn on email or text so the reminder has somewhere to go.";
+
 const NO_PLAN: RentReminderOverview = {
   plan: null,
   sms: SMS_OFF,
@@ -143,6 +145,37 @@ describe("RentReminderCard", () => {
     expect(screen.getByTestId("rent-reminder-sms-status")).toHaveTextContent(
       "Not set up on this server",
     );
+  });
+
+  it("asks for a channel and won't save a plan with neither email nor text", () => {
+    mockOverview.mockReturnValue({ data: NO_PLAN, isLoading: false, isError: false });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-setup"));
+    expect(screen.queryByText(NEED_CHANNEL)).not.toBeInTheDocument();
+    expect(screen.getByTestId("rent-reminder-save")).toBeEnabled();
+
+    // Texts aren't set up here, so turning email off leaves no channel.
+    fireEvent.click(screen.getByTestId("rent-reminder-email"));
+
+    expect(screen.getByText(NEED_CHANNEL)).toHaveAttribute("role", "alert");
+    expect(screen.getByTestId("rent-reminder-save")).toBeDisabled();
+    // Enter in a field submits the form without the button.
+    fireEvent.submit(screen.getByTestId("rent-reminder-form"));
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("saves a plan that sends only texts once texts are set up", () => {
+    mockOverview.mockReturnValue({ data: { ...NO_PLAN, sms: SONU_PLAN.sms }, isLoading: false, isError: false });
+    mockCreate.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-setup"));
+
+    fireEvent.click(screen.getByTestId("rent-reminder-sms"));
+    fireEvent.click(screen.getByTestId("rent-reminder-email"));
+
+    expect(screen.queryByText(NEED_CHANNEL)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("rent-reminder-save"));
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ email_enabled: false, sms_enabled: true }));
   });
 
   it("labels a new plan's send time in the device's zone and saves that zone", () => {
