@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import logging
+from collections.abc import Iterator
 
 import pytest
 
@@ -19,10 +20,11 @@ from platform_shared.core.logging_safety import (
     escape_log_controls,
     install_crlf_safe_logging,
 )
+from tests.captured_logger import CapturedLogger
 
 
 @pytest.fixture()
-def captured():
+def captured() -> Iterator[CapturedLogger]:
     """A logger with one stream handler, isolated from the root config."""
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
@@ -32,7 +34,7 @@ def captured():
     logger.propagate = False
     logger.setLevel(logging.DEBUG)
     try:
-        yield logger, stream, handler
+        yield CapturedLogger(logger, stream, handler)
     finally:
         logger.handlers = []
 
@@ -64,7 +66,7 @@ class TestEscapeLogControls:
 
 
 class TestFilterAtHandlerBoundary:
-    def test_forged_record_is_flattened_to_one_line(self, captured) -> None:
+    def test_forged_record_is_flattened_to_one_line(self, captured: CapturedLogger) -> None:
         logger, stream, _ = captured
         install_crlf_safe_logging(logger)
         # The classic attack: a field value that closes the real record and
@@ -74,7 +76,7 @@ class TestFilterAtHandlerBoundary:
         assert out.count("\n") == 1, out  # only the handler's own terminator
         assert "ACME\\nINFO app ADMIN_DB wiped_everything" in out
 
-    def test_escaping_happens_after_interpolation(self, captured) -> None:
+    def test_escaping_happens_after_interpolation(self, captured: CapturedLogger) -> None:
         # A literal ``%s`` in the format string is not itself the payload; the
         # newline arrives via the argument, so escaping must run post-format.
         logger, stream, _ = captured
@@ -82,13 +84,13 @@ class TestFilterAtHandlerBoundary:
         logger.warning("a=%s b=%s", "x\ny", "z")
         assert "a=x\\ny b=z" in stream.getvalue()
 
-    def test_clean_message_is_unchanged(self, captured) -> None:
+    def test_clean_message_is_unchanged(self, captured: CapturedLogger) -> None:
         logger, stream, _ = captured
         install_crlf_safe_logging(logger)
         logger.info("vendor=%s count=%d", "ACME", 3)
         assert "INFO vendor=ACME count=3" in stream.getvalue()
 
-    def test_exception_traceback_keeps_its_newlines(self, captured) -> None:
+    def test_exception_traceback_keeps_its_newlines(self, captured: CapturedLogger) -> None:
         # Tracebacks are interpreter-generated and multi-line by nature; only
         # the interpolated message is sanitised.
         logger, stream, _ = captured
@@ -102,7 +104,7 @@ class TestFilterAtHandlerBoundary:
         assert "Traceback (most recent call last):" in out
         assert out.count("\n") > 1
 
-    def test_install_is_idempotent(self, captured) -> None:
+    def test_install_is_idempotent(self, captured: CapturedLogger) -> None:
         logger, stream, handler = captured
         install_crlf_safe_logging(logger)
         install_crlf_safe_logging(logger)
@@ -111,7 +113,7 @@ class TestFilterAtHandlerBoundary:
         logger.info("v=%s", "a\nb")
         assert "v=a\\nb" in stream.getvalue()
 
-    def test_two_handlers_do_not_double_escape(self, captured) -> None:
+    def test_two_handlers_do_not_double_escape(self, captured: CapturedLogger) -> None:
         logger, stream, _ = captured
         second = io.StringIO()
         extra = logging.StreamHandler(second)
@@ -122,7 +124,47 @@ class TestFilterAtHandlerBoundary:
         assert "v=a\\nb" in stream.getvalue()
         assert second.getvalue().strip() == "v=a\\nb"
 
-    def test_malformed_format_string_still_emits(self, captured) -> None:
+    def test_the_handler_gets_an_escaped_copy(self) -> None:
+        record = logging.LogRecord(
+            name="t", level=logging.INFO, pathname=__file__, lineno=1,
+            msg="v=%s", args=("a\nb",), exc_info=None,
+        )
+        escaped = CRLFSafeLogFilter().filter(record)
+        assert isinstance(escaped, logging.LogRecord)
+        assert escaped is not record
+        assert (escaped.msg, escaped.args) == ("v=a\\nb", ())
+
+    def test_a_clean_record_is_passed_on_as_it_is(self) -> None:
+        record = logging.LogRecord(
+            name="t", level=logging.INFO, pathname=__file__, lineno=1,
+            msg="v=%s", args=("a",), exc_info=None,
+        )
+        assert CRLFSafeLogFilter().filter(record) is True
+
+    def test_the_record_keeps_its_template_and_arguments(self, captured: CapturedLogger) -> None:
+        # Sentry's logging integration reads the record after every handler
+        # has run, and sends its template and arguments.
+        logger, stream, _ = captured
+        install_crlf_safe_logging(logger)
+        record = logger.makeRecord(
+            logger.name, logging.WARNING, __file__, 1, "v=%s", ("a\nb",), None,
+        )
+        logger.handle(record)
+        assert stream.getvalue() == "WARNING v=a\\nb\n"
+        assert (record.msg, record.args) == ("v=%s", ("a\nb",))
+
+    def test_the_copy_keeps_the_stack_and_extra(self, captured: CapturedLogger) -> None:
+        logger, stream, handler = captured
+        handler.setFormatter(
+            logging.Formatter("%(levelname)s %(message)s request=%(request_id)s")
+        )
+        install_crlf_safe_logging(logger)
+        logger.warning("v=%s", "a\nb", stack_info=True, extra={"request_id": "r1"})
+        first_line, rest = stream.getvalue().split("\n", 1)
+        assert first_line == "WARNING v=a\\nb request=r1"
+        assert rest.startswith("Stack (most recent call last):")
+
+    def test_malformed_format_string_still_emits(self, captured: CapturedLogger) -> None:
         # A broken format string is the logging framework's error to report --
         # sanitisation must never swallow the record.
         logger, _stream, handler = captured
