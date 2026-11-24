@@ -116,6 +116,9 @@ MBK_SKIP_TABLES: frozenset[str] = frozenset({
     "processed_emails",
     "usage_logs",
     "sync_logs",
+    # One row per account per day, derived from balances whose own changes
+    # are audited where they happen (financial_accounts, mortgages, properties).
+    "balance_snapshots",
 })
 
 # Large-binary columns where neither the value nor a masked stub is useful.

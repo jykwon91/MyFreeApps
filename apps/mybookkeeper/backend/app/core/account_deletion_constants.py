@@ -10,6 +10,7 @@ HOLDS_SHARED_RECORDS_MESSAGE = (
 # Rows that are about the user rather than part of a workspace's books. They can
 # go with the account without anyone else losing a record.
 TABLES_NOT_HOLDING_SHARED_RECORDS = frozenset({
+    "balance_snapshots",
     "calendar_email_review_queue",
     "email_filter_logs",
     "email_queue",

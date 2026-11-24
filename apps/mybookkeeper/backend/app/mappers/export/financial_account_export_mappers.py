@@ -1,10 +1,11 @@
-"""Account data export mappers: financial accounts (bank, card, loan, investment)
-and the bank connections that sync them."""
+"""Account data export mappers: financial accounts (bank, card, loan, investment),
+the bank connections that sync them, and the daily net worth snapshots."""
 from typing import Final
 
 from app.mappers.export.table_export_mapper import TableExportMapper
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.integrations.plaid_item import PlaidItem
+from app.models.net_worth.balance_snapshot import BalanceSnapshot
 
 FINANCIAL_ACCOUNTS_EXPORT: Final = TableExportMapper(
     FinancialAccount,
@@ -48,7 +49,24 @@ PLAID_ITEMS_EXPORT: Final = TableExportMapper(
     ),
 )
 
+BALANCE_SNAPSHOTS_EXPORT: Final = TableExportMapper(
+    BalanceSnapshot,
+    (
+        "id",
+        "organization_id",
+        "user_id",
+        "snapshot_date",
+        "financial_account_id",
+        "mortgage_id",
+        "property_id",
+        "balance_cents",
+        "created_at",
+        "updated_at",
+    ),
+)
+
 FINANCIAL_ACCOUNT_EXPORT_MAPPERS: Final[tuple[TableExportMapper, ...]] = (
     FINANCIAL_ACCOUNTS_EXPORT,
     PLAID_ITEMS_EXPORT,
+    BALANCE_SNAPSHOTS_EXPORT,
 )

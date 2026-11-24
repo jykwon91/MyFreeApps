@@ -1,3 +1,4 @@
+import datetime as _dt
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,7 +8,10 @@ from app.core.permissions import current_org_member, require_write_access
 from app.models.requests.property_create import PropertyCreate
 from app.models.requests.property_update import PropertyUpdate
 from app.schemas.properties.property import PropertyRead
-from app.services.properties import property_service
+from app.schemas.properties.property_value_response import PropertyValueResponse
+from app.schemas.properties.property_value_update_request import PropertyValueUpdateRequest
+from app.services.properties import property_service, property_value_service
+from app.services.properties.property_not_found_error import PropertyNotFoundError
 
 router = APIRouter(prefix="/properties", tags=["properties"])
 
@@ -48,6 +52,25 @@ async def update_property(
     if not result:
         raise HTTPException(status_code=404, detail="Property not found")
     return result
+
+
+@router.put("/{property_id}/estimated-value", response_model=PropertyValueResponse)
+async def set_property_estimated_value(
+    property_id: uuid.UUID,
+    payload: PropertyValueUpdateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> PropertyValueResponse:
+    """What the home is worth today, for net worth. Null clears it."""
+    try:
+        return await property_value_service.set_estimated_value(
+            property_id=property_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            value_cents=payload.estimated_value_cents,
+            today=_dt.date.today(),
+        )
+    except PropertyNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Property not found") from exc
 
 
 @router.delete("/{property_id}", status_code=204)

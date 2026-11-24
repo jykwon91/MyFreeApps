@@ -41,6 +41,7 @@ import InsurancePolicies from "@/app/pages/InsurancePolicies";
 import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
 import Mortgages from "@/app/pages/Mortgages";
 import FinancialAccounts from "@/app/pages/FinancialAccounts";
+import NetWorth from "@/app/pages/NetWorth";
 import PlaidOAuthReturn from "@/app/pages/PlaidOAuthReturn";
 import SpendingCategories from "@/app/pages/SpendingCategories";
 import UtilityPlans from "@/app/pages/UtilityPlans";
@@ -149,6 +150,7 @@ export default function App() {
               <Route path="insurance-policies/:policyId" element={<InsurancePolicyDetail />} />
               <Route path="mortgages" element={<Mortgages />} />
               <Route path="financial-accounts" element={<FinancialAccounts />} />
+              <Route path="net-worth" element={<NetWorth />} />
               <Route path="plaid-oauth" element={<PlaidOAuthReturn />} />
               <Route path="spending-categories" element={<SpendingCategories />} />
               <Route path="utility-plans" element={<UtilityPlans />} />

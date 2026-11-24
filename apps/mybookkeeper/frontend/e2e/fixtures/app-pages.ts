@@ -18,6 +18,7 @@ export const APP_PAGES = [
   "/listings",
   "/members",
   "/mortgages",
+  "/net-worth",
   "/payment-review",
   "/plaid-oauth",
   "/properties",

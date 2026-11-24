@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, Enum as SAEnum, ForeignKey,
+    BigInteger, Boolean, CheckConstraint, Date, DateTime, Enum as SAEnum, ForeignKey,
     Integer, Numeric, String, UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,6 +65,10 @@ class Property(Base):
     rented_since: Mapped[date | None] = mapped_column(Date, nullable=True)
     property_class: Mapped[str | None] = mapped_column(String(20), nullable=True)
     personal_use_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # What the person says the home is worth today, and when they said it. Net
+    # worth counts it; nothing ever guesses it from the purchase price.
+    estimated_value_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    estimated_value_as_of: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -84,6 +88,11 @@ class Property(Base):
             "(classification IN ('PRIMARY_RESIDENCE', 'SECOND_HOME') AND type IS NULL) OR "
             "(classification = 'UNCLASSIFIED')",
             name="chk_prop_classification_type",
+        ),
+        CheckConstraint(
+            "(estimated_value_cents IS NULL) = (estimated_value_as_of IS NULL)"
+            " AND (estimated_value_cents IS NULL OR estimated_value_cents >= 0)",
+            name="chk_prop_estimated_value",
         ),
     )
 

@@ -1,6 +1,6 @@
 """Every part of a scheduler tick contains its own failure.
 
-One org's Gmail (in its own task, see test_scheduler_worker_gmail_task), the channel-iCal poll, the utility-plan check, the bank sync, lease
+One org's Gmail (in its own task, see test_scheduler_worker_gmail_task), the channel-iCal poll, the utility-plan check, the bank sync, the net worth snapshot, lease
 hand-over and the rent reminders each log what went wrong and never skip the
 parts after them — a single bad mailbox or DB blip must not cost every other
 org its sync or a tenant their reminder.
@@ -33,6 +33,7 @@ def _cycle(
     leases: AsyncMock | None = None,
     plans: AsyncMock | None = None,
     plaid: AsyncMock | None = None,
+    net_worth: AsyncMock | None = None,
 ) -> Iterator[dict[str, AsyncMock]]:
     mocks = {
         "targets": targets or AsyncMock(return_value=[]),
@@ -41,6 +42,7 @@ def _cycle(
         "leases": leases or AsyncMock(return_value=0),
         "plans": plans or AsyncMock(return_value=[]),
         "plaid": plaid or AsyncMock(return_value=0),
+        "net_worth": net_worth or AsyncMock(return_value=0),
     }
     with (
         patch(f"{_WORKER}.get_gmail_sync_targets", mocks["targets"]),
@@ -49,6 +51,7 @@ def _cycle(
         patch(f"{_WORKER}.lease_handover_service.end_replaced_leases", mocks["leases"]),
         patch(f"{_WORKER}.utility_plan_service.sweep_plans_needing_renewal", mocks["plans"]),
         patch(f"{_WORKER}.plaid_sync_service.sync_all_active", mocks["plaid"]),
+        patch(f"{_WORKER}.net_worth_service.record_all_today", mocks["net_worth"]),
     ):
         yield mocks
 
@@ -57,6 +60,7 @@ def _assert_later_steps_ran(mocks: dict[str, AsyncMock]) -> None:
     mocks["channels"].assert_awaited_once()
     mocks["plans"].assert_awaited_once()
     mocks["plaid"].assert_awaited_once()
+    mocks["net_worth"].assert_awaited_once()
 
 
 async def test_one_orgs_gmail_failure_does_not_skip_other_orgs_or_steps(
@@ -112,14 +116,25 @@ async def test_bank_sync_failure_is_logged_not_raised(caplog: pytest.LogCaptureF
     with _cycle(plaid=AsyncMock(side_effect=RuntimeError("db blip"))) as mocks:
         await scheduler_worker.run_sync_cycle()
     mocks["plaid"].assert_awaited_once()
+    mocks["net_worth"].assert_awaited_once()
     assert "Daily Plaid sync failed" in caplog.text
+
+
+async def test_net_worth_snapshot_failure_is_logged_not_raised(caplog: pytest.LogCaptureFixture) -> None:
+    with _cycle(net_worth=AsyncMock(side_effect=RuntimeError("db blip"))) as mocks:
+        await scheduler_worker.run_sync_cycle()
+    mocks["net_worth"].assert_awaited_once()
+    assert "Daily net worth snapshot failed" in caplog.text
 
 
 async def test_reminders_still_run_after_every_cycle_step_failed() -> None:
     reminders = AsyncMock()
     failing = AsyncMock(side_effect=RuntimeError("down"))
     with (
-        _cycle(targets=failing, channels=failing, leases=failing, plans=failing, plaid=failing),
+        _cycle(
+            targets=failing, channels=failing, leases=failing, plans=failing, plaid=failing,
+            net_worth=failing,
+        ),
         patch(f"{_WORKER}.rent_reminder_dispatch_service.run_tick", reminders),
     ):
         await scheduler_worker.run_tick(full_cycle=True, transparency_sync=False)

@@ -63,6 +63,7 @@ from app.models.listings.listing_blackout_attachment import ListingBlackoutAttac
 from app.models.listings.listing_external_id import ListingExternalId
 from app.models.listings.listing_photo import ListingPhoto
 from app.models.mortgage.mortgage import Mortgage
+from app.models.net_worth.balance_snapshot import BalanceSnapshot
 from app.models.organization.activity import Activity
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember, OrgRole
@@ -197,6 +198,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(Mortgage, Scope.WORKSPACE_MEMBER),
     Source(FinancialAccount, Scope.WORKSPACE_MEMBER),
     Source(PlaidItem, Scope.WORKSPACE_MEMBER),
+    Source(BalanceSnapshot, Scope.WORKSPACE_MEMBER),
     Source(SpendingCategory, Scope.WORKSPACE),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),

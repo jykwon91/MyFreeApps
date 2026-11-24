@@ -1,9 +1,12 @@
 """Service layer for financial accounts.
 
 All data access goes through repositories; this module never builds a query.
+Every write that can move a balance records today's net worth snapshot in the
+same unit of work.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import uuid
 from typing import Any
 
@@ -22,6 +25,7 @@ from app.schemas.financial_accounts.financial_account_list_response import (
 )
 from app.schemas.financial_accounts.financial_account_response import FinancialAccountResponse
 from app.schemas.financial_accounts.financial_account_state_rules import validate_account_state
+from app.services.net_worth import net_worth_service
 
 # What a PATCH may change. Anything else in ``fields`` is refused rather than
 # silently set.
@@ -129,6 +133,9 @@ async def create_account(
             db,
             FinancialAccount(user_id=user_id, organization_id=organization_id, **values),
         )
+        await net_worth_service.record_today(
+            db, organization_id=organization_id, user_id=user_id, today=_dt.date.today(),
+        )
         return financial_account_mapper.to_response(account)
 
 
@@ -170,6 +177,9 @@ async def update_account(
             )
 
         updated = await financial_account_repo.update_fields(db, account, fields)
+        await net_worth_service.record_today(
+            db, organization_id=organization_id, user_id=user_id, today=_dt.date.today(),
+        )
         return financial_account_mapper.to_response(updated)
 
 
@@ -208,4 +218,7 @@ async def restore_account(
             account_id=account.id,
         )
         restored = await financial_account_repo.update_fields(db, account, {"deleted_at": None})
+        await net_worth_service.record_today(
+            db, organization_id=organization_id, user_id=user_id, today=_dt.date.today(),
+        )
         return financial_account_mapper.to_response(restored)

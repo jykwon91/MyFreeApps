@@ -96,6 +96,7 @@ from app.models.integrations.gmail_sync_run import GmailSyncRun
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import integration_repo
 from app.services.leases import lease_handover_service
+from app.services.net_worth import net_worth_service
 from app.services.plaid import plaid_sync_service
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.services.properties import utility_plan_service
@@ -267,6 +268,20 @@ async def sync_plaid_items() -> int:
         return 0
 
 
+async def record_net_worth_snapshots() -> int:
+    """Today's net worth snapshot for everyone with something to count, after
+    the bank sync so it holds the balances that sync just brought in. Returns
+    how many people were recorded.
+
+    Never raises: a failure to even list them must not stop the steps after it.
+    """
+    try:
+        return await net_worth_service.record_all_today(today=_dt.date.today())
+    except Exception:  # noqa: BLE001 — must not skip the steps after it
+        logger.exception("Daily net worth snapshot failed")
+        return 0
+
+
 async def run_sync_cycle() -> None:
     """Run the in-tick part of a full sync cycle (Gmail runs as its own task).
 
@@ -276,6 +291,7 @@ async def run_sync_cycle() -> None:
     await sync_all_channel_calendars()
     await flag_expiring_utility_plans()
     await sync_plaid_items()
+    await record_net_worth_snapshots()
 
 
 async def send_due_rent_reminders() -> None:
