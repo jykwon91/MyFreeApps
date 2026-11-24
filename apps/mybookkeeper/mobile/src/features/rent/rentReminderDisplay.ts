@@ -5,6 +5,7 @@ import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/re
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
 import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
+import { rentReminderChannelWord } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
 import { formatDueDate, formatSendTime } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { zoneAbbreviation } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { formatCurrency } from "@platform/core/utils/currency";
@@ -27,18 +28,12 @@ import {
   textOnlyWent,
 } from "../../constants/rentReminders";
 
-const CHANNEL_WORD: Record<RentReminderChannel, string> = { email: "email", sms: "text" };
-
 export function firstNameOf(name: string | null | undefined): string | null {
   return name?.trim().split(/\s+/)[0] || null;
 }
 
 export function planChannels(plan: RentReminderPlan): RentReminderChannel[] {
   return [...(plan.email_enabled ? (["email"] as const) : []), ...(plan.sms_enabled ? (["sms"] as const) : [])];
-}
-
-export function channelWords(channels: readonly RentReminderChannel[]): string {
-  return channels.map((channel) => CHANNEL_WORD[channel]).join(" and ");
 }
 
 export function dueLine(preview: Pick<RentReminderPreview, "amount" | "due_date">): string {
@@ -84,7 +79,7 @@ export interface SendOutcome {
 /** Each channel in its own words, once one may have gone out without our knowing. */
 function unsureOutcome(rows: readonly RentReminderSend[]): SendOutcome {
   const lines = rows.map((row) => {
-    const channel = CHANNEL_WORD[row.channel];
+    const channel = rentReminderChannelWord(row.channel);
     if (row.status !== "failed") return channelWent(channel);
     const reason = describeReminderError(row.error_code);
     return reminderMayStillArrive(row.error_code) ? channelMayHaveGone(channel, reason) : channelDidntGo(channel, reason);
@@ -103,8 +98,8 @@ export function sendOutcome(rows: readonly RentReminderSend[], name: string | nu
   if (failed(email) && failed(text)) return { message: neitherWent(reason(text)), isProblem: true };
   if (email && failed(text)) return { message: emailOnlyWent(reason(text), name), isProblem: true };
   if (text && failed(email)) return { message: textOnlyWent(reason(email)), isProblem: true };
-  if (failed(email)) return { message: oneFailed(CHANNEL_WORD.email, reason(email)), isProblem: true };
-  if (failed(text)) return { message: oneFailed(CHANNEL_WORD.sms, reason(text)), isProblem: true };
+  if (failed(email)) return { message: oneFailed(rentReminderChannelWord("email"), reason(email)), isProblem: true };
+  if (failed(text)) return { message: oneFailed(rentReminderChannelWord("sms"), reason(text)), isProblem: true };
   if (email && text) return { message: sentBoth(), isProblem: false };
   return { message: text ? REMINDER_MESSAGES.textWithPhone : sentEmail(name), isProblem: false };
 }

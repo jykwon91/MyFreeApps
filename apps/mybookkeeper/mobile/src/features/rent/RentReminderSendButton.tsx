@@ -1,11 +1,13 @@
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
+import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
+import { possiblySentWarning } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
 import { Banner, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef } from "react";
 import { Text, View } from "react-native";
-import { confirmTitle, goesBy, possiblySentWarning, REMINDER_MESSAGES, sendNowLabel } from "../../constants/rentReminders";
+import { confirmTitle, goesBy, REMINDER_MESSAGES, sendNowLabel, UNNAMED_TENANT } from "../../constants/rentReminders";
 import { askOnce } from "../../lib/askOnce";
-import { channelWords, dueLine, firstNameOf } from "./rentReminderDisplay";
+import { dueLine, firstNameOf } from "./rentReminderDisplay";
 
 interface RentReminderSendButtonProps {
   name: string | null;
@@ -22,17 +24,10 @@ export default function RentReminderSendButton({ name, preview, channels, canSen
   const asking = useRef(false);
   const possiblySentChannels = preview.possibly_sent.map((p) => p.channel);
   const possiblySent = possiblySentChannels.length > 0;
-  const warning = possiblySent
-    ? possiblySentWarning(
-        channelWords(possiblySentChannels),
-        firstNameOf(name),
-        possiblySentChannels.includes("sms"),
-        possiblySentChannels.includes("email"),
-      )
-    : null;
+  const warning = possiblySent ? possiblySentWarning(possiblySentChannels, firstNameOf(name) ?? UNNAMED_TENANT) : null;
   const body = [
     ...(warning ? [warning, ""] : []),
-    goesBy(channelWords(channels)),
+    goesBy(rentReminderChannelWords(channels)),
     dueLine(preview),
     "",
     preview.send_now_message,

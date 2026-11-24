@@ -285,7 +285,7 @@ describe("RentReminderCard", () => {
     fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
     await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
     const message = mockShowError.mock.calls[0][0] as string;
-    expect(message).toContain("The email may already have been sent");
+    expect(message).toContain("The email may already have been sent. Ask the tenant whether the email arrived");
     expect(message).not.toContain("httpsms.com");
   });
 

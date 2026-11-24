@@ -2,6 +2,7 @@ import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/ren
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
+import { possiblySentWarning } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
@@ -18,7 +19,6 @@ import {
   LOST_SEND_HOLD_MS,
   neitherWent,
   noEmailWontGo,
-  possiblySentWarning,
   REMINDER_MESSAGES,
   sentBoth,
   sentEmail,
@@ -338,7 +338,7 @@ describe("Send now", () => {
     const alert = jest.spyOn(Alert, "alert");
     await renderReminders(server);
 
-    const warning = possiblySentWarning("text", "Dana", true, false);
+    const warning = possiblySentWarning(["sms"], "Dana");
     expect(warning).toContain("httpsms.com");
     expect(await screen.findByText(warning)).toBeTruthy();
     await fireEvent.press(await screen.findByText(SEND_BUTTON));
@@ -358,9 +358,17 @@ describe("Send now", () => {
     const server = startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "email", attempt: 1 }] }) });
     await renderReminders(server);
 
-    const warning = possiblySentWarning("email", "Dana", false, true);
+    const warning = possiblySentWarning(["email"], "Dana");
     expect(await screen.findByText(warning)).toBeTruthy();
-    expect(warning).toBe("The last email may already have reached Dana. Ask Dana whether it arrived before sending it again.");
+    expect(warning).toBe("The last email may already have reached Dana. Ask Dana whether the email arrived before sending it again.");
+  });
+
+  it("calls a tenant with no name on file them in the warning", async () => {
+    await renderReminders(startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "email", attempt: 1 }] }) }), { name: null });
+
+    expect(
+      await screen.findByText("The last email may already have reached them. Ask them whether the email arrived before sending it again."),
+    ).toBeTruthy();
   });
 
   it("says when the reminder changed before sending again, and sends nothing more", async () => {

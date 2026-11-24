@@ -1,6 +1,8 @@
 export const RENT_REMINDERS_SHOWN_AT_FIRST = 3;
 /** Long enough for a send that lost its answer to show up in the history. */
 export const LOST_SEND_HOLD_MS = 30_000;
+/** How a message names a tenant whose first name isn't known. */
+export const UNNAMED_TENANT = "them";
 
 export const REMINDER_MESSAGES = {
   section: "Rent reminders",
@@ -94,11 +96,11 @@ export function sentBoth(): string {
 }
 
 export function sentEmail(name: string | null): string {
-  return `I sent the email to ${name ?? "them"}.`;
+  return `I sent the email to ${name ?? UNNAMED_TENANT}.`;
 }
 
 export function emailOnlyWent(reason: string, name: string | null): string {
-  return `The email went out, but the text didn't. ${reason}. I can't resend it from here. Text ${name ?? "them"} yourself if you need to.`;
+  return `The email went out, but the text didn't. ${reason}. I can't resend it from here. Text ${name ?? UNNAMED_TENANT} yourself if you need to.`;
 }
 
 export function textOnlyWent(reason: string): string {
@@ -124,16 +126,4 @@ export function channelDidntGo(channel: string, reason: string): string {
 /** A failed send that may still have reached them: never "didn't go out", never "try again". */
 export function channelMayHaveGone(channel: string, reason: string): string {
   return `I can't tell if the ${channel} went out. ${reason}.`;
-}
-
-/** Only texts go through httpSMS, so an email that may have gone out is checked with the tenant. */
-export function possiblySentWarning(channels: string, firstName: string | null, includesText: boolean, includesEmail: boolean): string {
-  const who = firstName ?? "them";
-  const check =
-    includesText && includesEmail
-      ? `Check the message log on httpsms.com for the text, and ask ${who} about the email, before sending them again.`
-      : includesText
-        ? `Check the message log on httpsms.com (or ask ${who}) before sending it again.`
-        : `Ask ${who} whether it arrived before sending it again.`;
-  return `The last ${channels} may already have reached ${who}. ${check}`;
 }

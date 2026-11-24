@@ -6,15 +6,16 @@ import {
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
-import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
 import { reminderMayStillArrive } from "@mybookkeeper/api-client/utils/reminderMayStillArrive";
+import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
+import { possiblySentAdvice } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import RentReminderPossiblySentWarning from "./RentReminderPossiblySentWarning";
-import { possiblySentAdvice, possiblySentKey } from "./rent-reminder-possibly-sent";
+import { possiblySentKey, TENANT_WORDS } from "./rent-reminder-possibly-sent";
 
 export interface RentReminderPreviewBoxProps {
   applicantId: string;
@@ -29,25 +30,21 @@ function enabledChannels(plan: RentReminderPlan): RentReminderChannel[] {
   return channels;
 }
 
-function channelList(channels: RentReminderChannel[]): string {
-  return channels.map((c) => RENT_REMINDER_CHANNEL_LABEL[c].toLowerCase()).join(" and ");
-}
-
 function reportResults(results: RentReminderSend[]) {
   const failed = results.filter((r) => r.status === "failed");
   const notSent = failed.filter((r) => !reminderMayStillArrive(r.error_code)).map((r) => r.channel);
   const unsure = failed.filter((r) => reminderMayStillArrive(r.error_code)).map((r) => r.channel);
   const problems = [
-    ...(notSent.length > 0 ? [`The ${channelList(notSent)} didn't go out.`] : []),
+    ...(notSent.length > 0 ? [`The ${rentReminderChannelWords(notSent)} didn't go out.`] : []),
     ...(unsure.length > 0
-      ? [`The ${channelList(unsure)} may already have been sent. ${possiblySentAdvice(unsure)}`]
+      ? [`The ${rentReminderChannelWords(unsure)} may already have been sent. ${possiblySentAdvice(unsure, TENANT_WORDS)}`]
       : []),
   ];
   if (problems.length > 0) {
     showError(`${problems.join(" ")} See history below.`);
     return;
   }
-  showSuccess(`Reminder sent by ${channelList(results.map((r) => r.channel))}.`);
+  showSuccess(`Reminder sent by ${rentReminderChannelWords(results.map((r) => r.channel))}.`);
 }
 
 /**
@@ -144,7 +141,6 @@ export default function RentReminderPreviewBox({
         <RentReminderPossiblySentWarning
           id={warningId}
           channels={possiblySentChannels}
-          channelWords={channelList(possiblySentChannels)}
           confirmed={confirmedResend}
           onConfirmedChange={(checked) => setConfirmedFor(checked ? possiblySentKey(preview) : null)}
         />
@@ -163,7 +159,7 @@ export default function RentReminderPreviewBox({
           className="min-h-[44px] w-full sm:w-auto"
           data-testid="rent-reminder-send-now"
         >
-          {alreadySent ? "Sent for this due date" : `Send ${channelList(channels)} now`}
+          {alreadySent ? "Sent for this due date" : `Send ${rentReminderChannelWords(channels)} now`}
         </LoadingButton>
       ) : null}
     </div>

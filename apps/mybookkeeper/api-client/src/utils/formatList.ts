@@ -5,8 +5,9 @@
  * `lib: ES2021` bump this app doesn't otherwise want. Six lines here beats
  * widening the whole compile surface for one conjunction.
  *
- * Serial comma omitted deliberately — the only caller is a sentence an
- * operator reads to their insurance agent.
+ * Serial comma omitted deliberately: each list sits inside a sentence that's
+ * read aloud or skimmed (carriers to ask an insurance agent about, the
+ * channels a rent reminder goes by).
  */
 export function joinWithAnd(items: string[]): string {
   if (items.length === 0) return "";

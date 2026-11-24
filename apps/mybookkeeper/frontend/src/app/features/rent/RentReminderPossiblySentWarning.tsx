@@ -1,13 +1,13 @@
 import { AlertBox } from "@platform/ui";
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
-import { possiblySentAdvice } from "./rent-reminder-possibly-sent";
+import { possiblySentWarning } from "@mybookkeeper/api-client/utils/rentReminderPossiblySent";
+import { TENANT_WORDS } from "./rent-reminder-possibly-sent";
 
 export interface RentReminderPossiblySentWarningProps {
   /** Id of the warning text, for the Send button's `aria-describedby`. */
   id: string;
+  /** How the tries that may have gone out were sent. */
   channels: RentReminderChannel[];
-  /** How the failed try went, e.g. "text" or "email and text". */
-  channelWords: string;
   confirmed: boolean;
   onConfirmedChange: (confirmed: boolean) => void;
 }
@@ -19,15 +19,12 @@ export interface RentReminderPossiblySentWarningProps {
 export default function RentReminderPossiblySentWarning({
   id,
   channels,
-  channelWords,
   confirmed,
   onConfirmedChange,
 }: RentReminderPossiblySentWarningProps) {
   return (
     <AlertBox variant="warning" className="space-y-2" data-testid="rent-reminder-possibly-sent">
-      <p id={id}>
-        The last {channelWords} may already have reached the tenant. {possiblySentAdvice(channels)}
-      </p>
+      <p id={id}>{possiblySentWarning(channels, TENANT_WORDS)}</p>
       <label className="flex items-start gap-2 min-h-[44px]">
         <input
           type="checkbox"
