@@ -31,6 +31,11 @@ workers:
     # extraction. Sized like the scheduler; the 512m default would be ~75% full
     # before the first parse.
     mem_limit: 768m
+    # On SIGTERM the worker finishes the step it is on and starts no other.
+    # A parse is one Claude call (120s timeout, no SDK retries) plus a MinIO
+    # download and a few DB writes; compose's 10s default would kill it
+    # mid-parse and leave the job in `processing`.
+    stop_grace_period: 150s
   # The ONLY process that runs the discovery APScheduler (the api's two uvicorn
   # workers must not — see app/workers/discovery_scheduler_worker.py). Exactly
   # one replica: never scale this service.

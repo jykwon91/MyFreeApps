@@ -1,8 +1,8 @@
 """Refinement-session preparation — one step of the worker polling loop.
 
 Runs inside the SAME worker process as the resume parser (see
-``resume_parser_worker.main``), so no new container or compose change
-is needed. Each poll:
+``resume_parser_worker.poll_until_stopped``), so no new container or compose
+change is needed. Each poll:
 
 1. Claim one ``preparing`` session whose ``preparation_started_at`` is
    NULL (read FOR UPDATE SKIP LOCKED, then stamped in the same

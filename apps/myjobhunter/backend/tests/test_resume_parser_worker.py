@@ -12,6 +12,7 @@ Covers:
 """
 from __future__ import annotations
 
+import asyncio
 import inspect
 import io
 import logging
@@ -785,3 +786,88 @@ def test_run_propagates_fatal_errors_so_the_process_exits_non_zero(
     monkeypatch.setattr(resume_parser_worker, "main", _failing_main)
     with pytest.raises(RuntimeError):
         resume_parser_worker.run()
+
+
+@pytest.mark.asyncio
+async def test_an_idle_worker_stops_as_soon_as_it_is_signalled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process_one = AsyncMock(return_value=False)
+    monkeypatch.setattr(resume_parser_worker, "process_one", process_one)
+    monkeypatch.setattr(resume_parser_worker, "process_one_session", AsyncMock(return_value=False))
+    monkeypatch.setattr(resume_parser_worker, "POLL_INTERVAL_SECONDS", 3600)
+    stop = asyncio.Event()
+    task = asyncio.create_task(resume_parser_worker.poll_until_stopped(stop))
+    while not process_one.await_count:
+        await asyncio.sleep(0)
+    stop.set()
+    await asyncio.wait_for(task, timeout=5)
+
+
+@pytest.mark.asyncio
+async def test_no_prepare_starts_after_a_stop(monkeypatch: pytest.MonkeyPatch) -> None:
+    stop = asyncio.Event()
+
+    async def _parse_then_stop() -> bool:
+        stop.set()
+        return True
+
+    prepare = AsyncMock(return_value=True)
+    monkeypatch.setattr(resume_parser_worker, "process_one", _parse_then_stop)
+    monkeypatch.setattr(resume_parser_worker, "process_one_session", prepare)
+    await asyncio.wait_for(resume_parser_worker.poll_until_stopped(stop), timeout=5)
+    prepare.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_failing_pass_does_not_stop_the_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    stop = asyncio.Event()
+    calls = 0
+
+    async def _fails_then_stops() -> bool:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            stop.set()
+        raise RuntimeError("db blip")
+
+    monkeypatch.setattr(resume_parser_worker, "process_one", _fails_then_stops)
+    monkeypatch.setattr(resume_parser_worker, "process_one_session", AsyncMock(return_value=False))
+    monkeypatch.setattr(resume_parser_worker, "POLL_INTERVAL_SECONDS", 0)
+    await asyncio.wait_for(resume_parser_worker.poll_until_stopped(stop), timeout=5)
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_the_worker_starts_sentry_and_disposes_the_engine_on_stop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    init_sentry = MagicMock()
+    load_model = MagicMock()
+    engine = MagicMock()
+    engine.dispose = AsyncMock()
+    monkeypatch.setattr(resume_parser_worker, "init_sentry", init_sentry)
+    monkeypatch.setattr(
+        resume_parser_worker.discovery_embedding_service, "load_model_eager", load_model,
+    )
+    monkeypatch.setattr(resume_parser_worker, "engine", engine)
+    monkeypatch.setattr(resume_parser_worker, "poll_until_stopped", AsyncMock())
+    await resume_parser_worker.run_resume_worker(asyncio.Event())
+    init_sentry.assert_called_once()
+    load_model.assert_called_once()
+    engine.dispose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_a_model_that_fails_to_load_crashes_the_boot(monkeypatch: pytest.MonkeyPatch) -> None:
+    poll = AsyncMock()
+    monkeypatch.setattr(resume_parser_worker, "init_sentry", MagicMock())
+    monkeypatch.setattr(
+        resume_parser_worker.discovery_embedding_service,
+        "load_model_eager",
+        MagicMock(side_effect=EmbeddingModelLoadError("model missing")),
+    )
+    monkeypatch.setattr(resume_parser_worker, "poll_until_stopped", poll)
+    with pytest.raises(EmbeddingModelLoadError):
+        await resume_parser_worker.run_resume_worker(asyncio.Event())
+    poll.assert_not_awaited()
