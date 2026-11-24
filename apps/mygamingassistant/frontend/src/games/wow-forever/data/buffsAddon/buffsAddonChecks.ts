@@ -1,4 +1,4 @@
-import { Gem, HandHeart, Heart, Shield, Users, UtensilsCrossed } from "lucide-react";
+import { Flame, Gem, HandHeart, Heart, Shield, Users, UtensilsCrossed } from "lucide-react";
 import type { BuffsAddonCheck } from "@/games/wow-forever/types/buffsAddon/buffsAddonCheck";
 
 /** What MGA Buffs reminds you about, in the order its list shows them. Each one is `/mgabuffs <id>` to turn off. */
@@ -20,6 +20,12 @@ export const BUFFS_ADDON_CHECKS: readonly BuffsAddonCheck[] = [
     icon: Heart,
     title: "Healthstone",
     text: "None in your bags: Warlocks are told to make one, everyone else to ask the Warlock in the group by name.",
+  },
+  {
+    id: "stone",
+    icon: Flame,
+    title: "Weapon stone",
+    text: "Warlocks who know Create Firestone or Create Spellstone: no temporary enchant on your main-hand weapon (use the stone in your bags, or make one), or one about to run out.",
   },
   {
     id: "food",

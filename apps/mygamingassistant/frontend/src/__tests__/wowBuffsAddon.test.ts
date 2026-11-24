@@ -192,6 +192,50 @@ describe("MGA Buffs Healthstone", () => {
   });
 });
 
+describe("MGA Buffs weapon stone", () => {
+  const base = `${ARMORED}; ${FED}; ${STONE_IN_BAGS}; cooldowns[${MAJOR_SOULSTONE}] = { start = now, duration = 1800 }; bags[4] = { 5509 }`;
+  const bare = `${base}; weaponEnchant = { has = false, ms = 0 }`;
+
+  it("says to use the stone in your bags when the weapon has no enchant", () => {
+    expect(rows(run(`${bare}; bags[1] = { 9999 }; itemNames[9999] = "Lesser Firestone"`))).toEqual(["Use your Lesser Firestone on your weapon"]);
+    expect(rows(run(`${bare}; bags[1] = { 9998 }; itemNames[9998] = "Major Spellstone"`))).toEqual(["Use your Major Spellstone on your weapon"]);
+  });
+
+  it("flashes the reminder once it shows up after login", () => {
+    const lines = run(`${base}; bags[1] = { 9999 }; itemNames[9999] = "Firestone"`, `clear(); weaponEnchant = { has = false, ms = 0 }; fire("UNIT_INVENTORY_CHANGED", "player")`);
+    expect(lines).toEqual(["row: Use your Firestone on your weapon", "flash: Use your Firestone on your weapon", "sound"]);
+  });
+
+  it("says to make one when there is none in your bags", () => {
+    expect(rows(run(bare))).toEqual(["No weapon stone: make a Firestone or Spellstone"]);
+    expect(rows(run(`${bare}; for _, id in ipairs({ 2362, 17727, 17728 }) do knownSpells[id] = false end`))).toEqual(["No weapon stone: make a Firestone"]);
+    expect(rows(run(`${bare}; for _, id in ipairs({ 6366, 17951, 17952, 17953 }) do knownSpells[id] = false end`))).toEqual(["No weapon stone: make a Spellstone"]);
+  });
+
+  it("stays quiet while any main-hand enchant lasts", () => {
+    expect(rows(run(base))).toEqual([]);
+    expect(rows(run(`${base}; weaponEnchant = { has = true, ms = 181000 }`))).toEqual([]);
+  });
+
+  it("warns when the enchant has the minutes threshold or less left", () => {
+    expect(rows(run(`${base}; weaponEnchant = { has = true, ms = 150000 }`))).toEqual(["Weapon enchant: 3 min left"]);
+    expect(rows(run(`${base}; weaponEnchant = { has = true, ms = 30000 }`))).toEqual(["Weapon enchant: under a minute left"]);
+  });
+
+  it("is for Warlocks only", () => {
+    expect(rows(run(`units.player = unit("MAGE", 60, "Me"); ${FED}; table.insert(units.player.buffs, buff("Ice Armor", now + 900)); table.insert(units.player.buffs, buff("Arcane Intellect", now + 900)); weaponEnchant = { has = false, ms = 0 }`))).toEqual([]);
+  });
+
+  it("stays quiet until a Warlock knows Create Firestone or Create Spellstone", () => {
+    const unlearn = [6366, 17951, 17952, 17953, 2362, 17727, 17728].map((id) => `knownSpells[${id}] = false`).join("; ");
+    expect(rows(run(`${bare}; ${unlearn}`))).toEqual([]);
+  });
+
+  it("turns off from the slash command", () => {
+    expect(rows(run(bare, `clear(); SlashCmdList.MGABUFFS("stone"); clear(); tick()`))).toEqual([]);
+  });
+});
+
 describe("MGA Buffs Paladin Blessings", () => {
   const rogue = `units.player = unit("ROGUE", 30, "Me", { buffs = { buff("Well Fed", now + 600) } }); group = "party"; units.party1 = unit("PALADIN", 40, "Pat")`;
 
@@ -391,7 +435,7 @@ describe("MGA Buffs options window", () => {
   it("shows what's missing in chat with its button", () => {
     const lines = run("units.player.level = 15", `clear(); click(MGABuffsOptions_status)`);
     expect(lines.slice(0, 3)).toEqual([
-      "chat: MGA Buffs: armor on, soulstone on, healthstone on, food on, group on, party on; warns 3 min before a buff runs out; sound on.",
+      "chat: MGA Buffs: armor on, soulstone on, healthstone on, stone on, food on, group on, party on; warns 3 min before a buff runs out; sound on.",
       "chat: MGA Buffs: No Demon Skin",
       "chat: MGA Buffs: Not Well Fed: eat buff food",
     ]);
@@ -477,7 +521,7 @@ describe("MGA Buffs slash command", () => {
 
   it("explains itself for anything else", () => {
     expect(run("", `clear(); ${slash("help")}`)).toEqual([
-      "chat: MGA Buffs: /mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | food | group | party | minutes N | sound | unlock | lock | reset",
+      "chat: MGA Buffs: /mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | stone | food | group | party | minutes N | sound | unlock | lock | reset",
     ]);
   });
 });
