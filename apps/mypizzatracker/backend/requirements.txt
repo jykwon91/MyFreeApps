@@ -64,7 +64,7 @@ cryptography==50.0.1
     #   mypizzatracker-backend
     #   platform-shared
     #   pyjwt
-dnspython==2.9.1
+dnspython==2.9.2
     # via email-validator
 email-validator==2.3.0
     # via
