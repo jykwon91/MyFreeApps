@@ -7,6 +7,8 @@ Locks the public shape so per-app db/session.py thin wrappers stay valid:
   rolls back on exception
 - SQLite URLs skip pool kwargs (would otherwise TypeError at engine create)
 - Postgres URLs apply pool kwargs
+- Both kinds of URL hide bound parameters, so no database error's message
+  carries the values a statement was given
 """
 from __future__ import annotations
 
@@ -15,9 +17,11 @@ from inspect import isasyncgenfunction
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from platform_shared.db.session import SessionFactory, create_session_factory
+from tests.database_error_samples import PROBE_VALUE
 
 
 def test_factory_returns_session_factory_namedtuple() -> None:
@@ -42,6 +46,32 @@ def test_factory_applies_pool_kwargs_for_postgres() -> None:
         max_overflow=10,
     )
     assert factory.engine.pool.size() == 5
+
+
+@pytest.mark.parametrize(
+    "database_url",
+    ["sqlite+aiosqlite:///:memory:", "postgresql+asyncpg://user:pass@localhost/db"],
+    ids=["sqlite", "postgres"],
+)
+def test_factory_hides_bound_parameters(database_url: str) -> None:
+    factory = create_session_factory(database_url)
+    assert factory.engine.sync_engine.hide_parameters is True
+
+
+@pytest.mark.asyncio
+async def test_a_failed_statement_does_not_show_its_parameters() -> None:
+    factory = create_session_factory("sqlite+aiosqlite:///:memory:")
+    insert = text("INSERT INTO probe_users (email) VALUES (:email)")
+    try:
+        async with factory.engine.connect() as connection:
+            await connection.execute(text("CREATE TABLE probe_users (email TEXT UNIQUE)"))
+            await connection.execute(insert, {"email": PROBE_VALUE})
+            with pytest.raises(IntegrityError) as raised:
+                await connection.execute(insert, {"email": PROBE_VALUE})
+    finally:
+        await factory.engine.dispose()
+    assert "[SQL parameters hidden due to hide_parameters=True]" in str(raised.value)
+    assert PROBE_VALUE not in str(raised.value)
 
 
 @pytest.mark.asyncio

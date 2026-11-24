@@ -5,7 +5,6 @@ connection or a row surviving a refusal. The default pool here has one connectio
 route that waits for a second connection while holding the first fails with a timeout.
 """
 import hashlib
-import os
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -16,7 +15,6 @@ from typing import Any
 
 import httpx
 import pyotp
-import pytest
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
@@ -40,8 +38,8 @@ from platform_shared.services.refresh_session_service import RefreshSessionServi
 from platform_shared.services.totp_account_service import TotpAccountService
 from platform_shared.services.totp_service import TOTP_DIGITS, TOTP_PERIOD_SECONDS
 from platform_shared.testing.factories import _FastPasswordHelper
+from tests.postgres_test_url import postgres_test_url
 
-POSTGRES_URL_ENV = "SHARED_BACKEND_TEST_POSTGRES_URL"
 SECRET = "test-secret-key-that-is-long-enough-to-sign-with"
 PASSWORD = "the-right-password"
 EMAIL_DOMAIN = "example.com"
@@ -285,12 +283,7 @@ def current_code(secret: str) -> str:
 
 @asynccontextmanager
 async def make_stack(*, pool_size: int, check_tokens: bool = False) -> AsyncIterator[RealAuthStack]:
-    url = os.environ.get(POSTGRES_URL_ENV)
-    if not url:
-        # CI sets this, so these tests can't quietly stop running there.
-        if os.environ.get("CI"):
-            pytest.fail(f"{POSTGRES_URL_ENV} isn't set")
-        pytest.skip(f"{POSTGRES_URL_ENV} isn't set")
+    url = postgres_test_url()
     schema = f"auth_stack_{uuid.uuid4().hex}"
     engine = create_async_engine(
         url,

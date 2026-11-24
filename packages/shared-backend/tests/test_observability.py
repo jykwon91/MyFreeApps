@@ -3,12 +3,17 @@
 from unittest.mock import patch, MagicMock
 
 import pytest
+from sentry_sdk.types import Event
 
+from platform_shared.core.database_error_summary import summarize_database_error
 from platform_shared.core.observability import (
     SentryNotConfiguredError,
+    _before_send,
     _drop_known_noise,
     init_sentry,
 )
+from platform_shared.core.sentry_database_scrubbing import scrub_breadcrumb, scrub_log
+from tests.database_error_samples import PROBE_VALUE, unique_violation
 
 
 class TestProductionEnforcement:
@@ -66,7 +71,37 @@ class TestSentryInit:
     @patch("platform_shared.core.observability.sentry_sdk.init")
     def test_before_send_hook_wired(self, mock_init: MagicMock) -> None:
         init_sentry(dsn="https://x@y/1", environment="production")
-        assert mock_init.call_args.kwargs["before_send"] is _drop_known_noise
+        assert mock_init.call_args.kwargs["before_send"] is _before_send
+
+    @patch("platform_shared.core.observability.sentry_sdk.init")
+    def test_breadcrumb_and_log_scrubbers_wired(self, mock_init: MagicMock) -> None:
+        init_sentry(dsn="https://x@y/1", environment="production")
+        assert mock_init.call_args.kwargs["before_breadcrumb"] is scrub_breadcrumb
+        assert mock_init.call_args.kwargs["before_send_log"] is scrub_log
+
+
+class TestBeforeSendChain:
+    """``_before_send`` drops known noise, then summarises database errors."""
+
+    def test_drops_known_noise(self) -> None:
+        event: Event = {"logger": "googleapiclient.discovery_cache"}
+        assert _before_send(event, {}) is None
+
+    def test_summarises_database_errors_in_what_it_keeps(self) -> None:
+        error = unique_violation()
+        event: Event = {
+            "logger": "app.services.users",
+            "exception": {
+                "values": [
+                    {"type": "IntegrityError", "module": "sqlalchemy.exc", "value": str(error)}
+                ]
+            },
+        }
+        hint = {"exc_info": (type(error), error, error.__traceback__)}
+        kept = _before_send(event, hint)
+        assert kept is not None
+        assert kept["exception"]["values"][0]["value"] == summarize_database_error(error)
+        assert PROBE_VALUE not in str(kept)
 
 
 class TestDropKnownNoise:
@@ -97,7 +132,7 @@ class TestDropKnownNoise:
         assert _drop_known_noise(event, {}) is event
 
     def test_keeps_event_with_empty_logger(self) -> None:
-        event: dict = {"logger": ""}
+        event: Event = {"logger": ""}
         assert _drop_known_noise(event, {}) is event
 
     def test_does_not_match_unrelated_logger_with_similar_prefix(self) -> None:

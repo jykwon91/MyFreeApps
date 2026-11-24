@@ -11,7 +11,6 @@ row, as two ``ON CONFLICT`` inserts would.
 from __future__ import annotations
 
 import asyncio
-import os
 import uuid
 from collections.abc import AsyncIterator
 from typing import cast
@@ -36,8 +35,8 @@ from platform_shared.repositories.audited_writes import (
     update_rows,
     upsert_row,
 )
+from tests.postgres_test_url import postgres_test_url
 
-POSTGRES_URL_ENV = "SHARED_BACKEND_TEST_POSTGRES_URL"
 ACTOR = "11111111-1111-1111-1111-111111111111"
 
 
@@ -192,12 +191,7 @@ async def test_lock_rows_locks_only_the_target_table_in_primary_key_order() -> N
 
 @pytest_asyncio.fixture()
 async def pg_sessions() -> AsyncIterator[async_sessionmaker[AsyncSession]]:
-    url = os.environ.get(POSTGRES_URL_ENV)
-    if not url:
-        # CI sets this, so the test can't quietly stop running there.
-        if os.environ.get("CI"):
-            pytest.fail(f"{POSTGRES_URL_ENV} isn't set")
-        pytest.skip(f"{POSTGRES_URL_ENV} isn't set")
+    url = postgres_test_url()
     schema = f"audited_writes_{uuid.uuid4().hex}"
     engine = create_async_engine(url, connect_args={"server_settings": {"search_path": schema}})
     async with engine.begin() as connection:

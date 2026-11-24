@@ -3,6 +3,7 @@
 - the worker entrypoint boots, reconciles, heartbeats and shuts down cleanly
 - boot fails loud (scheduler never started) when the jobstore can't be built
 - the jobstore factory refuses to run against an unmigrated database
+- the jobstore's engine hides bound parameters from its error messages
 - end to end on the real ``apscheduler_jobs`` table: a source the API creates
   is persisted as a job by the scheduler process's reconcile
 - the container healthcheck reads the heartbeat
@@ -198,6 +199,15 @@ def test_jobstore_factory_rejects_unmigrated_database(monkeypatch: pytest.Monkey
     monkeypatch.setattr(scheduler_jobstore, "JOBSTORE_TABLE_NAME", "no_such_jobstore_table")
     with pytest.raises(SchedulerJobstoreMissingError, match="alembic upgrade head"):
         build_scheduler_jobstore(settings.database_url_sync)
+
+
+def test_jobstore_engine_hides_bound_parameters() -> None:
+    """A failed job write must not put the pickled job state in its error."""
+    jobstore = build_scheduler_jobstore(settings.database_url_sync)
+    try:
+        assert jobstore.engine.hide_parameters is True
+    finally:
+        jobstore.engine.dispose()
 
 
 @pytest.mark.asyncio
