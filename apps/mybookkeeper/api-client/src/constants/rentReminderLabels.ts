@@ -21,6 +21,9 @@ export const RENT_REMINDER_CHANNEL_LABEL: Record<RentReminderChannel, string> = 
  *  (see `isTextHandedOff`). Each app writes its own sentence around it. */
 export const TEXT_HANDOFF_HOLDER = "Twilio";
 
+/** Under the text switch of a plan that still has texts on when its owner may not send them. */
+export const SMS_NOT_ALLOWED_NOTE = "Texts can't be sent from your account. Turn this off to keep your email reminders going.";
+
 /** What texts are said to come from when the server doesn't say which number. */
 export const SMS_FROM_NUMBER_FALLBACK = "your Twilio number";
 

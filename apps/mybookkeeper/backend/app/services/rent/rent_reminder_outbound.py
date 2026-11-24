@@ -20,3 +20,5 @@ class ReminderOutbound:
     tenant_email: str | None
     tenant_phone: str | None
     operator_email: str | None
+    # Whether the plan's owner may send texts (``rent_reminder_sms_permission``).
+    owner_may_text: bool

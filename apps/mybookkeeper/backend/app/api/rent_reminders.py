@@ -82,7 +82,10 @@ async def create_plan(
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
     except rent_reminder_service.PlanAlreadyExistsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except rent_reminder_service.SmsUnavailableError as exc:
+    except (
+        rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -103,7 +106,10 @@ async def update_plan(
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
     except rent_reminder_service.PlanNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_PLAN_NOT_FOUND) from exc
-    except rent_reminder_service.SmsUnavailableError as exc:
+    except (
+        rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -170,6 +176,7 @@ async def send_now(
         raise HTTPException(status_code=404, detail=_PLAN_NOT_FOUND) from exc
     except (
         rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
         rent_reminder_dispatch_service.NoUpcomingRentError,
         rent_reminder_dispatch_service.TenancyEndedError,
     ) as exc:

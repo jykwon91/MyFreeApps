@@ -21,6 +21,7 @@ from app.services.rent import rent_reminder_alert_service as alerts
 from app.services.rent import rent_reminder_math as math
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent import rent_reminder_send_state as send_state
+from app.services.rent.rent_reminder_sms_permission import owner_may_send_texts
 from app.services.system import sms_service
 
 _HISTORY_LIMIT = 50
@@ -47,13 +48,23 @@ SMS_UNAVAILABLE_MESSAGE = (
 )
 
 
+class SmsNotAllowedError(ValueError):
+    """Texts were asked for, but the plan's owner may not send them."""
+
+
+SMS_NOT_ALLOWED_MESSAGE = (
+    "Texts can't be sent from your account. Turn texts off for this tenant and use email."
+)
+
+
 def _now() -> _dt.datetime:
     return _dt.datetime.now(_dt.timezone.utc)
 
 
-def sms_status() -> RentReminderSmsStatus:
+def sms_status(*, allowed: bool) -> RentReminderSmsStatus:
     return RentReminderSmsStatus(
         available=sms_service.is_configured(),
+        allowed=allowed,
         from_number=sms_service.from_number(),
     )
 
@@ -73,6 +84,18 @@ def _fields(payload: RentReminderPlanRequest) -> dict[str, object]:
     return payload.model_dump()
 
 
+async def _require_texts_allowed(
+    db, *, payload: RentReminderPlanRequest, owner_id: uuid.UUID, texts_were_on: bool,
+) -> None:
+    """Refuse switching texts on for an owner who may not send them.
+
+    A plan that already has texts on keeps saving, so its other settings can
+    still change; it only goes on sending email until texts are turned off.
+    """
+    if payload.sms_enabled and not texts_were_on and not await owner_may_send_texts(db, owner_id):
+        raise SmsNotAllowedError(SMS_NOT_ALLOWED_MESSAGE)
+
+
 async def get_overview(
     *, organization_id: uuid.UUID, user_id: uuid.UUID, applicant_id: uuid.UUID,
 ) -> RentReminderOverviewResponse:
@@ -83,9 +106,12 @@ async def get_overview(
         plan = await rent_reminder_plan_repo.get_for_applicant(
             db, organization_id=organization_id, applicant_id=applicant_id,
         )
+        # Texts go out as the plan's owner; with no plan yet, the caller
+        # becomes the owner on saving.
+        owner_id = plan.user_id if plan else user_id
         return RentReminderOverviewResponse(
             plan=RentReminderPlanResponse.model_validate(plan) if plan else None,
-            sms=sms_status(),
+            sms=sms_status(allowed=await owner_may_send_texts(db, owner_id)),
             tenant_has_email=bool((applicant.contact_email or "").strip()),
             tenant_has_phone=bool((applicant.contact_phone or "").strip()),
         )
@@ -107,6 +133,8 @@ async def create_plan(
             db, organization_id=organization_id, applicant_id=applicant_id,
         ):
             raise PlanAlreadyExistsError("This tenant already has a reminder plan.")
+        # Tenants are scoped to the caller, who becomes the plan's owner.
+        await _require_texts_allowed(db, payload=payload, owner_id=user_id, texts_were_on=False)
         plan = await rent_reminder_plan_repo.create(
             db,
             user_id=user_id,
@@ -134,6 +162,9 @@ async def update_plan(
         )
         if plan is None:
             raise PlanNotFoundError(str(applicant_id))
+        await _require_texts_allowed(
+            db, payload=payload, owner_id=plan.user_id, texts_were_on=plan.sms_enabled,
+        )
         plan = await rent_reminder_plan_repo.update(db, plan=plan, fields=fields)
         return RentReminderPlanResponse.model_validate(plan)
 

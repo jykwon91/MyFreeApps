@@ -54,6 +54,7 @@ export function sendMoment(sendAt: string, timeZone: string, now: Date = new Dat
  */
 export function sendReadiness(overview: RentReminderOverview, plan: RentReminderPlan, firstName: string | null): { canSend: boolean; notes: string[] } {
   if (plan.sms_enabled && !overview.sms.available) return { canSend: false, notes: [REMINDER_MESSAGES.noSms] };
+  if (plan.sms_enabled && !overview.sms.allowed) return { canSend: false, notes: [REMINDER_MESSAGES.smsNotAllowed] };
   const emailMissing = plan.email_enabled && !overview.tenant_has_email;
   const phoneMissing = plan.sms_enabled && !overview.tenant_has_phone;
   const emailReaches = plan.email_enabled && !emailMissing;

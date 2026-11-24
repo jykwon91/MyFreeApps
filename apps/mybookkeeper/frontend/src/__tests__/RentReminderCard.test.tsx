@@ -12,6 +12,7 @@ const mockOverview = vi.fn();
 const mockPreview = vi.fn();
 const mockSends = vi.fn();
 const mockCreate = vi.fn();
+const mockUpdate = vi.fn();
 const mockSendNow = vi.fn();
 const sendNowState = { isLoading: false };
 
@@ -20,7 +21,7 @@ vi.mock("@mybookkeeper/api-client/store/rentRemindersApi", () => ({
   useGetRentReminderPreviewQuery: (...args: unknown[]) => mockPreview(...args),
   useGetRentReminderSendsQuery: (...args: unknown[]) => mockSends(...args),
   useCreateRentReminderPlanMutation: () => [mockCreate, { isLoading: false }],
-  useUpdateRentReminderPlanMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateRentReminderPlanMutation: () => [mockUpdate, { isLoading: false }],
   useSendRentReminderNowMutation: () => [mockSendNow, sendNowState],
 }));
 
@@ -36,8 +37,10 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
 
 const SMS_OFF = {
   available: false,
+  allowed: true,
   from_number: null,
 };
+const NOT_ALLOWED_NOTE = "Texts can't be sent from your account. Turn this off to keep your email reminders going.";
 
 const NEED_CHANNEL = "Turn on email or text so the reminder has somewhere to go.";
 
@@ -174,6 +177,44 @@ describe("RentReminderCard", () => {
     expect(screen.queryByText(NEED_CHANNEL)).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("rent-reminder-save"));
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ email_enabled: false, sms_enabled: true }));
+  });
+
+  it("has no text switch for an account that may not send texts", () => {
+    mockOverview.mockReturnValue({
+      data: { ...NO_PLAN, sms: { ...SONU_PLAN.sms, allowed: false } },
+      isLoading: false,
+      isError: false,
+    });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-setup"));
+
+    expect(screen.getByTestId("rent-reminder-email")).toBeChecked();
+    expect(screen.queryByTestId("rent-reminder-sms")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^From /)).not.toBeInTheDocument();
+  });
+
+  it("lets an account that may not send texts turn a plan's texts off, and only off", () => {
+    mockOverview.mockReturnValue({
+      data: { ...SONU_PLAN, sms: { ...SONU_PLAN.sms, allowed: false }, tenant_has_phone: false },
+      isLoading: false,
+      isError: false,
+    });
+    mockUpdate.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-edit"));
+
+    const text = screen.getByTestId("rent-reminder-sms");
+    expect(text).toBeChecked();
+    expect(text).toBeEnabled();
+    expect(screen.getByTestId("rent-reminder-sms-status")).toHaveTextContent(NOT_ALLOWED_NOTE);
+    expect(screen.queryByText(/No phone number/)).not.toBeInTheDocument();
+
+    fireEvent.click(text);
+    expect(text).not.toBeChecked();
+    expect(text).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId("rent-reminder-save"));
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ email_enabled: true, sms_enabled: false }));
   });
 
   it("labels a new plan's send time in the device's zone and saves that zone", () => {

@@ -47,6 +47,7 @@ from app.models.rent.rent_reminder_plan import RentReminderPlan
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
 from app.repositories.rent import rent_reminder_send_repo
+from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
 from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
 from app.services.rent import (
     rent_ledger_service,
@@ -109,8 +110,10 @@ def _fake_uow(session: AsyncSession):
 @pytest.fixture()
 def wired(db: AsyncSession):
     """Route every reminder module's transactions into the test session and
-    mock the outside world. Yields the email/SMS mocks."""
+    mock the outside world. Yields the email/SMS mocks, and ``may_text``:
+    whether the plan's owner may send texts (yes unless a test says not)."""
     fake = _fake_uow(db)
+    may_text = AsyncMock(return_value=True)
     send_email_or_raise = AsyncMock()
     send_email = AsyncMock(return_value=True)
     sms_send = MagicMock(return_value=SID_1)
@@ -131,7 +134,12 @@ def wired(db: AsyncSession):
         stack.enter_context(patch.object(email_service, "send_email", send_email))
         stack.enter_context(patch.object(sms_service, "is_configured", lambda: True))
         stack.enter_context(patch.object(sms_service, "send_or_raise", sms_send))
-        yield {"email": send_email_or_raise, "alert": send_email, "sms": sms_send}
+        for target in (
+            "app.services.rent.rent_reminder_dispatch_service.owner_may_send_texts",
+            "app.services.rent.rent_reminder_service.owner_may_send_texts",
+        ):
+            stack.enter_context(patch(target, may_text))
+        yield {"email": send_email_or_raise, "alert": send_email, "sms": sms_send, "may_text": may_text}
 
 
 async def _tenant(db: AsyncSession, *, legal_name: str = "Sonu Patel") -> uuid.UUID:
@@ -741,6 +749,168 @@ class TestChannelsGoTogether:
         # Next Sunday's reminder goes out on both (6:30pm CST, after DST ends).
         assert await dispatch.run_due_reminders(_dt.datetime(2026, 11, 8, 0, 30, tzinfo=UTC)) == 2
         wired["sms"].assert_called_once()
+
+
+class TestOwnerWhoMayNotText:
+    """Texts go out from the operator's own number, so only an owner who may
+    send texts gets them. Their email reminders keep going."""
+
+    @pytest.mark.asyncio
+    async def test_the_scheduled_text_fails_and_the_email_still_goes(
+        self, db: AsyncSession, wired, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, sms_enabled=True)
+        wired["may_text"].return_value = False
+
+        with caplog.at_level(logging.WARNING, logger=dispatch.logger.name):
+            assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 1
+
+        wired["sms"].assert_not_called()
+        wired["email"].assert_called_once()
+        rows = {row.channel: row for row in await _sends(db)}
+        assert (rows["email"].status, rows["sms"].status, rows["sms"].error_code) == (
+            "sent", "failed", "sms_not_allowed",
+        )
+        wired["may_text"].assert_awaited_with(db, USER)
+        held = [r for r in caplog.records if "held back" in r.getMessage()]
+        assert [r.getMessage() for r in held] == [
+            f"Rent reminder text held back: the owner may not send texts: plan_id={plan.id} owner_id={USER}",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_the_alert_says_to_turn_texts_off_and_offers_no_retry(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+        wired["may_text"].return_value = False
+
+        await dispatch.run_due_reminders(SATURDAY_EVENING)
+
+        subject, body = _last_alert(wired)
+        assert subject == "Sonu's rent text didn't go out"
+        assert body == (
+            "Sonu's rent text didn't go out. Texts can't be sent from your account. "
+            "Turn texts off on the tenant's Rent reminders card so only email reminders go out."
+        )
+
+    @pytest.mark.asyncio
+    async def test_send_now_refuses_before_claiming_anything(
+        self, db: AsyncSession, wired, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id, sms_enabled=True)
+        wired["may_text"].return_value = False
+
+        with caplog.at_level(logging.WARNING, logger=dispatch.logger.name):
+            with pytest.raises(rent_reminder_service.SmsNotAllowedError) as raised:
+                await _send_now(applicant_id)
+
+        assert str(raised.value) == rent_reminder_service.SMS_NOT_ALLOWED_MESSAGE
+        assert await _sends(db) == []
+        wired["email"].assert_not_called()
+        wired["sms"].assert_not_called()
+        assert any(
+            f"plan_id={plan.id} owner_id={USER}" in r.getMessage() for r in caplog.records
+        )
+
+    @pytest.mark.asyncio
+    async def test_an_email_only_plan_still_sends_now(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["may_text"].return_value = False
+
+        [sent] = await _send_now(applicant_id)
+        assert (sent.channel, sent.status) == ("email", "sent")
+
+    @pytest.mark.asyncio
+    async def test_the_overview_says_texts_are_not_allowed(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        wired["may_text"].return_value = False
+
+        overview = await rent_reminder_service.get_overview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+        )
+        assert (overview.sms.available, overview.sms.allowed) == (True, False)
+
+
+def _plan_request(**fields) -> RentReminderPlanRequest:
+    return RentReminderPlanRequest(
+        frequency="weekly", due_weekday=6, send_days_before=1, **fields,
+    )
+
+
+async def _save(applicant_id: uuid.UUID, *, create: bool, **fields):
+    save = rent_reminder_service.create_plan if create else rent_reminder_service.update_plan
+    return await save(
+        organization_id=ORG, user_id=USER, applicant_id=applicant_id, payload=_plan_request(**fields),
+    )
+
+
+class TestSavingTextsForAnOwnerWhoMayNotText:
+    @pytest.mark.asyncio
+    async def test_a_new_plan_cant_have_texts(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        wired["may_text"].return_value = False
+
+        with pytest.raises(rent_reminder_service.SmsNotAllowedError):
+            await _save(applicant_id, create=True, sms_enabled=True)
+        assert (await db.execute(select(RentReminderPlan))).scalars().all() == []
+        wired["may_text"].assert_awaited_with(db, USER)
+
+    @pytest.mark.asyncio
+    async def test_a_new_email_plan_saves(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        wired["may_text"].return_value = False
+
+        saved = await _save(applicant_id, create=True)
+        assert (saved.email_enabled, saved.sms_enabled) == (True, False)
+
+    @pytest.mark.asyncio
+    async def test_texts_cant_be_switched_on(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        plan = await _plan(db, applicant_id)
+        wired["may_text"].return_value = False
+
+        with pytest.raises(rent_reminder_service.SmsNotAllowedError):
+            await _save(applicant_id, create=False, sms_enabled=True)
+        assert plan.sms_enabled is False
+        wired["may_text"].assert_awaited_with(db, plan.user_id)
+
+    @pytest.mark.asyncio
+    async def test_a_plan_that_already_texts_still_saves_its_other_settings(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _plan(db, applicant_id, sms_enabled=True)
+        wired["may_text"].return_value = False
+
+        saved = await _save(
+            applicant_id, create=False, sms_enabled=True, payment_instructions="Venmo @jason",
+        )
+        assert (saved.sms_enabled, saved.payment_instructions) == (True, "Venmo @jason")
+
+    @pytest.mark.asyncio
+    async def test_texts_can_always_be_turned_off(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _plan(db, applicant_id, sms_enabled=True)
+        wired["may_text"].return_value = False
+
+        saved = await _save(applicant_id, create=False, sms_enabled=False)
+        assert saved.sms_enabled is False
+
+    @pytest.mark.asyncio
+    async def test_an_owner_who_may_text_switches_texts_on(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _plan(db, applicant_id)
+
+        saved = await _save(applicant_id, create=False, sms_enabled=True)
+        assert saved.sms_enabled is True
 
 
 _SEND_NOW_AT = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
@@ -1482,6 +1652,7 @@ class TestRaces:
             ReminderOutbound(
                 send_id=row.id, attempt=1, channel="sms", subject="", body=row.message_body,
                 tenant_email=None, tenant_phone="(713) 555-0100", operator_email="jason@example.com",
+                owner_may_text=True,
             ),
         )
 

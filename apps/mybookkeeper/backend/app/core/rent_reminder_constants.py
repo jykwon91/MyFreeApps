@@ -36,6 +36,9 @@ ERROR_SEND_INTERRUPTED = "send_interrupted"
 ERROR_NO_RECIPIENT = "no_recipient"
 ERROR_INVALID_PHONE = "invalid_phone"
 ERROR_SMS_NOT_CONFIGURED = "sms_not_configured"
+# The plan's owner may not send texts (``rent_reminder_sms_permission``).
+# Only the text is held back; the email still goes.
+ERROR_SMS_NOT_ALLOWED = "sms_not_allowed"
 # A text Twilio refused when it was sent is stored as ``sms_<code>``
 # (``sms_21211``). A few ``sms_`` codes have a fixed spelling below, with words
 # of their own.
@@ -63,6 +66,7 @@ REMINDER_ERROR_CODES: frozenset[str] = frozenset({
     ERROR_NO_RECIPIENT,
     ERROR_INVALID_PHONE,
     ERROR_SMS_NOT_CONFIGURED,
+    ERROR_SMS_NOT_ALLOWED,
     ERROR_SMS_NETWORK,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_EMAIL_NOT_CONFIGURED,

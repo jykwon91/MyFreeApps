@@ -1,5 +1,6 @@
-import { SMS_FROM_NUMBER_FALLBACK } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
+import { isTextSwitchLocked, showsTextSwitch } from "@mybookkeeper/api-client/utils/rentReminderTextSwitch";
+import { smsStatusText } from "./rent-reminder-sms-status-text";
 
 export interface RentReminderChannelFieldsProps {
   emailEnabled: boolean;
@@ -15,7 +16,9 @@ const ROW_CLASS = "flex items-start gap-2 min-h-[44px] text-sm";
 /**
  * Email and text toggles. Text is disabled — with the reason shown — when the
  * server has no Twilio setup, rather than letting the host switch on a
- * channel that would only ever fail.
+ * channel that would only ever fail. For an account that may not send texts
+ * it is hidden, or, while a saved plan still has texts on, it can only turn
+ * them off.
  */
 export default function RentReminderChannelFields({
   emailEnabled,
@@ -26,6 +29,7 @@ export default function RentReminderChannelFields({
   hasChannel,
 }: RentReminderChannelFieldsProps) {
   const { sms } = overview;
+  const canText = sms.available && sms.allowed;
   return (
     <fieldset className="space-y-1">
       <legend className="block text-sm font-medium mb-1">Send by</legend>
@@ -48,32 +52,32 @@ export default function RentReminderChannelFields({
         </span>
       </label>
 
-      <label className={ROW_CLASS}>
-        <input
-          type="checkbox"
-          checked={smsEnabled}
-          disabled={!sms.available}
-          onChange={(e) => onSmsChange(e.target.checked)}
-          className="mt-0.5"
-          data-testid="rent-reminder-sms"
-        />
-        <span>
-          Text message
-          <span
-            className="block text-xs text-muted-foreground"
-            data-testid="rent-reminder-sms-status"
-          >
-            {sms.available
-              ? `From ${sms.from_number ?? SMS_FROM_NUMBER_FALLBACK}.`
-              : "Not set up on this server yet — texts need a Twilio number."}
-          </span>
-          {sms.available && !overview.tenant_has_phone ? (
-            <span className="block text-xs text-muted-foreground">
-              No phone number on this tenant&apos;s record yet.
+      {showsTextSwitch(overview) ? (
+        <label className={ROW_CLASS}>
+          <input
+            type="checkbox"
+            checked={smsEnabled}
+            disabled={isTextSwitchLocked(sms, smsEnabled)}
+            onChange={(e) => onSmsChange(e.target.checked)}
+            className="mt-0.5"
+            data-testid="rent-reminder-sms"
+          />
+          <span>
+            Text message
+            <span
+              className="block text-xs text-muted-foreground"
+              data-testid="rent-reminder-sms-status"
+            >
+              {smsStatusText(sms)}
             </span>
-          ) : null}
-        </span>
-      </label>
+            {canText && !overview.tenant_has_phone ? (
+              <span className="block text-xs text-muted-foreground">
+                No phone number on this tenant&apos;s record yet.
+              </span>
+            ) : null}
+          </span>
+        </label>
+      ) : null}
 
       {hasChannel ? null : (
         <p className="text-xs text-destructive" role="alert">

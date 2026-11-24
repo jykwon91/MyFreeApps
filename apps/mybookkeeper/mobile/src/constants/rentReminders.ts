@@ -34,6 +34,7 @@ export const REMINDER_MESSAGES = {
   sendAgain: "Send again",
   possiblySentRefused: "The last try may already have reached them, so I didn't send anything. Check first, then send again.",
   noSms: "Text reminders aren't set up on the server, so I can't send.",
+  smsNotAllowed: "Texts can't be sent from your account, so I can't send. Turn texts off in Edit reminders to send by email.",
   history: "History",
   noHistory: "No reminders sent yet.",
   showFewer: "Show fewer",

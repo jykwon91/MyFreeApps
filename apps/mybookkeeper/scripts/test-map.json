@@ -1140,6 +1140,7 @@
         "api-client/src/utils/rentReminderChannelWords.ts",
         "api-client/src/utils/rentReminderPossiblySent.ts",
         "api-client/src/utils/rentReminderPlanChannels.ts",
+        "api-client/src/utils/rentReminderTextSwitch.ts",
         "api-client/src/utils/isTextHandedOff.ts",
         "api-client/src/constants/rentReminderLabels.ts",
         "api-client/src/utils/rentReminderForm.ts",
@@ -1160,7 +1161,8 @@
         "test_rent_reminder_request_id.py",
         "test_cross_org_isolation_http_2.py",
         "test_rent_reminder_send_audit.py",
-        "test_rent_reminder_channels.py"
+        "test_rent_reminder_channels.py",
+        "test_rent_reminder_sms_permission.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx",

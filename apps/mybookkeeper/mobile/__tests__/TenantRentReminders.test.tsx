@@ -535,8 +535,14 @@ describe("reminder wording", () => {
   });
 
   it("refuses when texts aren't set up, as the server would", () => {
-    const overview = aReminderOverview({ sms: { available: false, from_number: null } });
+    const overview = aReminderOverview({ sms: { available: false, allowed: true, from_number: null } });
     expect(sendReadiness(overview, plan, "Dana")).toEqual({ canSend: false, notes: [REMINDER_MESSAGES.noSms] });
+  });
+
+  it("refuses a plan with texts on when the account may not send them, as the server would", () => {
+    const overview = aReminderOverview({ sms: { available: true, allowed: false, from_number: null } });
+    expect(sendReadiness(overview, plan, "Dana")).toEqual({ canSend: false, notes: [REMINDER_MESSAGES.smsNotAllowed] });
+    expect(sendReadiness(overview, aReminderPlan({ sms_enabled: false }), "Dana")).toEqual({ canSend: true, notes: [] });
   });
 
   it("describes each way a send can come out", () => {

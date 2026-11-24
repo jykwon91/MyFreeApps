@@ -14,7 +14,7 @@ import { APPLICANT_DETAIL, APPLICANT_ID, SCREENING_ELIGIBLE, SCREENING_PROVIDERS
 
 const NO_PLAN_OVERVIEW = {
   plan: null,
-  sms: { available: false, from_number: null },
+  sms: { available: false, allowed: true, from_number: null },
   tenant_has_email: true,
   tenant_has_phone: false,
 };

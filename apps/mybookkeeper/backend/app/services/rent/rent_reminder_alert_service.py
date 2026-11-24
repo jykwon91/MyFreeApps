@@ -18,6 +18,7 @@ import uuid
 from app.core.rent_reminder_alert_messages import (
     CHECK_WHETHER_SENT,
     MISSING_CONTACT,
+    NOT_RETRYABLE_ERRORS,
     REMINDER_NAME,
     RETRY,
     TWILIO_ERROR_DOCS_URL,
@@ -106,8 +107,10 @@ def _alert_text(*, tenant: str, channel: RentReminderChannel, code: str) -> tupl
     else:
         subject = f"{tenant}'s {what} didn't go out"
         next_step = RETRY
-    body = f"{subject}. {_what_happened(channel=channel, code=code)} {next_step}"
-    return subject, body
+    body = f"{subject}. {_what_happened(channel=channel, code=code)}"
+    if code in NOT_RETRYABLE_ERRORS:
+        return subject, body
+    return subject, f"{body} {next_step}"
 
 
 async def alert_operator(

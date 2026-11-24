@@ -28,7 +28,7 @@ from app.schemas.rent.rent_reminder_overview_response import RentReminderOvervie
 from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
-from app.services.rent import rent_reminder_dispatch_service
+from app.services.rent import rent_reminder_dispatch_service, rent_reminder_service
 from app.services.system import sms_service
 
 _AUTH_TOKEN = "test-twilio-auth-token-0123456789"
@@ -64,7 +64,7 @@ class TestOverview:
         try:
             overview = RentReminderOverviewResponse(
                 plan=None,
-                sms=RentReminderSmsStatus(available=False),
+                sms=RentReminderSmsStatus(available=False, allowed=False),
                 tenant_has_email=True,
                 tenant_has_phone=True,
             )
@@ -75,6 +75,7 @@ class TestOverview:
                 response = TestClient(app).get(f"/rent-reminders/tenants/{uuid.uuid4()}")
             assert response.status_code == 200
             assert response.json()["sms"]["available"] is False
+            assert response.json()["sms"]["allowed"] is False
             assert response.json()["plan"] is None
         finally:
             app.dependency_overrides.clear()
@@ -116,6 +117,24 @@ class TestPlanValidation:
         finally:
             app.dependency_overrides.clear()
 
+    @pytest.mark.parametrize(("method", "service"), [("post", "create_plan"), ("put", "update_plan")])
+    def test_texts_the_owner_may_not_send_are_422(self, method: str, service: str) -> None:
+        _override_auth()
+        try:
+            refused = rent_reminder_service.SmsNotAllowedError(rent_reminder_service.SMS_NOT_ALLOWED_MESSAGE)
+            with patch(
+                f"app.api.rent_reminders.rent_reminder_service.{service}",
+                AsyncMock(side_effect=refused),
+            ):
+                response = getattr(TestClient(app), method)(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/plan",
+                    json={**_SUNDAY_PLAN, "sms_enabled": True},
+                )
+            assert response.status_code == 422
+            assert response.json()["detail"] == rent_reminder_service.SMS_NOT_ALLOWED_MESSAGE
+        finally:
+            app.dependency_overrides.clear()
+
 
 class TestSendNow:
     def test_happy_path(self) -> None:
@@ -147,6 +166,23 @@ class TestSendNow:
             assert send_now.call_args.kwargs["expected_message"] == _SHOWN["message"]
             assert send_now.call_args.kwargs["expected_channels"] == ["email", "sms"]
             assert send_now.call_args.kwargs["confirmed_possibly_sent"] == []
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_texts_the_owner_may_not_send_are_422(self) -> None:
+        _override_auth()
+        try:
+            refused = rent_reminder_service.SmsNotAllowedError(rent_reminder_service.SMS_NOT_ALLOWED_MESSAGE)
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(side_effect=refused),
+            ):
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
+                )
+            assert response.status_code == 422
+            assert response.json()["detail"] == rent_reminder_service.SMS_NOT_ALLOWED_MESSAGE
         finally:
             app.dependency_overrides.clear()
 

@@ -18,6 +18,7 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_SMS_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     ERROR_SMS_NETWORK,
+    ERROR_SMS_NOT_ALLOWED,
     ERROR_SMS_NOT_CONFIGURED,
     ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
@@ -40,6 +41,8 @@ CHECK_WHETHER_SENT: Mapping[RentReminderChannel, str] = MappingProxyType({
     ),
     RENT_REMINDER_CHANNEL_EMAIL: "ask the tenant whether it arrived",
 })
+# Codes a retry can't fix, so the alert doesn't offer one.
+NOT_RETRYABLE_ERRORS: frozenset[str] = frozenset({ERROR_SMS_NOT_ALLOWED})
 RETRY = (
     "If nothing else went out for this due date, you can retry from the "
     "tenant's Rent reminders card with Send now. If the other channel did go "
@@ -55,6 +58,10 @@ WHAT_HAPPENED: Mapping[str, str] = MappingProxyType({
     ERROR_SEND_INTERRUPTED: "Sending was interrupted before it was confirmed.",
     ERROR_INVALID_PHONE: "The tenant's phone number isn't valid. Fix it on their record, area code included.",
     ERROR_SMS_NOT_CONFIGURED: "Text reminders are switched on but Twilio isn't configured on the server.",
+    ERROR_SMS_NOT_ALLOWED: (
+        "Texts can't be sent from your account. Turn texts off on the tenant's "
+        "Rent reminders card so only email reminders go out."
+    ),
     ERROR_SMS_NETWORK: "The server couldn't reach Twilio, so the text wasn't sent.",
     ERROR_SMS_OUTCOME_UNKNOWN: "Twilio didn't confirm it took the text.",
     ERROR_EMAIL_NOT_CONFIGURED: "Email isn't set up on the server.",

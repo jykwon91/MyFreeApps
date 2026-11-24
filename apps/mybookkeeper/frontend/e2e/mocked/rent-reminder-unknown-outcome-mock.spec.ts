@@ -21,7 +21,7 @@ import type { RentReminderSendStatus } from "@mybookkeeper/api-client/types/rent
 import { APPLICANT_DETAIL, APPLICANT_ID, SCREENING_ELIGIBLE, SCREENING_PROVIDERS } from "./fixtures/mockApplicant";
 
 const OVERVIEW = {
-  sms: { available: true, from_number: "+17135550199" },
+  sms: { available: true, allowed: true, from_number: "+17135550199" },
   tenant_has_email: true,
   tenant_has_phone: true,
   plan: {

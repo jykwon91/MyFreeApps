@@ -6,6 +6,7 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Alert } from "react-native";
 import { Provider } from "react-redux";
+import { SMS_NOT_ALLOWED_NOTE } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import { REMINDER_SETUP_MESSAGES as S } from "../src/constants/rentReminderSetup";
 import { RENT_MANAGE_MESSAGES } from "../src/constants/rentManage";
 import TenantRentReminders from "../src/features/rent/TenantRentReminders";
@@ -247,8 +248,16 @@ describe("setting reminders up", () => {
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
+  it("has no text switch for an account that may not send texts", async () => {
+    await start(aReminderOverview({ plan: null, sms: { available: true, allowed: false, from_number: null } }));
+    await openSheet(S.titleNew, S.setUp);
+
+    expect(screen.queryByRole("switch", { name: new RegExp(`^${S.sms}`) })).toBeNull();
+    expect(screen.queryByText(SMS_NOT_ALLOWED_NOTE)).toBeNull();
+  });
+
   it("can't turn texts on when the server can't send them", async () => {
-    await start(aReminderOverview({ plan: null, sms: { available: false, from_number: null } }));
+    await start(aReminderOverview({ plan: null, sms: { available: false, allowed: true, from_number: null } }));
     await openSheet(S.titleNew, S.setUp);
 
     const sms = screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) });
@@ -340,6 +349,24 @@ describe("editing reminders", () => {
         },
       },
     ]);
+  });
+
+  it("lets an account that may not send texts turn a plan's texts off, and only off", async () => {
+    const texting = aReminderOverview({ plan: aReminderPlan({ sms_enabled: true }), sms: { available: true, allowed: false, from_number: null } });
+    const server = await start(texting);
+    await openSheet(S.titleEdit, S.edit);
+
+    const sms = () => screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) });
+    expect(sms().props.accessibilityState).toEqual(expect.objectContaining({ checked: true, disabled: false }));
+    expect(screen.getByText(SMS_NOT_ALLOWED_NOTE)).toBeTruthy();
+
+    await fireEvent.press(sms());
+    expect(sms().props.accessibilityState).toEqual(expect.objectContaining({ checked: false, disabled: true }));
+
+    await save(S.saveEdit);
+
+    expect(await screen.findByText(S.savedEdit)).toBeTruthy();
+    expect(server.writes).toEqual([expect.objectContaining({ method: "PUT", body: expect.objectContaining({ sms_enabled: false }) })]);
   });
 
   it("says when saving fails", async () => {
