@@ -67,6 +67,12 @@
   },
   {
     "date": "2026-11-23",
+    "title": "Pattern and recipe tooltips say what they teach",
+    "summary": "Hovering a Pattern, Plans, Formula or Recipe the game files haven't shown yet no longer says \"No stats for this item.\" It now shows what it needs (profession and skill), what it teaches, the item it makes with its stats, and the reagents.",
+    "to": "/wow-forever/professions"
+  },
+  {
+    "date": "2026-11-23",
     "title": "New MGA Professions addon: the profession guides in your game",
     "summary": "Open Professions from the MGA minimap menu, the key binding, or the MGA guide button on a profession window. It starts from your own professions and skill and lists the next rows of the route with the mats you carry against what each needs, where to learn each recipe, the trainers for your next rank, and the best gathering zones. Click a trainer to point the MGA Waypoints arrow at them; with MGA Prices installed it adds what the mats cost. Download it from the Professions page.",
     "to": "/wow-forever/professions"

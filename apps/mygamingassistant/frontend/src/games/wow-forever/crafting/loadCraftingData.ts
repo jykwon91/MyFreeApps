@@ -14,6 +14,13 @@ const RECIPE_FILES: Readonly<Record<CraftingProfession, () => Promise<{ default:
   firstaid: () => import("@/games/wow-forever/data/professions/crafting/firstaid.json"),
 };
 
+/** Every crafting profession's recipe file alone (no trainers or sources) — for a lookup by recipe item. */
+export async function loadAllCraftingFiles(): Promise<ReadonlyMap<CraftingProfession, CraftingFile>> {
+  const professions = Object.keys(RECIPE_FILES) as CraftingProfession[];
+  const loaded = await Promise.all(professions.map((p) => RECIPE_FILES[p]()));
+  return new Map(professions.map((p, i) => [p, loaded[i].default as CraftingFile]));
+}
+
 /** The generated recipe, trainer and source data for one crafting profession. */
 export async function loadCraftingData(profession: CraftingProfession): Promise<CraftingData> {
   const [recipes, skills, sources] = await Promise.all([

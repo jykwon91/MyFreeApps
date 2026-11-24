@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ITEM_TOOLTIP_STATUS } from "@/games/wow-forever/data/itemPages/itemTooltipStatus";
-import { cachedItemTooltip, loadItemTooltip } from "@/games/wow-forever/lib/itemPages/itemTooltipLoader";
+import { cachedItemTooltip, cachedRecipeItemTooltip, loadItemTooltip } from "@/games/wow-forever/lib/itemPages/itemTooltipLoader";
 import type { ItemTooltipSettled as Settled } from "@/games/wow-forever/types/itemPages/itemTooltipSettled";
 import type { ItemTooltipState } from "@/games/wow-forever/types/itemPages/itemTooltipState";
 
@@ -25,7 +25,10 @@ export function useItemTooltipData(itemId: number): ItemTooltipState {
 
   const cached = cachedItemTooltip(itemId);
   if (cached) return { status: ITEM_TOOLTIP_STATUS.READY, data: cached };
-  if (cached === null) return { status: ITEM_TOOLTIP_STATUS.MISSING };
+  if (cached === null) {
+    const recipe = cachedRecipeItemTooltip(itemId);
+    return recipe ? { status: ITEM_TOOLTIP_STATUS.RECIPE, data: recipe } : { status: ITEM_TOOLTIP_STATUS.MISSING };
+  }
   if (settled?.itemId === itemId && settled.failed) return { status: ITEM_TOOLTIP_STATUS.ERROR };
   return { status: ITEM_TOOLTIP_STATUS.LOADING };
 }

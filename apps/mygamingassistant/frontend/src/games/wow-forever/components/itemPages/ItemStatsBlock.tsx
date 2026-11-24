@@ -17,15 +17,17 @@ interface ItemStatsBlockProps {
   /** The item page shows what a vendor charges; a hover tooltip doesn't (the game's tooltip never does). */
   showVendorPrice?: boolean;
   className?: string;
+  /** Drop the card's frame, so the block sits inside another card (a recipe's product). */
+  bare?: boolean;
 }
 
 /** The item as its in-game tooltip shows it, from the Forever game files, in the game's line order. */
-export default function ItemStatsBlock({ item, facts, showVendorPrice = true, className }: ItemStatsBlockProps) {
+export default function ItemStatsBlock({ item, facts, showVendorPrice = true, className, bare = false }: ItemStatsBlockProps) {
   const lines = itemStatLines(item);
   return (
     <section
       aria-label="Item stats"
-      className={clsx("rounded-xl border bg-card p-4 space-y-0.5 text-sm max-w-md", className)}
+      className={clsx("space-y-0.5 text-sm", !bare && "rounded-xl border bg-card p-4 max-w-md", className)}
       data-testid="item-stats"
     >
       <p className={`font-semibold ${QUALITY_TEXT_CLASSES[item.quality]}`}>{item.name}</p>
