@@ -21,13 +21,25 @@ describe("describeReminderError", () => {
     expect(reason).toContain("httpsms.com");
   });
 
+  it("says an email the mail server never confirmed may already have been sent, and to ask the tenant", () => {
+    const reason = describeReminderError("email_outcome_unknown");
+    expect(reason).toContain("may already have been sent");
+    expect(reason).toContain("Ask the tenant");
+    expect(reason).not.toContain("httpsms.com");
+  });
+
   it("says a text that never reached the relay wasn't sent", () => {
     expect(describeReminderError("sms_network_error")).toBe("The server couldn't reach the text relay, so it wasn't sent");
+  });
+
+  it("says the relay rejected the server's API key, not the text", () => {
+    expect(describeReminderError("sms_http_401")).toBe("The text relay rejected the server's API key, so it wasn't sent");
   });
 
   it("explains the phone and relay failures", () => {
     expect(describeReminderError("phone_failed: RESULT_ERROR_GENERIC")).toBe("The phone reported a problem sending it. Check the httpSMS app");
     expect(describeReminderError("sms_send_failed")).toBe("The text relay refused it");
+    expect(describeReminderError("sms_http_422")).toBe("The text relay refused it");
     expect(describeReminderError("constructor")).toBe("Something went wrong sending it");
   });
 });

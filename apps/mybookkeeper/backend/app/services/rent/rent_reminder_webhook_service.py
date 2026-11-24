@@ -53,6 +53,7 @@ from app.core.rent_reminder_constants import (
     ERROR_SEND_INTERRUPTED,
     ERROR_SMS_EXPIRED,
     ERROR_SMS_OUTCOME_UNKNOWN,
+    PHONE_FAILED_CODE_PREFIX,
 )
 from app.core.rent_reminder_request_id import parse_reminder_request_id
 from app.db.session import unit_of_work
@@ -64,7 +65,6 @@ from app.services.system import sms_service
 logger = logging.getLogger(__name__)
 
 _SMS = "sms"
-_PHONE_FAILED_PREFIX = "phone_failed"
 _STATUS_RANK: dict[str, int] = {"queued": 0, "sent_to_phone": 1, "sent": 2, "delivered": 3}
 _CONFIRMED_STATUS: dict[str, str] = {
     HTTPSMS_EVENT_PHONE_SENT: "sent",
@@ -177,8 +177,8 @@ async def _apply(
     else:
         # The phone's own words can quote the number it was sending to;
         # they are stored, shown and emailed to the operator.
-        detail = mask_phone_numbers((event.error_message or "unknown").strip())
-        code = f"{_PHONE_FAILED_PREFIX}: {detail}"
+        detail = mask_phone_numbers((event.error_message or "").strip() or "unknown")
+        code = f"{PHONE_FAILED_CODE_PREFIX}{detail}"
 
     if not _can_fail(row):
         return "ignored", False

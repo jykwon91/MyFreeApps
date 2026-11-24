@@ -5,7 +5,8 @@
  *  - `sent_to_phone`: text handed to the Android phone, awaiting its report
  *  - `sent`: email accepted by the mail server, or text sent by the phone
  *  - `delivered`: the carrier confirmed the text arrived
- *  - `failed`: did not go out (see `error_code`)
+ *  - `failed`: gave up. It didn't go out, or may have with nothing to
+ *    confirm it (`error_code` says which)
  */
 export type RentReminderSendStatus =
   | "queued"

@@ -7,6 +7,7 @@ export const MAY_STILL_ARRIVE_ERROR_CODES: readonly string[] = [
   "no_phone_confirmation",
   "send_interrupted",
   "sms_outcome_unknown",
+  "email_outcome_unknown",
 ];
 
 /** Mirrors ``REMINDER_MAY_HAVE_BEEN_SENT_CODE``: Send now's 409 when resending wasn't confirmed. */

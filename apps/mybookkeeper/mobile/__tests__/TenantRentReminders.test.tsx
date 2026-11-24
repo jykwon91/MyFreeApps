@@ -329,7 +329,7 @@ describe("Send now", () => {
 
     await sendAndConfirm();
 
-    await waitFor(() => expect(screen.getAllByText(neitherWent("The mail server refused it")).length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(neitherWent("The mail server didn't take it")).length).toBeGreaterThan(0));
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
 
@@ -503,7 +503,7 @@ describe("reminder wording", () => {
     const email = aReminderSend();
     const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_phone" });
     const failed = { status: "failed" as const, error_code: "email_send_failed" };
-    const reason = "The mail server refused it";
+    const reason = "The mail server didn't take it";
 
     expect(sendOutcome([email], "Dana")).toEqual({ message: sentEmail("Dana"), isProblem: false });
     expect(sendOutcome([text], "Dana")).toEqual({ message: REMINDER_MESSAGES.textWithPhone, isProblem: false });
@@ -525,5 +525,17 @@ describe("reminder wording", () => {
       expect(outcome.message).not.toContain("try again");
     }
     expect(sendOutcome([email, unsure], "Dana").message).toBe(`${channelWent("email")} ${channelMayHaveGone("text", reason)}`);
+  });
+
+  it("never says an email the mail server never confirmed didn't go out, or to try again", () => {
+    const text = aReminderSend({ id: "s2", channel: "sms" });
+    const unsure = aReminderSend({ channel: "email", status: "failed", error_code: "email_outcome_unknown" });
+    const reason = "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again";
+
+    const outcome = sendOutcome([unsure, text], "Dana");
+    expect(outcome.isProblem).toBe(true);
+    expect(outcome.message).toBe(`${channelMayHaveGone("email", reason)} ${channelWent("text")}`);
+    expect(outcome.message).not.toContain("didn't go out");
+    expect(outcome.message).not.toContain("try again");
   });
 });
