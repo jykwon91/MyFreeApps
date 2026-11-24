@@ -39,6 +39,13 @@ LIABILITY_ACCOUNT_TYPES: frozenset[str] = frozenset({
     ACCOUNT_TYPE_MORTGAGE,
     ACCOUNT_TYPE_OTHER_LIABILITY,
 })
+# The accounts that hold securities: the ones the Investments page lists, a
+# person can add holdings to, and a bank sync asks Plaid's holdings for.
+INVESTMENT_ACCOUNT_TYPES: frozenset[str] = frozenset({
+    ACCOUNT_TYPE_BROKERAGE,
+    ACCOUNT_TYPE_RETIREMENT,
+    ACCOUNT_TYPE_HSA,
+})
 
 # Display order on the Accounts page: everyday money first, debt last.
 ACCOUNT_TYPES: tuple[str, ...] = (

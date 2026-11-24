@@ -1,7 +1,8 @@
 """Act on a verified Plaid webhook.
 
-Returns the id of a connection to sync in the background, or None. The
-handler only records state; the sync itself runs after the response so Plaid
+Returns what to run in the background — a sync of one connection, or for
+``HOLDINGS: DEFAULT_UPDATE`` just its holdings — or None. The handler only
+records state; the sync itself runs after the response so Plaid
 gets its 200 quickly (it retries slow answers).
 
 ``NEW_ACCOUNTS_AVAILABLE`` is only logged: adding an account needs the person
@@ -10,15 +11,16 @@ to choose it in Link update mode, which is not offered yet.
 from __future__ import annotations
 
 import logging
-import uuid
 
 from pydantic import ValidationError
 
 from app.core.plaid_constants import (
+    PLAID_WEBHOOK_HOLDINGS_DEFAULT_UPDATE,
     PLAID_WEBHOOK_ITEM_ERROR,
     PLAID_WEBHOOK_ITEM_REAUTH_CODES,
     PLAID_WEBHOOK_LOGIN_REPAIRED,
     PLAID_WEBHOOK_SYNC_UPDATES_AVAILABLE,
+    PLAID_WEBHOOK_TYPE_HOLDINGS,
     PLAID_WEBHOOK_TYPE_ITEM,
     PLAID_WEBHOOK_TYPE_TRANSACTIONS,
     PLAID_WEBHOOK_USER_PERMISSION_REVOKED,
@@ -31,13 +33,14 @@ from app.core.plaid_item_enums import (
 from app.db.session import unit_of_work
 from app.models.integrations.plaid_item import PlaidItem
 from app.repositories.plaid import plaid_item_repo
+from app.schemas.plaid.plaid_webhook_follow_up import PlaidWebhookFollowUp
 from app.schemas.plaid.wire.plaid_wire_webhook import PlaidWireWebhook
 from app.services.plaid import plaid_item_status_rules
 
 logger = logging.getLogger(__name__)
 
 
-async def handle(body: bytes) -> uuid.UUID | None:
+async def handle(body: bytes) -> PlaidWebhookFollowUp | None:
     try:
         webhook = PlaidWireWebhook.model_validate_json(body)
     except ValidationError:
@@ -57,7 +60,12 @@ async def handle(body: bytes) -> uuid.UUID | None:
             return None
         if webhook.webhook_type == PLAID_WEBHOOK_TYPE_TRANSACTIONS:
             if webhook.webhook_code == PLAID_WEBHOOK_SYNC_UPDATES_AVAILABLE:
-                return item.id
+                return PlaidWebhookFollowUp(item_id=item.id)
+            return None
+        if webhook.webhook_type == PLAID_WEBHOOK_TYPE_HOLDINGS:
+            if webhook.webhook_code == PLAID_WEBHOOK_HOLDINGS_DEFAULT_UPDATE:
+                return PlaidWebhookFollowUp(item_id=item.id, holdings_only=True)
+            logger.info("Plaid holdings webhook %s for item %s; no action", webhook.webhook_code, item.id)
             return None
         if webhook.webhook_type == PLAID_WEBHOOK_TYPE_ITEM:
             _apply_item_webhook(item, webhook)

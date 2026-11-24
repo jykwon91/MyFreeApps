@@ -40,4 +40,11 @@ export const PLAID_MESSAGES = {
   oauthResuming: "Returning to your bank connection…",
   oauthNoSession: "This bank connection can't be resumed here. Start again from Financial Accounts.",
   backToAccounts: "Back to Financial Accounts",
+  addInvestments: "Add investments",
+  investmentsAdded: "Investments added. Pulling your holdings.",
+  investmentsNotEnabled: "Investment syncing isn't turned on for this server yet.",
+  investmentsConsentNeeded: "This bank's investments aren't shared yet.",
+  investmentsNotReady: "Your bank is still getting your holdings ready.",
+  investmentsFailed: "Couldn't pull your holdings last time. They'll be tried again on the next sync.",
+  holdingsSyncedAt: (when: string) => `Holdings synced ${when}`,
 } as const;

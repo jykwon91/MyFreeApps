@@ -41,6 +41,7 @@ from app.core.plaid_constants import (
 )
 from app.core.financial_account_enums import INSTITUTION_MAX_LENGTH
 from app.core.plaid_item_enums import (
+    PLAID_INVESTMENTS_STATUSES_SQL,
     PLAID_ITEM_STATUS_ACTIVE,
     PLAID_ITEM_STATUS_MAX_LENGTH,
     PLAID_ITEM_STATUSES_SQL,
@@ -104,6 +105,20 @@ class PlaidItem(Base):
     last_synced_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
+
+    # Investment holdings, kept apart from the transactions status above so a
+    # bank that won't give holdings never marks the connection broken. NULL
+    # until the sync first asks (``plaid_item_enums``). The code is Plaid's
+    # last refusal for holdings, cleared when holdings next arrive.
+    investments_status: Mapped[str | None] = mapped_column(
+        String(PLAID_ITEM_STATUS_MAX_LENGTH), nullable=True,
+    )
+    investments_error_code: Mapped[str | None] = mapped_column(
+        String(PLAID_ERROR_CODE_MAX_LENGTH), nullable=True,
+    )
+    holdings_synced_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
     created_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -121,6 +136,10 @@ class PlaidItem(Base):
     __table_args__ = (
         CheckConstraint(
             f"status IN {PLAID_ITEM_STATUSES_SQL}", name="chk_plaid_item_status",
+        ),
+        CheckConstraint(
+            f"investments_status IS NULL OR investments_status IN {PLAID_INVESTMENTS_STATUSES_SQL}",
+            name="chk_plaid_item_investments_status",
         ),
         Index("uq_plaid_items_plaid_item_id", "plaid_item_id", unique=True),
         # The Accounts page lists one person's connections.

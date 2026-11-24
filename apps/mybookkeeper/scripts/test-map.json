@@ -2438,7 +2438,9 @@
         "api-client/src/constants/plaidItemStatuses.ts",
         "api-client/src/constants/transactionScopes.ts",
         "api-client/src/utils/plaidItemFormat.ts",
-        "api-client/src/utils/suggestPlaidAccountMatch.ts"
+        "api-client/src/utils/suggestPlaidAccountMatch.ts",
+        "backend/app/mappers/plaid_holding_mapper.py",
+        "frontend/src/shared/lib/plaidInvestmentsNote.ts"
       ],
       "backend_tests": [
         "test_plaid_api.py",
@@ -2449,7 +2451,9 @@
         "test_plaid_sync_service.py",
         "test_plaid_webhook_service.py",
         "test_plaid_webhook_verifier.py",
-        "test_bank_csv_account_import.py"
+        "test_bank_csv_account_import.py",
+        "test_plaid_holdings_sync_service.py",
+        "test_plaid_investments_consent.py"
       ],
       "frontend_tests": [
         "ConnectedBanksSection.test.tsx",
@@ -2830,6 +2834,46 @@
       ],
       "e2e_specs": [
         "mocked/budget-cash-flow-mock.spec.ts"
+      ]
+    },
+    "investments": {
+      "source_paths": [
+        "backend/app/core/investment_enums.py",
+        "backend/app/models/investments/",
+        "backend/app/repositories/investments/",
+        "backend/app/services/investments/",
+        "backend/app/services/plaid/plaid_holdings_sync_service.py",
+        "backend/app/schemas/investments/",
+        "backend/app/schemas/plaid/wire/plaid_wire_holding.py",
+        "backend/app/schemas/plaid/wire/plaid_wire_security.py",
+        "backend/app/schemas/plaid/wire/plaid_wire_holdings_response.py",
+        "backend/app/mappers/holding_mapper.py",
+        "backend/app/mappers/plaid_holding_mapper.py",
+        "backend/app/api/holdings.py",
+        "backend/alembic/versions/holdings261124_investment_holdings.py",
+        "frontend/src/app/pages/Investments.tsx",
+        "frontend/src/app/features/holdings/",
+        "frontend/src/shared/lib/holdings-messages.ts",
+        "api-client/src/store/holdingsApi.ts",
+        "api-client/src/types/investments/",
+        "api-client/src/constants/securityTypes.ts",
+        "api-client/src/utils/decimalText.ts",
+        "api-client/src/utils/holdingForm.ts",
+        "api-client/src/utils/holdingFormat.ts"
+      ],
+      "backend_tests": [
+        "test_holding_mappers.py",
+        "test_holding_service.py",
+        "test_holdings_api.py",
+        "test_plaid_holdings_sync_service.py",
+        "test_financial_accounts_service.py"
+      ],
+      "frontend_tests": [
+        "HoldingsBody.test.tsx",
+        "HoldingDialogs.test.tsx"
+      ],
+      "e2e_specs": [
+        "mocked/holdings-mock.spec.ts"
       ]
     }
   },

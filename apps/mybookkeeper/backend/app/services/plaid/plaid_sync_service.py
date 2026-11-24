@@ -21,6 +21,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.financial_account_enums import INVESTMENT_ACCOUNT_TYPES
 from app.core.plaid_item_enums import PLAID_ITEM_STATUS_ACTIVE, PLAID_ITEM_STATUS_LOGIN_REQUIRED
 from app.core.plaid_not_configured_error import PlaidNotConfiguredError
 from app.db.session import unit_of_work
@@ -28,15 +29,32 @@ from app.repositories.financial_accounts import financial_account_repo
 from app.repositories.plaid import plaid_item_repo
 from app.repositories.transactions import spending_category_repo
 from app.schemas.plaid.plaid_sync_result import PlaidSyncResult
-from app.services.plaid import plaid_client, plaid_item_status_rules, plaid_transaction_applier
+from app.services.plaid import (
+    plaid_client,
+    plaid_holdings_sync_service,
+    plaid_item_status_rules,
+    plaid_transaction_applier,
+)
 from app.services.plaid.plaid_api_error import PlaidApiError
 from app.services.plaid.plaid_item_not_found_error import PlaidItemNotFoundError
 from app.services.plaid.plaid_login_required_error import PlaidLoginRequiredError
 
 logger = logging.getLogger(__name__)
 
+
 async def sync_item(item_id: uuid.UUID) -> PlaidSyncResult:
-    """Sync one connection. Raises ``PlaidItemNotFoundError`` if it is gone."""
+    """Sync one connection: transactions, then (in their own transaction, so
+    they can never undo or fail these) investment holdings. Raises
+    ``PlaidItemNotFoundError`` if it is gone."""
+    result, has_investment_accounts = await _sync_transactions(item_id)
+    if result.status == PLAID_ITEM_STATUS_ACTIVE and has_investment_accounts:
+        await plaid_holdings_sync_service.sync_holdings_in_background(item_id)
+    return result
+
+
+async def _sync_transactions(item_id: uuid.UUID) -> tuple[PlaidSyncResult, bool]:
+    """The transactions sync, and whether the item feeds an investment account
+    (only then are holdings worth asking for)."""
     async with unit_of_work() as db:
         item = await plaid_item_repo.lock(db, item_id)
         if item is None:
@@ -52,7 +70,7 @@ async def sync_item(item_id: uuid.UUID) -> PlaidSyncResult:
                 item.id, exc.error_type, exc.error_code, exc.request_id,
             )
             await db.flush()
-            return PlaidSyncResult(status=item.status)
+            return PlaidSyncResult(status=item.status), False
 
         accounts = await financial_account_repo.list_by_plaid_item(db, item.id)
         counts = await plaid_transaction_applier.apply_batch(
@@ -77,7 +95,7 @@ async def sync_item(item_id: uuid.UUID) -> PlaidSyncResult:
             item.id, counts.added, counts.modified, counts.removed,
             counts.matched_existing, counts.transfers_matched,
         )
-        return PlaidSyncResult(
+        result = PlaidSyncResult(
             added=counts.added,
             modified=counts.modified,
             removed=counts.removed,
@@ -85,6 +103,7 @@ async def sync_item(item_id: uuid.UUID) -> PlaidSyncResult:
             transfers_matched=counts.transfers_matched,
             status=item.status,
         )
+        return result, any(a.account_type in INVESTMENT_ACCOUNT_TYPES for a in accounts)
 
 
 async def sync_for_user(

@@ -14,6 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write
+from app.core.plaid_constants import PLAID_ERROR_INVALID_PRODUCT
 from app.core.plaid_not_configured_error import PlaidNotConfiguredError
 from app.core.rate_limit import RateLimiter
 from app.core.request_utils import get_client_ip
@@ -23,6 +24,7 @@ from app.schemas.plaid.plaid_link_token_request import PlaidLinkTokenRequest
 from app.schemas.plaid.plaid_link_token_response import PlaidLinkTokenResponse
 from app.schemas.plaid.plaid_sync_result import PlaidSyncResult
 from app.services.plaid import (
+    plaid_holdings_sync_service,
     plaid_item_service,
     plaid_sync_service,
     plaid_webhook_service,
@@ -42,6 +44,7 @@ _NOT_FOUND = "Bank connection not found"
 _NOT_CONFIGURED = "Bank sync isn't set up on this server"
 _PLAID_UNAVAILABLE = "The bank connection service didn't answer. Try again in a minute."
 _LOGIN_REQUIRED = "login_required"
+_INVESTMENTS_UNAVAILABLE = "Investment syncing isn't turned on for this server yet"
 # Plaid sends a handful of webhooks per item per day; this only stops floods.
 _webhook_limiter = RateLimiter(max_attempts=120, window_seconds=60)
 # "Sync now" calls Plaid each time.
@@ -60,13 +63,18 @@ async def create_link_token(
 ) -> PlaidLinkTokenResponse:
     try:
         return await plaid_item_service.create_link_token(
-            user_id=ctx.user_id, organization_id=ctx.organization_id, item_id=payload.item_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            item_id=payload.item_id,
+            add_investments=payload.add_investments,
         )
     except PlaidItemNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_NOT_FOUND) from exc
     except PlaidNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=_NOT_CONFIGURED) from exc
     except PlaidApiError as exc:
+        if payload.add_investments and exc.error_code == PLAID_ERROR_INVALID_PRODUCT:
+            raise HTTPException(status_code=503, detail=_INVESTMENTS_UNAVAILABLE) from exc
         raise _plaid_failure() from exc
 
 
@@ -169,7 +177,11 @@ async def plaid_webhook(
     except PlaidNotConfiguredError as exc:
         logger.error("Plaid webhook received but Plaid is not configured")
         raise HTTPException(status_code=503, detail=_NOT_CONFIGURED) from exc
-    item_id = await plaid_webhook_service.handle(body)
-    if item_id is not None:
-        background_tasks.add_task(plaid_sync_service.sync_item_in_background, item_id)
+    follow_up = await plaid_webhook_service.handle(body)
+    if follow_up is not None and follow_up.holdings_only:
+        background_tasks.add_task(
+            plaid_holdings_sync_service.sync_holdings_in_background, follow_up.item_id,
+        )
+    elif follow_up is not None:
+        background_tasks.add_task(plaid_sync_service.sync_item_in_background, follow_up.item_id)
     return Response(status_code=200)

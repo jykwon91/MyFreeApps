@@ -97,6 +97,30 @@ describe("usePlaidLinkFlow", () => {
     expect(result.current.pending).toBeNull();
   });
 
+  it("Add investments opens update mode with the consent and confirms it", async () => {
+    tokenIs("link-4");
+    markReconnected.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    const { result } = renderHook(() => usePlaidLinkFlow());
+    await act(() => result.current.begin("item-1", { addInvestments: true }));
+
+    expect(createLinkToken).toHaveBeenCalledWith({ item_id: "item-1", add_investments: true });
+    await waitFor(() => expect(open).toHaveBeenCalled());
+    const stored: unknown = JSON.parse(localStorage.getItem(PLAID_LINK_SESSION_STORAGE_KEY) ?? "null");
+    expect(stored).toEqual({ linkToken: "link-4", itemId: "item-1", addInvestments: true });
+
+    act(() => linkOptions?.onSuccess("public-4", metadata));
+    expect(markReconnected).toHaveBeenCalledWith("item-1");
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MSG.investmentsAdded));
+  });
+
+  it("says when investment syncing isn't turned on for this server", async () => {
+    createLinkToken.mockReturnValue({ unwrap: () => Promise.reject({ status: 503, data: {} }) });
+    const { result } = renderHook(() => usePlaidLinkFlow());
+    await act(() => result.current.begin("item-1", { addInvestments: true }));
+    expect(showError).toHaveBeenCalledWith(MSG.investmentsNotEnabled);
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("says when bank connections are not set up on the server", async () => {
     createLinkToken.mockReturnValue({ unwrap: () => Promise.reject({ status: 503, data: {} }) });
     const { result } = renderHook(() => usePlaidLinkFlow());

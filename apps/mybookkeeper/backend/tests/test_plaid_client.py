@@ -4,7 +4,9 @@ Pinned here: credentials ride in the body, a refusal keeps Plaid's
 error_type / error_code / request_id, a network failure and a malformed body
 become ``PlaidApiError`` too, sync pages are joined and restarted from the
 first cursor when Plaid reports a mutation mid-pagination, a Link token in
-update mode asks for no products, and nothing is sent when Plaid is not set up.
+update mode asks for no products, investments are asked as additional consent
+(never requested or billed up front), holdings come from
+`/investments/holdings/get`, and nothing is sent when Plaid is not set up.
 """
 from __future__ import annotations
 
@@ -170,3 +172,70 @@ async def test_no_webhook_is_registered_from_a_plain_http_origin() -> None:
         with patch.object(settings, "frontend_url", "http://localhost:5173"):
             await plaid_client.create_link_token(client_user_id="user-1")
     assert "webhook" not in sent[0]
+
+
+async def test_link_token_can_ask_consent_for_investments_without_requesting_them() -> None:
+    answer = {"link_token": "link-4", "expiration": "2026-11-23T12:00:00Z"}
+    with _plaid(lambda _: httpx.Response(200, json=answer)) as sent:
+        await plaid_client.create_link_token(
+            client_user_id="user-1", additional_consented_products=("investments",),
+        )
+    assert sent[0]["products"] == ["transactions"]
+    assert sent[0]["additional_consented_products"] == ["investments"]
+    assert "optional_products" not in sent[0]
+
+
+async def test_update_mode_can_add_investments_consent_to_an_item() -> None:
+    answer = {"link_token": "link-5", "expiration": "2026-11-23T12:00:00Z"}
+    with _plaid(lambda _: httpx.Response(200, json=answer)) as sent:
+        await plaid_client.create_link_token(
+            client_user_id="user-1", access_token="access-1",
+            additional_consented_products=("investments",),
+        )
+    assert sent[0]["access_token"] == "access-1"
+    assert sent[0]["additional_consented_products"] == ["investments"]
+    assert "products" not in sent[0]
+
+
+async def test_holdings_are_read_from_investments_holdings_get() -> None:
+    answer = {
+        "accounts": [{
+            "account_id": "inv-1", "name": "Brokerage", "type": "investment", "subtype": "brokerage",
+            "balances": {"current": 1250.5, "iso_currency_code": "USD"},
+        }],
+        "holdings": [{
+            "account_id": "inv-1", "security_id": "sec-1", "quantity": 10.5,
+            "institution_price": 119.1, "institution_price_as_of": "2026-11-20",
+            "institution_value": 1250.55, "cost_basis": None, "iso_currency_code": "USD",
+            "unofficial_currency_code": None, "vested_quantity": None,
+        }],
+        "securities": [{
+            "security_id": "sec-1", "name": "Vanguard Total Stock", "ticker_symbol": "VTI",
+            "type": "etf", "close_price": 119.1, "close_price_as_of": "2026-11-20",
+            "isin": None, "cusip": None, "is_cash_equivalent": False, "iso_currency_code": "USD",
+        }],
+        "item": {"item_id": "item-1"},
+        "request_id": "r",
+    }
+    with _plaid(lambda _: httpx.Response(200, json=answer)) as sent:
+        response = await plaid_client.get_holdings("access-1")
+
+    assert sent[0]["path"] == "/investments/holdings/get"
+    assert sent[0]["access_token"] == "access-1"
+    holding = response.holdings[0]
+    assert (holding.account_id, holding.security_id, str(holding.quantity)) == ("inv-1", "sec-1", "10.5")
+    assert holding.cost_basis is None
+    assert response.securities[0].ticker_symbol == "VTI"
+
+
+async def test_a_holdings_refusal_keeps_plaids_code() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={
+            "error_type": "ITEM_ERROR", "error_code": "NO_INVESTMENT_ACCOUNTS", "request_id": "req-2",
+        })
+
+    with _plaid(handler), pytest.raises(PlaidApiError) as raised:
+        await plaid_client.get_holdings("access-1")
+    assert (raised.value.endpoint, raised.value.error_code) == (
+        "/investments/holdings/get", "NO_INVESTMENT_ACCOUNTS",
+    )

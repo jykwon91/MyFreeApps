@@ -12,6 +12,8 @@ def to_response(item: PlaidItem, *, account_count: int) -> PlaidItemResponse:
         status=item.status,
         error_code=item.error_code,
         last_synced_at=item.last_synced_at,
+        investments_status=item.investments_status,
+        holdings_synced_at=item.holdings_synced_at,
         account_count=account_count,
         created_at=item.created_at,
     )

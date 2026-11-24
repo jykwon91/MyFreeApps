@@ -52,6 +52,7 @@ export default function FinancialAccounts() {
 
       <ConnectedBanksSection
         onReconnect={(itemId) => void plaid.begin(itemId)}
+        onAddInvestments={(itemId) => void plaid.begin(itemId, { addInvestments: true })}
         reconnectingItemId={plaid.starting}
       />
 

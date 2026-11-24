@@ -12,10 +12,12 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.financial_account_enums import INVESTMENT_ACCOUNT_TYPES
 from app.db.session import unit_of_work
 from app.mappers import financial_account_mapper
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.repositories.financial_accounts import financial_account_repo
+from app.repositories.investments import holding_repo
 from app.repositories.mortgage import mortgage_repo
 from app.schemas.financial_accounts.financial_account_create_request import (
     FinancialAccountCreateRequest,
@@ -43,6 +45,12 @@ UPDATABLE_FIELDS = frozenset({
 })
 # Clearing these to null would break a NOT NULL column.
 _NOT_NULLABLE_FIELDS = frozenset({"name", "account_type", "currency", "default_transaction_scope"})
+
+
+_BALANCE_FROM_HOLDINGS = (
+    "This account's balance is the total of its holdings; edit them on the Investments page"
+)
+_TYPE_HAS_HOLDINGS = "Remove this account's holdings before changing it to a non-investment type"
 
 
 class FinancialAccountNotFoundError(LookupError):
@@ -87,6 +95,26 @@ def _check_state(account_type: str, merged: dict[str, Any]) -> None:
         )
     except ValueError as exc:
         raise InvalidFinancialAccountError(str(exc)) from exc
+
+
+async def _assert_holdings_allow(
+    db: AsyncSession, account: FinancialAccount, fields: dict[str, Any],
+) -> None:
+    """A hand-kept account with holdings takes its balance from them (see
+    ``holding_service``): a typed balance would count the same money twice
+    or contradict them, and a non-investment type would strand them."""
+    if account.plaid_item_id is not None:
+        return
+    if await holding_repo.count_for_account(db, account.id) == 0:
+        return
+    balance_changed = any(
+        key in fields and fields[key] != getattr(account, key)
+        for key in ("current_balance_cents", "balance_as_of")
+    )
+    if balance_changed:
+        raise InvalidFinancialAccountError(_BALANCE_FROM_HOLDINGS)
+    if fields.get("account_type", account.account_type) not in INVESTMENT_ACCOUNT_TYPES:
+        raise InvalidFinancialAccountError(_TYPE_HAS_HOLDINGS)
 
 
 async def list_accounts(
@@ -167,6 +195,7 @@ async def update_account(
             **fields,
         }
         _check_state(fields.get("account_type", account.account_type), merged)
+        await _assert_holdings_allow(db, account, fields)
         if "mortgage_id" in fields:
             await _assert_mortgage_available(
                 db,
