@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from decimal import Decimal
 from collections.abc import Sequence
 
@@ -172,3 +173,12 @@ async def list_active(
         )
     )
     return list(result.scalars().all())
+
+
+async def set_estimated_value(
+    db: AsyncSession, prop: Property, *, value_cents: int | None, as_of: date | None,
+) -> Property:
+    prop.estimated_value_cents = value_cents
+    prop.estimated_value_as_of = as_of
+    await db.flush()
+    return prop

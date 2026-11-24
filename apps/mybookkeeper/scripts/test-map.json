@@ -2739,6 +2739,46 @@
       ],
       "frontend_tests": [],
       "e2e_specs": []
+    },
+    "net_worth": {
+      "source_paths": [
+        "backend/app/core/net_worth_constants.py",
+        "backend/app/models/net_worth/",
+        "backend/app/repositories/net_worth/",
+        "backend/app/services/net_worth/",
+        "backend/app/services/properties/property_value_service.py",
+        "backend/app/schemas/net_worth/",
+        "backend/app/schemas/properties/property_value_update_request.py",
+        "backend/app/schemas/properties/property_value_response.py",
+        "backend/app/mappers/net_worth_mapper.py",
+        "backend/app/api/net_worth.py",
+        "backend/alembic/versions/networth261124_net_worth_snapshots.py",
+        "frontend/src/app/pages/NetWorth.tsx",
+        "frontend/src/app/features/net-worth/",
+        "frontend/src/shared/lib/net-worth-messages.ts",
+        "frontend/src/shared/lib/net-worth-chart.ts",
+        "frontend/src/shared/lib/net-worth-update-pages.ts",
+        "api-client/src/store/netWorthApi.ts",
+        "api-client/src/types/net-worth/",
+        "api-client/src/constants/netWorth.ts",
+        "api-client/src/utils/netWorthChartRows.ts"
+      ],
+      "backend_tests": [
+        "test_net_worth_lines.py",
+        "test_net_worth_history.py",
+        "test_net_worth_mapper.py",
+        "test_net_worth_service.py",
+        "test_balance_snapshot_repo.py",
+        "test_net_worth_api.py",
+        "test_scheduler_worker_cycle_isolation.py"
+      ],
+      "frontend_tests": [
+        "NetWorthBody.test.tsx",
+        "PropertyValueEditor.test.tsx"
+      ],
+      "e2e_specs": [
+        "mocked/net-worth-mock.spec.ts"
+      ]
     }
   },
   "shared_paths": [

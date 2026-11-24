@@ -183,6 +183,25 @@ async def list_active_for_org(
     return list(result.scalars().all())
 
 
+async def list_live_for_user(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> list[Mortgage]:
+    """Every loan record not deleted, unpaginated: net worth needs all of them."""
+    result = await db.execute(
+        select(Mortgage)
+        .where(
+            Mortgage.user_id == user_id,
+            Mortgage.organization_id == organization_id,
+            Mortgage.deleted_at.is_(None),
+        )
+        .order_by(Mortgage.created_at)
+    )
+    return list(result.scalars().all())
+
+
 async def update_mortgage(
     db: AsyncSession,
     *,

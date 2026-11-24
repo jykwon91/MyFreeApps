@@ -52,6 +52,7 @@ from app.models.insurance.insurance_policy import InsurancePolicy  # noqa: F401
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment  # noqa: F401
 from app.models.mortgage.mortgage import Mortgage  # noqa: F401
 from app.models.financial_accounts.financial_account import FinancialAccount  # noqa: F401
+from app.models.net_worth.balance_snapshot import BalanceSnapshot  # noqa: F401
 from app.models.transactions.spending_category import SpendingCategory  # noqa: F401
 from app.models.vendors.vendor import Vendor  # noqa: F401
 from app.models.documents.document import Document  # noqa: F401

@@ -29,6 +29,8 @@ PROPERTIES_EXPORT: Final = TableExportMapper(
         "rented_since",
         "property_class",
         "personal_use_days",
+        "estimated_value_cents",
+        "estimated_value_as_of",
         "created_at",
         "updated_at",
     ),

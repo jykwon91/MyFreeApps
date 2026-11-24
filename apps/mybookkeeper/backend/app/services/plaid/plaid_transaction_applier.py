@@ -44,6 +44,7 @@ from app.repositories.transactions import plaid_transaction_repo, transaction_re
 from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
+from app.services.net_worth import net_worth_service
 from app.services.transactions.bank_row_classifier import classify_bank_row
 from app.services.transactions.transfer_rules import transfer_overrides
 
@@ -90,6 +91,9 @@ async def apply_batch(
         db, organization_id=item.organization_id, transaction_ids=batch.removed,
     )
     await _apply_balances(db, batch=batch, accounts_by_plaid_id=accounts_by_plaid_id, today=today)
+    await net_worth_service.record_today(
+        db, organization_id=item.organization_id, user_id=item.user_id, today=today,
+    )
     return counts
 
 
