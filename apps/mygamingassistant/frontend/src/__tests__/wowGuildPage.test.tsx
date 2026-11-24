@@ -88,9 +88,9 @@ function baseline(overrides: Partial<GuildMemberBaseline>): GuildMemberBaseline 
 }
 
 const MEMBERS: GuildMember[] = [
-  member({}),
-  member({ slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", level: 12, item_level: 8, rank: 3 }),
-  member({ slug: "big-sue", name: "Big", surname: "Sue", class_name: "Warrior", level: 60, item_level: null, rank: 1 }),
+  member({ dungeons_done: 20 }),
+  member({ slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", level: 12, item_level: 8, rank: 3, dungeons_done: 5 }),
+  member({ slug: "big-sue", name: "Big", surname: "Sue", class_name: "Warrior", level: 60, item_level: null, rank: 1, dungeons_done: 30 }),
   member({ slug: "new-guy", name: "New", surname: "Guy", class_name: null, level: null, item_level: null, rank: null }),
 ];
 
@@ -318,15 +318,15 @@ describe("guild leaderboard logic", () => {
     expect(missingCount(members, board, ranked.length)).toBe(0);
   });
 
-  it("cuts a huge tie (most of the guild at 60) to the first 10", () => {
-    const members = Array.from({ length: 30 }, (_, i) => member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, level: 60 }));
-    const top = topEntries(rankBoard(members, findBoard("level")));
+  it("cuts a huge tie (most of the guild on one number) to the first 10", () => {
+    const members = Array.from({ length: 30 }, (_, i) => member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, dungeons_done: 12 }));
+    const top = topEntries(rankBoard(members, findBoard("dungeons")));
     expect(top.map((e) => e.member.name)).toEqual(Array.from({ length: 10 }, (_, i) => `M${String(i).padStart(2, "0")}`));
   });
 
   it("says what the board shows above it", () => {
-    expect(boardStatus(findBoard("level"), 10, 31, 12)).toBe("Level: 10 of 31 shown · 12 members at 60");
-    expect(boardStatus(findBoard("fewest-deaths"), 0, 0, 0)).toBe("Fewest deaths (level 60): nobody yet · level 60 characters only");
+    expect(boardStatus(findBoard("dungeons"), 10, 31)).toBe("Dungeons cleared: 10 of 31 shown");
+    expect(boardStatus(findBoard("fewest-deaths"), 0, 0)).toBe("Fewest deaths (level 60): nobody yet · level 60 characters only");
   });
 
   it("ranks gains since each member's baseline, leaves out no gain and no older day, and says since when", () => {
@@ -353,9 +353,9 @@ describe("guild leaderboard logic", () => {
     expect(rankBoard(members, dungeons)[0]?.detail ?? null).toBeNull();
   });
 
-  it("falls back to the level board for a missing or unknown board", () => {
-    expect(findBoard(null).id).toBe("level");
-    expect(findBoard("nope").id).toBe("level");
+  it("falls back to the dungeons board (the default, since Level retired) for a missing or unknown board", () => {
+    expect(findBoard(null).id).toBe("dungeons");
+    expect(findBoard("nope").id).toBe("dungeons");
   });
 });
 
@@ -576,20 +576,20 @@ describe("guild page", () => {
     expect(shoutoutDetail(null, null)).toBe("");
   });
 
-  it("shows the level board by default and switches boards from the picker, keeping the member filters", () => {
+  it("shows the dungeons board by default and switches boards from the picker, keeping the member filters", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     renderAt("/wow-forever/topdeadcenter?tab=home&class=Warlock");
-    expect(boardNames("Level leaderboard")).toEqual(["Big Sue", "Jason Kwon", "Tiny John"]);
+    expect(boardNames("Dungeons cleared leaderboard")).toEqual(["Big Sue", "Jason Kwon", "Tiny John"]);
     expect(screen.getByText(/1 member has no number for this yet/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Rank members by"), { target: { value: "dungeons" } });
-    expect(screen.getByText(/Nobody in the guild has a number for Dungeons cleared yet/)).toBeInTheDocument();
-    expect(screen.getByTestId("location")).toHaveTextContent("?tab=home&class=Warlock&board=dungeons");
+    fireEvent.change(screen.getByLabelText("Rank members by"), { target: { value: "item-level" } });
+    expect(screen.getByText(/Nobody in the guild has a number for Item level \(level 60\) yet/)).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("?tab=home&class=Warlock&board=item-level");
   });
 
   it("shows the top 3 in their gear, each on their own card, and drops a picture when Blizzard has none", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     renderAt("/wow-forever/topdeadcenter?tab=home");
-    const board = screen.getByRole("list", { name: "Level leaderboard" });
+    const board = screen.getByRole("list", { name: "Dungeons cleared leaderboard" });
     const renders = within(board).getAllByTestId("guild-podium-render");
     expect(renders).toHaveLength(3);
     expect(renders.map((img) => img.closest("li")?.textContent)).toEqual([
@@ -607,10 +607,10 @@ describe("guild page", () => {
   });
 
   it("gives every member tied for 1st the champion's picture", () => {
-    const tied = [member({ slug: "a-a", name: "A", surname: "A", level: 60 }), member({ slug: "b-b", name: "B", surname: "B", level: 60 }), member({ slug: "c-c", name: "C", surname: "C", level: 40 })];
+    const tied = [member({ slug: "a-a", name: "A", surname: "A", dungeons_done: 60 }), member({ slug: "b-b", name: "B", surname: "B", dungeons_done: 60 }), member({ slug: "c-c", name: "C", surname: "C", dungeons_done: 40 })];
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members: tied } }));
     renderAt("/wow-forever/topdeadcenter?tab=home");
-    const renders = within(screen.getByRole("list", { name: "Level leaderboard" })).getAllByTestId("guild-podium-render");
+    const renders = within(screen.getByRole("list", { name: "Dungeons cleared leaderboard" })).getAllByTestId("guild-podium-render");
     expect(renders.map((img) => img.getAttribute("src"))).toEqual([
       expect.stringMatching(/a-a/),
       expect.stringMatching(/b-b/),
@@ -621,16 +621,16 @@ describe("guild page", () => {
 
   it("marks the viewer's character and pins it under the top 10 when it ranks lower", () => {
     const many = Array.from({ length: 11 }, (_, i) =>
-      member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", level: 60 - i }),
+      member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", dungeons_done: 60 - i }),
     );
-    mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...many, member({ level: 2 })] } }));
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...many, member({ dungeons_done: 2 })] } }));
     renderAt("/wow-forever/topdeadcenter?me=Jason-Kwon");
-    expect(boardNames("Level leaderboard")).toHaveLength(10);
+    expect(boardNames("Dungeons cleared leaderboard")).toHaveLength(10);
     const pinned = screen.getByRole("list", { name: "Your character" });
     expect(within(pinned).getByText("12")).toBeInTheDocument();
     expect(within(pinned).getByText("You")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Show all 12" }));
-    expect(boardNames("Level leaderboard")).toHaveLength(12);
+    expect(boardNames("Dungeons cleared leaderboard")).toHaveLength(12);
     expect(screen.queryByRole("list", { name: "Your character" })).toBeNull();
   });
 

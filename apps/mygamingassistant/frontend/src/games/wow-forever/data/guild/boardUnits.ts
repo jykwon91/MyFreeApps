@@ -2,7 +2,6 @@ import type { BoardUnit } from "@/games/wow-forever/types/guild/boardUnit";
 
 /** What each board counts, for "12 HKs behind". Profession boards (`prof-*`) fall back to skill points. */
 export const BOARD_UNITS: Readonly<Record<string, BoardUnit>> = {
-  level: { one: "level", many: "levels" },
   "item-level": { one: "item level", many: "item levels" },
   dungeons: { one: "dungeon", many: "dungeons" },
   "fewest-deaths": { one: "death", many: "deaths" },

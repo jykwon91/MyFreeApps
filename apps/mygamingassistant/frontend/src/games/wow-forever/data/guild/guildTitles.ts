@@ -1,5 +1,5 @@
 import {
-  ChefHat, Crosshair, DoorOpen, Fish, Flame, FlaskConical, Footprints, Gem, Ghost, Hammer, Heart, HeartPulse, Leaf,
+  ChefHat, Crosshair, DoorOpen, Fish, Flame, FlaskConical, Gem, Ghost, Hammer, Heart, HeartPulse, Leaf,
   Mountain, Backpack, PawPrint, Pickaxe, Scissors, Shield, Skull, Sparkles, Swords, Target, TrendingUp, Wrench, Zap,
 } from "lucide-react";
 import { GUILD_TITLE_TIERS as T } from "@/games/wow-forever/data/guild/titleTiers";
@@ -12,8 +12,6 @@ import type { LeaderboardSource } from "@/games/wow-forever/types/guild/leaderbo
  * (its standings are a separate fetch). None reuse a real in-game title or rank.
  */
 export const GUILD_TITLES: Readonly<Record<string, GuildTitleDef>> = {
-  level: { title: "Trailblazer", icon: Footprints, earnedFor: "highest level", tier: T.epic,
-    flavor: "Has seen more of Azeroth than the flight masters." },
   "item-level": { title: "Hoardmaster", icon: Gem, earnedFor: "best item level at 60", tier: T.legendary,
     flavor: "Dressed for the raid, even at the inn." },
   dungeons: { title: "Dungeon Delver", icon: Mountain, earnedFor: "most dungeons cleared", tier: T.epic,

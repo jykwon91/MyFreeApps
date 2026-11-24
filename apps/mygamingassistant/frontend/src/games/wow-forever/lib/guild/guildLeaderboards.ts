@@ -1,6 +1,5 @@
 import { MAX_LEVEL } from "@/games/wow-forever/data/levelCap";
 import {
-  GUILD_STAT_FIELDS,
   LEADERBOARD_SOURCE_KIND,
   LEADERBOARD_TIE_LIMIT,
   LEADERBOARD_TOP,
@@ -121,11 +120,10 @@ export function topEntries(entries: readonly LeaderboardEntry[]): LeaderboardEnt
   return top;
 }
 
-/** The line above a board: "Level: 10 of 31 shown · 12 members at 60". */
-export function boardStatus(board: LeaderboardBoard, shown: number, ranked: number, atCap: number): string {
+/** The line above a board: "Dungeons cleared: 10 of 31 shown". */
+export function boardStatus(board: LeaderboardBoard, shown: number, ranked: number): string {
   const parts = [ranked === 0 ? `${board.label}: nobody yet` : `${board.label}: ${shown} of ${ranked} shown`];
   if (board.maxLevelOnly) parts.push(`level ${MAX_LEVEL} characters only`);
-  if (atCap > 0) parts.push(`${formatCount(atCap, "member", "members")} at ${MAX_LEVEL}`);
   return parts.join(" · ");
 }
 
@@ -155,11 +153,4 @@ export function noGainCount(members: readonly GuildMember[], board: LeaderboardB
 /** A gains board's note: what each member's gain is counted from. */
 export function gainsNote(windowDays: number): string {
   return `Counted from each member's lookup at least ${formatCount(windowDays, "day", "days")} ago, or from their earliest lookup when we've known them for less.`;
-}
-
-/** On the level board, how many members are at the cap (once most are, the board is one big tie); 0 elsewhere. */
-export function levelCapCount(members: readonly GuildMember[], board: LeaderboardBoard): number {
-  const source = board.source;
-  if (source.kind !== LEADERBOARD_SOURCE_KIND.stat || source.field !== GUILD_STAT_FIELDS.level) return 0;
-  return members.filter((m) => m.level === MAX_LEVEL).length;
 }

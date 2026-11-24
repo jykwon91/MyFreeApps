@@ -57,17 +57,17 @@ describe("awarding titles", () => {
   it("skips a title when too many tie for it (everyone at 60), and says so", () => {
     expect(titleTieLimit(4)).toBe(3);
     expect(titleTieLimit(40)).toBe(10);
-    const at60 = Array.from({ length: 12 }, (_, i) => member(`m${i}`, { level: 60 }));
-    const titles = awardGuildTitles(at60);
-    expect(titles.awarded.map((t) => t.title)).not.toContain("Trailblazer");
-    expect(titles.skipped).toEqual([{ title: "Trailblazer", earnedFor: "highest level" }]);
+    const tied = Array.from({ length: 12 }, (_, i) => member(`m${i}`, { dungeons_done: 12 }));
+    const titles = awardGuildTitles(tied);
+    expect(titles.awarded.map((t) => t.title)).not.toContain("Dungeon Delver");
+    expect(titles.skipped).toEqual([{ title: "Dungeon Delver", earnedFor: "most dungeons cleared" }]);
     // Three tied in a small guild still share it.
-    expect(titleNames([member("a", { level: 60 }), member("b", { level: 60 }), member("c", { level: 60 }), member("d", { level: 20 })]))
-      .toContain("Trailblazer");
+    expect(titleNames([member("a", { dungeons_done: 12 }), member("b", { dungeons_done: 12 }), member("c", { dungeons_done: 12 }), member("d", { dungeons_done: 2 })]))
+      .toContain("Dungeon Delver");
     // Nobody leads when everyone on the board is tied.
-    const allTied = awardGuildTitles([member("a", { level: 30 }), member("b", { level: 30 }), member("c", { level: 30 })]);
+    const allTied = awardGuildTitles([member("a", { dungeons_done: 3 }), member("b", { dungeons_done: 3 }), member("c", { dungeons_done: 3 })]);
     expect(allTied.awarded).toEqual([]);
-    expect(allTied.skipped.map((s) => s.title)).toEqual(["Trailblazer"]);
+    expect(allTied.skipped.map((s) => s.title)).toEqual(["Dungeon Delver"]);
   });
 
   it("counts the tie limit against the board, so a crowd tied at the top gets nothing", () => {
@@ -121,16 +121,16 @@ describe("showing titles", () => {
   ]);
 
   const many = awardGuildTitles([
-    member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, level: 60 }),
-    member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, level: 20 }),
-    member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, level: 10 }),
+    member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, dungeons_done: 9 }),
+    member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, dungeons_done: 2 }),
+    member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, dungeons_done: 1 }),
   ]);
 
   it("shows a member's three rarest titles and '+N' for the rest, named in full for screen readers", () => {
     render(<GuildMemberTitles titles={many.bySlug.get("a")} />);
-    // Legendary Bloodletter, then the epic ones in board order: Trailblazer, Deathblow (Reaper is the fourth).
+    // Legendary Bloodletter, then the epic ones in board order: Dungeon Delver, Deathblow (Reaper is the fourth).
     expect(screen.getByText("Bloodletter")).toBeInTheDocument();
-    expect(screen.getByText("Trailblazer")).toBeVisible();
+    expect(screen.getByText("Dungeon Delver")).toBeVisible();
     expect(screen.getByText("Deathblow")).toBeVisible();
     expect(screen.getByText("Reaper")).not.toBeVisible();
     expect(screen.getAllByText(/Guild title:/)[0].parentElement).toHaveTextContent("Guild title: Bloodletter (most honorable kills)");
@@ -146,9 +146,9 @@ describe("showing titles", () => {
 
   it("names more titles in the plural, and shows up to three with no button", () => {
     const five = awardGuildTitles([
-      member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, level: 60, dungeons_done: 9 }),
-      member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, level: 20, dungeons_done: 2 }),
-      member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, level: 10, dungeons_done: 1 }),
+      member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, exalted_reputations: 5, dungeons_done: 9 }),
+      member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, exalted_reputations: 2, dungeons_done: 2 }),
+      member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, exalted_reputations: 1, dungeons_done: 1 }),
     ]);
     const { unmount } = render(<GuildMemberTitles titles={five.bySlug.get("a")} />);
     expect(screen.getByRole("button", { name: "Show 2 more guild titles" })).toHaveTextContent("+2");
@@ -195,8 +195,8 @@ describe("showing titles", () => {
   });
 
   it("notes a title skipped for a big tie", () => {
-    const at60 = Array.from({ length: 12 }, (_, i) => member(`m${i}`, { level: 60 }));
-    render(<MemoryRouter><GuildTitlesStrip titles={awardGuildTitles(at60)} /></MemoryRouter>);
-    expect(screen.getByText(GUILD_TITLE_COPY.skipped("Trailblazer", "highest level"))).toBeInTheDocument();
+    const tied = Array.from({ length: 12 }, (_, i) => member(`m${i}`, { dungeons_done: 12 }));
+    render(<MemoryRouter><GuildTitlesStrip titles={awardGuildTitles(tied)} /></MemoryRouter>);
+    expect(screen.getByText(GUILD_TITLE_COPY.skipped("Dungeon Delver", "most dungeons cleared"))).toBeInTheDocument();
   });
 });

@@ -9,7 +9,7 @@ export const LEADERBOARD_PARAMS = { board: "board", me: "me", faction: "faction"
 
 /** Rows shown before "Show all". Members tied with the last one are shown too… */
 export const LEADERBOARD_TOP = 10;
-/** …unless the tie is this big (the level board once most are 60): then just the first 10, and "Show all". */
+/** …unless the tie is this big (most of the guild on one number): then just the first 10, and "Show all". */
 export const LEADERBOARD_TIE_LIMIT = 20;
 /** Rows under the skeleton podium (a top 10 is three cards and seven rows). */
 export const LEADERBOARD_SKELETON_ROWS = 7;
@@ -31,7 +31,6 @@ export const STANDING_SCORE_TIER_SPAN = 1_000_000;
 
 /** The member stats a leaderboard can rank. */
 export const GUILD_STAT_FIELDS = {
-  level: "level",
   itemLevel: "item_level",
   dungeonsDone: "dungeons_done",
   totalDeaths: "total_deaths",
@@ -85,10 +84,10 @@ function stat(id: string, label: string, group: string, field: GuildStatField, e
 }
 
 const STAT_BOARDS: readonly LeaderboardBoard[] = [
-  stat("level", "Level", GROUP_CHARACTER, GUILD_STAT_FIELDS.level),
+  // The default: it ranks every member and keeps telling level 60s apart (the Level board retired once the guild reached the cap).
+  stat("dungeons", "Dungeons cleared", GROUP_CHARACTER, GUILD_STAT_FIELDS.dungeonsDone),
   // Item level mostly sorts people by level below the cap.
   stat("item-level", "Item level (level 60)", GROUP_CHARACTER, GUILD_STAT_FIELDS.itemLevel, { maxLevelOnly: true }),
-  stat("dungeons", "Dungeons cleared", GROUP_CHARACTER, GUILD_STAT_FIELDS.dungeonsDone),
   // Every death counts (mobs, falls, players): a fresh alt would win below the cap.
   stat("fewest-deaths", "Fewest deaths (level 60)", GROUP_CHARACTER, GUILD_STAT_FIELDS.totalDeaths, {
     ascending: true, maxLevelOnly: true,
