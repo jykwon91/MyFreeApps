@@ -25,7 +25,9 @@ venv). From the VPS checkout:
     cd /srv/myfreeapps
     PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes
 
-Deploy-preflight / verification mode (writes nothing, exit 0 = ready):
+Deploy-preflight / verification mode (writes nothing, exit 0 = ready). With
+EMAIL_BACKEND=smtp it also names an empty SMTP setting or a non-ASCII SMTP
+login, as the boot guard would refuse them; it never prints a value:
 
     PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes --check
 
@@ -59,6 +61,11 @@ import re
 import secrets
 import sys
 from pathlib import Path
+
+from platform_shared.core.smtp_setting_faults import (
+    non_ascii_smtp_settings,
+    unset_smtp_settings,
+)
 
 # Values the operator must obtain outside the VPS (dashboards, providers).
 # Only the subset actually declared in the app's template is enforced.
@@ -159,6 +166,20 @@ def _parse_env(text: str) -> dict[str, str]:
             continue
         key, _, value = stripped.partition("=")
         values[key.strip()] = value.strip()
+    return values
+
+
+def _raw_env_values(text: str) -> dict[str, str]:
+    """Like ``_parse_env`` but keeps each value exactly as written after ``=``.
+    The apps read their env files with ``format: raw``, so a pasted non-breaking
+    space that ``str.strip()`` would remove still reaches them."""
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = line.partition("=")
+        values[key.strip()] = value
     return values
 
 
@@ -317,6 +338,26 @@ def _blank_report(final: dict[str, str], enforced_keys: tuple[str, ...]) -> tupl
     return required, other
 
 
+def _smtp_problems(
+    current: dict[str, str], raw: dict[str, str], path: Path, reported: list[str],
+) -> list[str]:
+    """With EMAIL_BACKEND=smtp, the SMTP settings the boot guard would refuse,
+    by name only: an empty host, user or password, and a login that isn't
+    ASCII. Never prints a value. Skips a BLANK line ``reported`` already has.
+
+    The ASCII test reads ``raw`` (values as written), so a trailing
+    non-breaking space that ``current``'s stripping removed is still caught."""
+    if current.get("EMAIL_BACKEND", "") != "smtp":
+        return []
+    host, user, password = (current.get(k, "") for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"))
+    blanks = [f"BLANK {name} in {path}" for name in unset_smtp_settings(host=host, user=user, password=password)]
+    not_ascii = [
+        f"NOT ASCII {name} in {path} (smtplib sends the SMTP login as ASCII)"
+        for name in non_ascii_smtp_settings(user=raw.get("SMTP_USER", ""), password=raw.get("SMTP_PASSWORD", ""))
+    ]
+    return [line for line in blanks if line not in reported] + not_ascii
+
+
 def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
              check_only: bool = False,
              overrides: dict[str, str] | None = None,
@@ -373,6 +414,9 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
                     continue
                 if _is_unset(current.get(key, "")):
                     problems.append(f"BLANK {key} in {path}")
+            if path == docker_env:
+                raw = _raw_env_values(path.read_text(encoding="utf-8"))
+                problems.extend(_smtp_problems(current, raw, path, problems))
         if problems:
             print(f"seed_env --check FAILED for '{slug}':")
             for p in problems:
@@ -457,8 +501,10 @@ def _cli(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--app", required=True, help="App slug (matches apps/<slug>/)")
     parser.add_argument("--check", action="store_true",
-                        help="Report-only: verify both files exist and enforced keys "
-                             "are set. Writes nothing. Exit 0 = ready to deploy.")
+                        help="Report-only: verify both files exist, enforced keys "
+                             "are set and, with EMAIL_BACKEND=smtp, the SMTP host "
+                             "is set and the login is ASCII. Writes nothing. "
+                             "Exit 0 = ready to deploy.")
     parser.add_argument("--domain", default=None,
                         help="App domain (default: <slug>.myfreeapps.org). Used to "
                              "stamp FRONTEND_URL/CORS_ORIGINS when the template left them blank.")
