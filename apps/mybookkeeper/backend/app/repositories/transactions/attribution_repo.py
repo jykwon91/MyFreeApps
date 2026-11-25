@@ -171,3 +171,22 @@ async def move_pending_review(
         values={"transaction_id": to_transaction_id},
     )
     return len(changed) == 1
+
+
+async def resolve_pending_for_transaction(
+    db: AsyncSession,
+    *,
+    transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    status: str,
+) -> None:
+    """Close a transaction's open review, if it has one."""
+    await update_rows(
+        db,
+        RentAttributionReviewQueue,
+        RentAttributionReviewQueue.transaction_id == transaction_id,
+        RentAttributionReviewQueue.organization_id == organization_id,
+        RentAttributionReviewQueue.status == "pending",
+        RentAttributionReviewQueue.deleted_at.is_(None),
+        values={"status": status, "resolved_at": datetime.now(timezone.utc)},
+    )

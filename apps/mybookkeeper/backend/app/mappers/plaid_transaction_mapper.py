@@ -45,6 +45,25 @@ def spending_category_name_for(category: PlaidWireCategory | None) -> str | None
     return PFC_PRIMARY_TO_SPENDING_CATEGORY.get(category.primary)
 
 
+def link_to_plaid(
+    row: Transaction,
+    *,
+    transaction_id: str,
+    external_category: str | None,
+    account_id: uuid.UUID | None,
+) -> None:
+    """Make a row already on file the synced row for a Plaid transaction, so
+    the bank's later edits and withdrawals reach it. Only the bank's identity
+    is set: how the row was filed stays as it is."""
+    row.external_source = PLAID_EXTERNAL_SOURCE
+    row.external_id = transaction_id
+    row.is_pending = False
+    if row.external_category is None:
+        row.external_category = external_category
+    if row.account_id is None:
+        row.account_id = account_id
+
+
 def new_transaction(
     txn: PlaidWireTransaction,
     *,

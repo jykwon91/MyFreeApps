@@ -60,6 +60,21 @@ PLAID_EXTERNAL_SOURCE: Final = "plaid"
 # apart, so a counterpart is looked for this many calendar days either side.
 PLAID_TRANSFER_MATCH_WINDOW_DAYS: Final = 5
 
+# How far apart a synced row and the same money already on file from an email
+# or document may be dated. A person-to-person payment (matched on the payer's
+# name too) is read from the alert the day it is sent and posts a few days
+# later; any other row is matched on its vendor and posts within a few days of
+# the bill or receipt.
+PLAID_COPY_MATCH_WINDOW_DAYS_P2P: Final = 4
+PLAID_COPY_MATCH_WINDOW_DAYS_OTHER: Final = 3
+# A vendor shorter than this, once normalized, is too generic to match on.
+PLAID_COPY_MIN_VENDOR_LENGTH: Final = 4
+# Payment rails, not payees: a row filed under one of these says how the money
+# moved, not who it went to, so it can only be matched on the payer's name.
+PLAID_COPY_P2P_RAILS: Final[frozenset[str]] = frozenset({
+    "zelle", "venmo", "cashapp", "paypal", "wise",
+})
+
 # Plaid error codes the app routes on
 # (https://plaid.com/docs/errors/item/, /errors/transactions/).
 PLAID_ERROR_ITEM_LOGIN_REQUIRED: Final = "ITEM_LOGIN_REQUIRED"

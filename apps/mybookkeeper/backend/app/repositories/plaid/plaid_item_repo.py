@@ -23,6 +23,11 @@ async def create(db: AsyncSession, item: PlaidItem) -> PlaidItem:
     return item
 
 
+async def save(db: AsyncSession) -> None:
+    """Write the changes made to an item (status, cursor, errors)."""
+    await db.flush()
+
+
 async def get_for_user(
     db: AsyncSession,
     *,

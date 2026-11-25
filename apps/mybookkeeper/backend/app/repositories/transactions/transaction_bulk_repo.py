@@ -5,7 +5,7 @@ from platform_shared.repositories.audited_writes import delete_rows
 from sqlalchemy import ColumnElement, Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.transaction_statuses import COUNTED_STATUS, REVIEWABLE_STATUSES
+from app.core.transaction_statuses import COUNTED_STATUS, DUPLICATE_STATUS, REVIEWABLE_STATUSES
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
@@ -70,7 +70,7 @@ async def lock_live_transactions(
 def apply_soft_delete(transaction: Transaction, now: datetime) -> None:
     """Set the soft-delete columns without flushing."""
     transaction.deleted_at = now
-    transaction.status = "duplicate"
+    transaction.status = DUPLICATE_STATUS
 
 
 async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
