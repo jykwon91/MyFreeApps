@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from platform_shared.infra import seed_env
+from platform_shared.infra.env_file import parse_env
 
 COMPOSE_EXAMPLE = """\
 # Compose-level env file — only contains DB_PASSWORD.
@@ -67,7 +68,7 @@ def run(repo: Path, *extra: str) -> int:
 
 
 def read_env(path: Path) -> dict[str, str]:
-    return seed_env._parse_env(path.read_text(encoding="utf-8"))
+    return parse_env(path.read_text(encoding="utf-8"))
 
 
 _FILLED_KEYS = ("SENTRY_DSN", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS",

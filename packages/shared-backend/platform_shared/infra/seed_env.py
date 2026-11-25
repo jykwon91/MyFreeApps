@@ -62,10 +62,8 @@ import secrets
 import sys
 from pathlib import Path
 
-from platform_shared.core.smtp_setting_faults import (
-    non_ascii_smtp_settings,
-    unset_smtp_settings,
-)
+from platform_shared.infra.env_file import parse_env, raw_env_values, read_env_file
+from platform_shared.infra.seed_env_smtp_check import smtp_problems
 
 # Values the operator must obtain outside the VPS (dashboards, providers).
 # Only the subset actually declared in the app's template is enforced.
@@ -157,38 +155,6 @@ _GENERATORS = {
 }
 
 
-def _parse_env(text: str) -> dict[str, str]:
-    """Parse KEY=VALUE lines into a dict. Comments/blank lines are skipped."""
-    values: dict[str, str] = {}
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        key, _, value = stripped.partition("=")
-        values[key.strip()] = value.strip()
-    return values
-
-
-def _raw_env_values(text: str) -> dict[str, str]:
-    """Like ``_parse_env`` but keeps each value exactly as written after ``=``.
-    The apps read their env files with ``format: raw``, so a pasted non-breaking
-    space that ``str.strip()`` would remove still reaches them."""
-    values: dict[str, str] = {}
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        key, _, value = line.partition("=")
-        values[key.strip()] = value
-    return values
-
-
-def _read_env_file(path: Path) -> dict[str, str]:
-    if not path.exists():
-        return {}
-    return _parse_env(path.read_text(encoding="utf-8"))
-
-
 def _stamps(domain: str) -> dict[str, str]:
     return {
         "ENVIRONMENT": "production",
@@ -233,7 +199,7 @@ def _load_overrides(path: Path) -> dict[str, str]:
     never "erase")."""
     if not path.exists():
         raise SeedEnvError(f"Overrides file not found: {path}")
-    return {k: v for k, v in _parse_env(path.read_text(encoding="utf-8")).items()
+    return {k: v for k, v in parse_env(path.read_text(encoding="utf-8")).items()
             if v.strip()}
 
 
@@ -273,7 +239,7 @@ def load_copy_source(repo_root: Path, source_slug: str, target_slug: str,
     if not source_path.is_file():
         raise SeedEnvError(
             f"Copy source not found: {source_path} — seed '{source_slug}' first.")
-    source = _parse_env(source_path.read_text(encoding="utf-8"))
+    source = parse_env(source_path.read_text(encoding="utf-8"))
     blank = [k for k in keys if _is_unset(source.get(k, ""))]
     if blank:
         raise SeedEnvError(
@@ -338,26 +304,6 @@ def _blank_report(final: dict[str, str], enforced_keys: tuple[str, ...]) -> tupl
     return required, other
 
 
-def _smtp_problems(
-    current: dict[str, str], raw: dict[str, str], path: Path, reported: list[str],
-) -> list[str]:
-    """With EMAIL_BACKEND=smtp, the SMTP settings the boot guard would refuse,
-    by name only: an empty host, user or password, and a login that isn't
-    ASCII. Never prints a value. Skips a BLANK line ``reported`` already has.
-
-    The ASCII test reads ``raw`` (values as written), so a trailing
-    non-breaking space that ``current``'s stripping removed is still caught."""
-    if current.get("EMAIL_BACKEND", "") != "smtp":
-        return []
-    host, user, password = (current.get(k, "") for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"))
-    blanks = [f"BLANK {name} in {path}" for name in unset_smtp_settings(host=host, user=user, password=password)]
-    not_ascii = [
-        f"NOT ASCII {name} in {path} (smtplib sends the SMTP login as ASCII)"
-        for name in non_ascii_smtp_settings(user=raw.get("SMTP_USER", ""), password=raw.get("SMTP_PASSWORD", ""))
-    ]
-    return [line for line in blanks if line not in reported] + not_ascii
-
-
 def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
              check_only: bool = False,
              overrides: dict[str, str] | None = None,
@@ -404,8 +350,8 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
                 problems.append(f"MISSING file: {path}")
                 continue
             example = compose_example if path == compose_env else docker_example
-            declared = _parse_env(example.read_text(encoding="utf-8"))
-            current = _read_env_file(path)
+            declared = parse_env(example.read_text(encoding="utf-8"))
+            current = read_env_file(path)
             for key in enforced:
                 if key not in declared:
                     # The template is the contract: a key the app no longer
@@ -415,8 +361,8 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
                 if _is_unset(current.get(key, "")):
                     problems.append(f"BLANK {key} in {path}")
             if path == docker_env:
-                raw = _raw_env_values(path.read_text(encoding="utf-8"))
-                problems.extend(_smtp_problems(current, raw, path, problems))
+                raw = raw_env_values(path.read_text(encoding="utf-8"))
+                problems.extend(smtp_problems(current, raw, path, problems))
         if problems:
             print(f"seed_env --check FAILED for '{slug}':")
             for p in problems:
@@ -428,14 +374,14 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
         return 0
 
     # --- seed compose-level .env ---
-    existing_compose = _read_env_file(compose_env)
+    existing_compose = read_env_file(compose_env)
     compose_text, compose_final = _render_from_example(
         compose_example.read_text(encoding="utf-8"), existing_compose, stamps, overrides, {},
     )
     compose_written = _write_secure(compose_env, compose_text)
 
     # --- seed backend/.env.docker ---
-    existing_docker = _read_env_file(docker_env)
+    existing_docker = read_env_file(docker_env)
     docker_text, docker_final = _render_from_example(
         docker_example.read_text(encoding="utf-8"), existing_docker, stamps, overrides, copies,
     )
@@ -466,8 +412,8 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
             print(f"copied {key} from {source_label}")
 
     declared_keys = (
-        set(_parse_env(compose_example.read_text(encoding="utf-8")))
-        | set(_parse_env(docker_example.read_text(encoding="utf-8")))
+        set(parse_env(compose_example.read_text(encoding="utf-8")))
+        | set(parse_env(docker_example.read_text(encoding="utf-8")))
     )
     required_blanks, other_blanks = _blank_report(
         {**compose_final, **docker_final},
