@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import FinancialAccountsBody, { type FinancialAccountsBodyProps } from "@/app/features/financial-accounts/FinancialAccountsBody";
 import type { FinancialAccountListResponse } from "@mybookkeeper/api-client/types/financial-account/financial-account-list-response";
 import { FINANCIAL_ACCOUNT_MESSAGES as MSG } from "@/shared/lib/financial-account-messages";
@@ -17,7 +18,12 @@ const LOADED: FinancialAccountListResponse = {
 
 function renderBody(overrides: Partial<FinancialAccountsBodyProps> = {}) {
   const handlers = { onRetry: vi.fn(), onAdd: vi.fn(), onEdit: vi.fn(), onUpdateBalance: vi.fn() };
-  render(<FinancialAccountsBody data={LOADED} isLoading={false} isError={false} isRetrying={false} {...handlers} {...overrides} />);
+  // Each row links to its transactions, so it renders inside a router.
+  render(
+    <MemoryRouter>
+      <FinancialAccountsBody data={LOADED} isLoading={false} isError={false} isRetrying={false} {...handlers} {...overrides} />
+    </MemoryRouter>,
+  );
   return handlers;
 }
 
@@ -51,6 +57,12 @@ describe("FinancialAccountsBody", () => {
     expect(screen.getByTestId("financial-accounts-total-assets")).toHaveTextContent("$2,500.00");
     expect(screen.getByTestId("financial-accounts-total-liabilities")).toHaveTextContent("$500.00");
     expect(screen.getByTestId("financial-accounts-total-net")).toHaveTextContent("$2,000.00");
+  });
+
+  it("links each account to its transactions", () => {
+    renderBody();
+    const row = screen.getByTestId(`financial-account-row-${CARD.id}`);
+    expect(within(row).getByRole("link", { name: MSG.viewTransactions })).toHaveAttribute("href", `/transactions?account=${CARD.id}`);
   });
 
   it("hands the row's account to the edit and update-balance actions", async () => {
