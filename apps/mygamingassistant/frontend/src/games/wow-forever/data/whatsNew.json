@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "Best gear, food, Downrank and the Goal planner start from your character too",
+    "summary": "Best gear, What should I eat, Downrank, Recipes, Rares and the Goal planner now start from the character you picked: class, level, faction and (for food and the planner) Cooking and profession skill. They keep up as Blizzard updates it. Type a different value and it sticks; a small \"Use <name>'s\" button puts the character's back.",
+    "to": "/wow-forever/gear"
+  },
+  {
+    "date": "2026-11-25",
     "title": "Your level, class and profession skill now come from the character you picked",
     "summary": "After \"Use for MGA's pages\", the World Map, Making gold, Trainers and the profession guides start from that character's level, class, faction and skill, and keep up as Blizzard updates it. Professions opens on the character's own profession and lists theirs first. Type a different value and it sticks; a small \"Use <name>'s\" button puts the character's back.",
     "to": "/wow-forever/professions"

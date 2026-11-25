@@ -1,3 +1,5 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { useMemo } from "react";
 import GoalPlanSection from "@/games/wow-forever/components/goalPlanner/GoalPlanSection";
 import ProfessionGoalCard from "@/games/wow-forever/components/goalPlanner/ProfessionGoalCard";
@@ -17,6 +19,7 @@ import { useRecipeBook } from "@/games/wow-forever/hooks/useRecipeBook";
 export default function WowGoalPlannerPage() {
   useDocumentTitle(GOAL_PLANNER_TEXT.documentTitle);
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   const book = useRecipeBook();
   const { goals, addProfession, removeProfession, setGoal, addRecipe, removeRecipe } = useGoalPlannerGoals();
   const plan = useGoalPlan(goals, book);
@@ -32,6 +35,7 @@ export default function WowGoalPlannerPage() {
         value={player.faction}
         onChange={(faction) => updatePlayer({ faction })}
       />
+      <UseCharacterReset state={characterDefault} />
       <section className="space-y-3" aria-labelledby="goal-professions-heading">
         <h2 id="goal-professions-heading" className="text-lg font-semibold">
           {GOAL_PLANNER_TEXT.professionsHeading}

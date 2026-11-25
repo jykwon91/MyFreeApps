@@ -1,3 +1,5 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { useMemo } from "react";
 import RareFiltersBar from "@/games/wow-forever/components/rares/RareFiltersBar";
 import RareMacroPanel from "@/games/wow-forever/components/rares/RareMacroPanel";
@@ -13,6 +15,7 @@ import type { RaresData } from "@/games/wow-forever/types/rares/raresData";
 export default function RaresList({ data }: { data: RaresData }) {
   const { filters, update, reset } = useRareFilters();
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   const ids = useMemo(() => data.rares.map((r) => String(r.id)), [data.rares]);
   const checklist = useChecklist(ids, RARES_CHECKLIST_STORAGE_KEY);
   const shown = useMemo(() => filterRares(data.rares, filters, player.level), [data.rares, filters, player.level]);
@@ -20,6 +23,7 @@ export default function RaresList({ data }: { data: RaresData }) {
 
   return (
     <div className="space-y-4">
+      <UseCharacterReset state={characterDefault} />
       <RareFiltersBar
         zones={data.zones}
         filters={filters}

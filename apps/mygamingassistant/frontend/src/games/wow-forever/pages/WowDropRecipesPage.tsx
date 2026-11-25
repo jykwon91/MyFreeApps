@@ -1,3 +1,5 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { Link } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import { DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
@@ -19,6 +21,7 @@ export default function WowDropRecipesPage() {
   useDocumentTitle(DROP_RECIPES_TEXT.documentTitle);
   const state = useDropRecipes();
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   return (
     <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader title={DROP_RECIPES_TEXT.title} subtitle={DROP_RECIPES_TEXT.subtitle} backTo="/wow-forever" backLabel="Back to WoW Forever" />
@@ -35,6 +38,7 @@ export default function WowDropRecipesPage() {
         </p>
       </div>
       <SegmentedToggle label="Faction" options={PLAYER_FACTION_OPTIONS} value={player.faction} onChange={(faction) => updatePlayer({ faction })} />
+      <UseCharacterReset state={characterDefault} />
       {state.status === LOAD_STATUS.error ? <LoadErrorRetry message={DROP_RECIPES_TEXT.loadError} onRetry={state.retry} retrying={false} /> : null}
       {state.status === LOAD_STATUS.loading ? <DropRecipesSkeleton /> : null}
       {state.status === LOAD_STATUS.ready ? <DropRecipeBrowser recipes={state.recipes} faction={player.faction} /> : null}

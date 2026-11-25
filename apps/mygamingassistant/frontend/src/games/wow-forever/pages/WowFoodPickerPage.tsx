@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
 import FoodDataNote from "@/games/wow-forever/components/food/FoodDataNote";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import FoodNextUpgrade from "@/games/wow-forever/components/food/FoodNextUpgrade";
@@ -25,7 +26,7 @@ function describeWho(settings: FoodPickerSettings, level: number): string {
 
 /** /wow-forever/food — the best food to cook for your level, class and what you're doing. */
 export default function WowFoodPickerPage() {
-  const [settings, update] = useFoodPickerSettings();
+  const [settings, update, characterDefault] = useFoodPickerSettings();
   const { level, activity, cookingSkill } = settings;
   const result = useMemo(
     () => (level === null ? null : rankFoods(FOODS, { ...settings, level, levelCap: levelCap() }, TRAINER_SKILLS)),
@@ -46,6 +47,7 @@ export default function WowFoodPickerPage() {
         backLabel="Back to WoW Forever"
       />
       <FoodPickerInputs settings={settings} onChange={update} />
+      <UseCharacterReset state={characterDefault} />
       <SettledStatus message={status} />
 
       {result === null || level === null ? (

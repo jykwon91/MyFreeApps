@@ -3,8 +3,17 @@ import { useSearchParams } from "react-router-dom";
 import { findClass, findSpec, LEVELING_SPEC_ID, type WowClassId } from "@/games/wow-forever/data/classes";
 import { findActivity, type FoodActivity } from "@/games/wow-forever/food/foodActivities";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
-import { PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import {
+  PLAYER_SETTINGS_STORAGE_KEY,
+  parsePlayerSettings,
+  usePlayerSettings,
+  type PlayerSettings,
+} from "@/games/wow-forever/hooks/usePlayerSettings";
+import { useSelectedCharacter } from "@/games/wow-forever/hooks/useSelectedCharacter";
+import { characterSkillIn } from "@/games/wow-forever/lib/character/characterSkill";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
+import type { CharacterDefaultState } from "@/games/wow-forever/types/character/characterDefaultState";
+import { PROFESSION } from "@/games/wow-forever/data/professions/professionTypes";
 
 export const FOOD_SETTINGS_STORAGE_KEY = "mga.wowForever.food.settings.v1";
 
@@ -60,17 +69,29 @@ export function parseFoodSettings(raw: Record<string, unknown>, fallback: FoodPi
   };
 }
 
-/** Last settings used here; else level + class from the World Map "You" section. */
-function storedSettings(): FoodPickerSettings {
+/** With a character selected, its level, class and Cooking skill replace the remembered ones. */
+function followingCharacter(settings: FoodPickerSettings, player: PlayerSettings, cooking: number | null): FoodPickerSettings {
+  if (player.characterSlug === null) return settings;
+  return {
+    ...settings,
+    level: player.level,
+    classId: player.classId,
+    specId: settings.classId === player.classId ? settings.specId : LEVELING_SPEC_ID,
+    cookingSkill: cooking,
+  };
+}
+
+/** Last settings used here; else level + class from the World Map "You" section. The selected character wins for those and Cooking. */
+function storedSettings(player: PlayerSettings, cooking: number | null): FoodPickerSettings {
   const stored = readStored<FoodPickerSettings | null>(
     FOOD_SETTINGS_STORAGE_KEY,
     (raw) => (typeof raw === "object" && raw !== null ? parseFoodSettings(raw as Record<string, unknown>, DEFAULT_FOOD_SETTINGS) : null),
     null,
   );
-  if (stored) return stored;
-  const player = readStored(PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings, null);
-  if (!player) return DEFAULT_FOOD_SETTINGS;
-  return { ...DEFAULT_FOOD_SETTINGS, level: player.level, classId: player.classId };
+  if (stored) return followingCharacter(stored, player, cooking);
+  const saved = readStored(PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings, null);
+  if (!saved) return DEFAULT_FOOD_SETTINGS;
+  return followingCharacter({ ...DEFAULT_FOOD_SETTINGS, level: saved.level, classId: saved.classId }, player, cooking);
 }
 
 function fromParams(params: URLSearchParams): Record<string, unknown> {
@@ -82,11 +103,17 @@ function fromParams(params: URLSearchParams): Record<string, unknown> {
   return raw;
 }
 
-function toParams(s: FoodPickerSettings): Record<string, string> {
-  const out: Record<string, string> = { [PARAM.classId]: s.classId, [PARAM.activity]: s.activity };
-  if (s.level !== null) out[PARAM.level] = String(s.level);
+/** The URL carries the activity, and level / class / Cooking only where they differ from `base` (the character's own). */
+function toParams(s: FoodPickerSettings, base: FoodPickerSettings | null): Record<string, string> {
+  const differs = (field: keyof FoodPickerSettings) => base === null || s[field] !== base[field];
+  const out: Record<string, string> = { [PARAM.activity]: s.activity };
+  if (differs("classId")) out[PARAM.classId] = s.classId;
+  // A value cleared over the character's own is sent empty: "none", not "the character's".
+  if (differs("level") && (s.level !== null || base !== null)) out[PARAM.level] = s.level === null ? "" : String(s.level);
   if (s.specId !== LEVELING_SPEC_ID) out[PARAM.specId] = s.specId;
-  if (s.cookingSkill !== null) out[PARAM.cookingSkill] = String(s.cookingSkill);
+  if (differs("cookingSkill") && (s.cookingSkill !== null || base !== null)) {
+    out[PARAM.cookingSkill] = s.cookingSkill === null ? "" : String(s.cookingSkill);
+  }
   return out;
 }
 
@@ -94,9 +121,16 @@ function toParams(s: FoodPickerSettings): Record<string, string> {
  * Food picker settings. The URL holds them (so a link shares the exact
  * question); they're also remembered for the next visit.
  */
-export function useFoodPickerSettings(): [FoodPickerSettings, (patch: Partial<FoodPickerSettings>) => void] {
+export function useFoodPickerSettings(): [FoodPickerSettings, (patch: Partial<FoodPickerSettings>) => void, CharacterDefaultState | null] {
   const [params, setParams] = useSearchParams();
-  const settings = useMemo(() => parseFoodSettings(fromParams(params), storedSettings()), [params]);
+  const [player] = usePlayerSettings();
+  const { name, character } = useSelectedCharacter();
+  const following = player.characterSlug !== null;
+  const cooking = character ? characterSkillIn(character, PROFESSION.cooking) : null;
+  const base = useMemo(() => storedSettings(player, cooking), [player, cooking]);
+  const settings = useMemo(() => parseFoodSettings(fromParams(params), base), [params, base]);
+  const overridden =
+    following && (settings.level !== base.level || settings.classId !== base.classId || settings.cookingSkill !== base.cookingSkill);
   // The router applies a URL change in a transition. A second change made before
   // it lands (type a level, then pick a class) must build on the first, not on
   // the settings this render still shows, or the level is lost.
@@ -105,18 +139,30 @@ export function useFoodPickerSettings(): [FoodPickerSettings, (patch: Partial<Fo
     pending.current = null;
   }, [params]);
 
-  const update = useCallback(
-    (patch: Partial<FoodPickerSettings>) => {
-      const base = pending.current ?? settings;
-      const next = { ...base, ...patch };
-      // Spec ids are only unique within a class.
-      if (patch.classId && patch.classId !== base.classId && patch.specId === undefined) next.specId = LEVELING_SPEC_ID;
+  const go = useCallback(
+    (next: FoodPickerSettings) => {
       pending.current = next;
       writeStored(FOOD_SETTINGS_STORAGE_KEY, next);
-      setParams(toParams(next), { replace: true });
+      setParams(toParams(next, following ? base : null), { replace: true });
     },
-    [settings, setParams],
+    [base, following, setParams],
   );
 
-  return [settings, update];
+  const update = useCallback(
+    (patch: Partial<FoodPickerSettings>) => {
+      const prev = pending.current ?? settings;
+      const next = { ...prev, ...patch };
+      // Spec ids are only unique within a class.
+      if (patch.classId && patch.classId !== prev.classId && patch.specId === undefined) next.specId = LEVELING_SPEC_ID;
+      go(next);
+    },
+    [settings, go],
+  );
+
+  const reset = useCallback(
+    () => go({ ...settings, level: base.level, classId: base.classId, specId: base.specId, cookingSkill: base.cookingSkill }),
+    [settings, base, go],
+  );
+
+  return [settings, update, name ? { characterName: name, overridden, reset } : null];
 }

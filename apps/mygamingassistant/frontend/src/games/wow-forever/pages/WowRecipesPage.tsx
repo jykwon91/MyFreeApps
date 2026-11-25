@@ -1,3 +1,5 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { useSearchParams } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import RecipeBrowser from "@/games/wow-forever/components/recipes/RecipeBrowser";
@@ -19,12 +21,14 @@ export default function WowRecipesPage() {
   useDocumentTitle("Recipes · WoW Forever");
   const state = useRecipeBook();
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   const place = useVendorPlace(player.faction, player.zoneId, player.position);
   const [params] = useSearchParams();
   return (
     <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader title="Recipes" subtitle={RECIPES_TEXT.subtitle} backTo="/wow-forever" backLabel="Back to WoW Forever" />
       <SegmentedToggle label="Faction" options={PLAYER_FACTION_OPTIONS} value={player.faction} onChange={(faction) => updatePlayer({ faction })} />
+      <UseCharacterReset state={characterDefault} />
       {state.status === LOAD_STATUS.error ? <LoadErrorRetry message={RECIPES_TEXT.loadError} onRetry={state.retry} retrying={false} /> : null}
       {state.status === LOAD_STATUS.loading ? <RecipesSkeleton listing={hasRecipeSearch(recipeFiltersFromParams(params))} /> : null}
       {state.status === LOAD_STATUS.ready ? <RecipeBrowser entries={state.entries} place={place} zoneId={player.zoneId} level={player.level} /> : null}

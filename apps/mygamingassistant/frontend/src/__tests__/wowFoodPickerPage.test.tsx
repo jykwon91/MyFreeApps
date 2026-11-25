@@ -1,3 +1,5 @@
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +21,8 @@ function LocationProbe() {
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <Provider store={store}>
+<MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route
           path="/wow-forever/food"
@@ -31,7 +34,8 @@ function renderAt(path: string) {
           }
         />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

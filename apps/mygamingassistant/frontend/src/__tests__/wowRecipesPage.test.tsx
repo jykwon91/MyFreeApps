@@ -1,3 +1,5 @@
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +21,8 @@ function LocationProbe() {
 
 function renderAt(path: string) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <Provider store={store}>
+<MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route
           path="/wow-forever/recipes"
@@ -31,7 +34,8 @@ function renderAt(path: string) {
           }
         />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 
@@ -87,9 +91,11 @@ describe("WowRecipesPage", { timeout: 30000 }, () => {
     loadItemCategories.mockRejectedValue(new Error("offline"));
     const { default: Page } = await import("@/games/wow-forever/pages/WowRecipesPage");
     render(
-      <MemoryRouter initialEntries={["/wow-forever/recipes"]}>
+      <Provider store={store}>
+<MemoryRouter initialEntries={["/wow-forever/recipes"]}>
         <Page />
-      </MemoryRouter>,
+      </MemoryRouter>
+</Provider>,
     );
     expect(await screen.findByText(RECIPES_TEXT.loadError, undefined, LOAD)).toBeInTheDocument();
     expect(screen.queryByTestId("recipe-search")).toBeNull();
