@@ -8,7 +8,7 @@ Brief an agent with "run `scripts/agent/<script>`", not with the steps.
 |---|---|
 | `worktree-new.sh <name> [branch]` | Worktree from fresh `origin/main` in `../MyFreeApps-worktrees/<name>`, with the main checkout's `node_modules` linked in (vitest/tsc work without `npm ci`). Prints the path. |
 | `worktree-remove.sh <name or path>` | Unlinks those `node_modules` links (never the real folders), removes the worktree, deletes the branch if it's merged. |
-| `pr-merge-on-green.sh <pr> [--no-merge]` | Waits until no check is pending; on any failure lists it and exits 1; otherwise `gh pr merge --squash --admin` (never `--auto`). |
+| `pr-merge-on-green.sh <pr> [--no-merge]` | Waits until no check is pending and every required check on the base branch (`ci-gate`) has passed or been skipped, since `--admin` would bypass that rule; on any failure lists it and exits 1; otherwise `gh pr merge --squash --admin` (never `--auto`). |
 | `wait-runs.sh <pr or sha> [--workflow NAME]` | Waits for every Actions run on the merge commit (the deploys) and exits 1 naming any that didn't succeed. |
 | `install-wow-addons.sh [Addon ...]` | Copies the MGA WoW addons from `origin/main` into the game's AddOns folder: only changed files, never deletes, keeps the installed `MGAPrices/Data.lua`, says `/reload` or full restart. `WOW_ADDONS`, `REF` override. |
 
