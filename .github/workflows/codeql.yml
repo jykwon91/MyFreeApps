@@ -1,12 +1,19 @@
 name: CodeQL
 
 on:
+  # Full scans (both languages) on every push to main and weekly.
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   schedule:
     - cron: "23 4 * * 1"
+  # Pull requests call this from ci.yml with only the languages whose files changed.
+  workflow_call:
+    inputs:
+      languages:
+        description: JSON array of the CodeQL languages to analyze.
+        required: false
+        type: string
+        default: '["python","javascript-typescript"]'
 
 permissions:
   contents: read
@@ -22,7 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [python, javascript-typescript]
+        # `inputs` is empty on push and schedule runs, which scan both languages.
+        language: ${{ fromJSON(inputs.languages || '["python","javascript-typescript"]') }}
 
     steps:
       - name: Checkout

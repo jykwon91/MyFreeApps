@@ -1,0 +1,285 @@
+name: CI
+
+# The ONE pull_request entry point for CI. Every area's workflow (ci-<app>.yml,
+# ci-shared-*.yml, codeql.yml, ...) is a reusable workflow that this file calls only
+# when the area is affected, so a PR no longer starts a runner per workflow just to
+# find out it has nothing to do. (Measured 2026-11-25: an MGA-only PR spent ~10
+# runner slots deciding to skip, queued behind real suites.)
+#
+# Relevance is computed ONCE, by the `changes` job running .github/scripts/ci_changes.py.
+# That script holds every area's path rules, including the phone-only carve-outs
+# (apps/<app>/mobile and packages/shared-mobile are tested by the mobile workflows and
+# cannot change a web bundle or API image). Its tests are
+# packages/shared-backend/tests/test_ci_changes.py.
+#
+# Each call below is skipped by a job-level `if:` rather than the workflow being left
+# out of `on.pull_request.paths`: a pull_request workflow skipped by a path filter never
+# reports its check contexts, so a REQUIRED check inside it would hang every other PR
+# on "Expected - Waiting for status to be reported". A job skipped by `if:` reports
+# SUCCESS.
+#
+# The gates are `!cancelled() && ... != 'false'`, NOT `== 'true'`. A plain `needs:
+# changes` would skip every dependent job if the gate job itself failed - and a
+# skipped job reports SUCCESS, which would let a PR merge with no tests run at all.
+# This form inverts that: work is skipped only on an explicit `false`, so any failure of
+# the gate (a failed job, a script error, an empty output) runs everything.
+#
+# REQUIRED CHECK: `ci-gate`, and only it. A job inside a called workflow reports as
+# "<caller job> / <called job>" and, when the call is skipped, reports nothing at all,
+# so per-job required contexts cannot survive this layout. `ci-gate` is skipped when
+# none of mybookkeeper, myjobhunter or shared-backend is relevant, and otherwise fails
+# unless each relevant one succeeded - the same set the old per-job contexts covered.
+#
+# Pushes to main do NOT go through here. Each area's workflow keeps its own `push`
+# trigger (with its path filter) because deploy-*.yml chain off those runs by workflow
+# name (`workflow_run`), and that must keep working unchanged.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mybookkeeper: ${{ steps.filter.outputs.mybookkeeper }}
+      myjobhunter: ${{ steps.filter.outputs.myjobhunter }}
+      mygamingassistant: ${{ steps.filter.outputs.mygamingassistant }}
+      mylanguagetutor: ${{ steps.filter.outputs.mylanguagetutor }}
+      mypizzatracker: ${{ steps.filter.outputs.mypizzatracker }}
+      myrecipes: ${{ steps.filter.outputs.myrecipes }}
+      landing: ${{ steps.filter.outputs.landing }}
+      myjobhunter_integration: ${{ steps.filter.outputs.myjobhunter_integration }}
+      mobile_mybookkeeper: ${{ steps.filter.outputs.mobile_mybookkeeper }}
+      mobile_myjobhunter: ${{ steps.filter.outputs.mobile_myjobhunter }}
+      mobile_mylanguagetutor: ${{ steps.filter.outputs.mobile_mylanguagetutor }}
+      mobile_myrecipes: ${{ steps.filter.outputs.mobile_myrecipes }}
+      mobile_foundation: ${{ steps.filter.outputs.mobile_foundation }}
+      shared_frontend: ${{ steps.filter.outputs.shared_frontend }}
+      shared_backend: ${{ steps.filter.outputs.shared_backend }}
+      python_lint: ${{ steps.filter.outputs.python_lint }}
+      dependency_review: ${{ steps.filter.outputs.dependency_review }}
+      codeql_languages: ${{ steps.filter.outputs.codeql_languages }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect which areas this PR affects
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 .github/scripts/ci_changes.py
+
+  # Always runs: secrets and file-size rules apply to every change, docs included.
+  # One job, not two workflows, so it holds one runner. Each step runs even if an
+  # earlier one failed, so one red run shows every problem.
+  repo-checks:
+    name: repo-checks (secrets scan, file size)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the secrets scan reads history; file-size resolves origin/<base>:<path>
+
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true
+
+      # See scripts/check-file-size.py for the rules and scripts/file-size-allowlist.yml
+      # for the explicitly permitted large files.
+      - name: Set up Python
+        if: ${{ !cancelled() }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        if: ${{ !cancelled() }}
+        run: pip install pyyaml pytest
+
+      - name: Test the file-size check
+        if: ${{ !cancelled() }}
+        run: python -m pytest scripts/tests -q
+
+      - name: Run file-size check
+        if: ${{ !cancelled() }}
+        run: python scripts/check-file-size.py --base origin/${{ github.base_ref }}
+
+  # Runs only when a dependency manifest (or a workflow's pinned actions) changed.
+  dependency-review:
+    name: Review dependency changes
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.dependency_review != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+          # GHSA-wj6h-64fc-37mp: Minerva timing attack on P-256 in python-ecdsa.
+          # Pulled in transitively by python-jose (used for JWT decode in mybookkeeper).
+          # Timing-side-channel attack — requires precise local timing measurements;
+          # not exploitable over typical noisy network conditions. Tracked for proper
+          # mitigation via python-jose → PyJWT migration in MyBookkeeper.
+          # GHSA-3g3m-2fjr-6pw4 (glob) and GHSA-g3hv-75wg-m249 (minimatch): reached through
+          # @expo/cli, which is developer and CI tooling only. Their fixes are major versions
+          # Expo hasn't adopted. Tracked in #1489.
+          allow-ghsas: GHSA-wj6h-64fc-37mp, GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249
+
+  # Only the languages whose files changed; the full scan of both stays on push to main
+  # and the weekly schedule (codeql.yml). `[]` is the only skip: an empty output runs both.
+  codeql:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.codeql_languages != '[]' }}
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    uses: ./.github/workflows/codeql.yml
+    with:
+      languages: ${{ needs.changes.outputs.codeql_languages || '["python","javascript-typescript"]' }}
+
+  shared-backend:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.shared_backend != 'false' }}
+    uses: ./.github/workflows/ci-shared-backend.yml
+
+  shared-frontend:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.shared_frontend != 'false' }}
+    uses: ./.github/workflows/ci-shared-frontend.yml
+
+  python-lint:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.python_lint != 'false' }}
+    uses: ./.github/workflows/ci-python-lint.yml
+
+  mybookkeeper:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mybookkeeper != 'false' }}
+    uses: ./.github/workflows/ci-mybookkeeper.yml
+
+  myjobhunter:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.myjobhunter != 'false' }}
+    uses: ./.github/workflows/ci-myjobhunter.yml
+
+  myjobhunter-integration:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.myjobhunter_integration != 'false' }}
+    uses: ./.github/workflows/integration-myjobhunter.yml
+
+  mygamingassistant:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mygamingassistant != 'false' }}
+    uses: ./.github/workflows/ci-mygamingassistant.yml
+
+  mylanguagetutor:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mylanguagetutor != 'false' }}
+    uses: ./.github/workflows/ci-mylanguagetutor.yml
+
+  mypizzatracker:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mypizzatracker != 'false' }}
+    uses: ./.github/workflows/ci-mypizzatracker.yml
+
+  myrecipes:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.myrecipes != 'false' }}
+    uses: ./.github/workflows/ci-myrecipes.yml
+
+  landing:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.landing != 'false' }}
+    uses: ./.github/workflows/ci-landing.yml
+
+  mobile-foundation:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile_foundation != 'false' }}
+    uses: ./.github/workflows/ci-mobile.yml
+
+  mobile-mybookkeeper:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile_mybookkeeper != 'false' }}
+    uses: ./.github/workflows/ci-mobile-mybookkeeper.yml
+
+  mobile-myjobhunter:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile_myjobhunter != 'false' }}
+    uses: ./.github/workflows/ci-mobile-myjobhunter.yml
+
+  mobile-mylanguagetutor:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile_mylanguagetutor != 'false' }}
+    uses: ./.github/workflows/ci-mobile-mylanguagetutor.yml
+
+  mobile-myrecipes:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mobile_myrecipes != 'false' }}
+    uses: ./.github/workflows/ci-mobile-myrecipes.yml
+
+  # The one required status check (see the header). Skipped, hence passing, when none of
+  # the three areas it covers is relevant; otherwise each relevant one must have passed.
+  ci-gate:
+    name: ci-gate
+    needs: [changes, mybookkeeper, myjobhunter, shared-backend]
+    if: >-
+      ${{ always() && (needs.changes.outputs.mybookkeeper != 'false'
+      || needs.changes.outputs.myjobhunter != 'false'
+      || needs.changes.outputs.shared_backend != 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every relevant required area passed
+        env:
+          MBK_RELEVANT: ${{ needs.changes.outputs.mybookkeeper }}
+          MBK_RESULT: ${{ needs.mybookkeeper.result }}
+          MJH_RELEVANT: ${{ needs.changes.outputs.myjobhunter }}
+          MJH_RESULT: ${{ needs.myjobhunter.result }}
+          SHARED_BACKEND_RELEVANT: ${{ needs.changes.outputs.shared_backend }}
+          SHARED_BACKEND_RESULT: ${{ needs.shared-backend.result }}
+        run: |
+          set -u
+          failed=0
+          check() {
+            # $1 area, $2 relevant flag, $3 job result. Only an explicit `false` excuses a skip, so a cancelled run fails.
+            if [ "$2" = "false" ]; then
+              echo "$1: not affected by this PR"
+            elif [ "$3" = "success" ]; then
+              echo "$1: passed"
+            else
+              echo "::error::$1 is relevant to this PR but its result is '$3'"
+              failed=1
+            fi
+          }
+          check mybookkeeper "$MBK_RELEVANT" "$MBK_RESULT"
+          check myjobhunter "$MJH_RELEVANT" "$MJH_RESULT"
+          check shared-backend "$SHARED_BACKEND_RELEVANT" "$SHARED_BACKEND_RESULT"
+          exit "$failed"

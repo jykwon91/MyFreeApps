@@ -1,14 +1,9 @@
 name: MyGamingAssistant CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/mygamingassistant/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-mygamingassistant.yml'
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   # A successful push run is what deploys this app (deploy-mygamingassistant.yml runs on
   # workflow_run of this workflow), so mobile-only changes are excluded here:
   # they cannot change the web bundle or API image. Mobile has its own CI.
