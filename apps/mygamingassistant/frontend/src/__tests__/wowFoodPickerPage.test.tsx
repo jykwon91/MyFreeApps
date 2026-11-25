@@ -1,7 +1,7 @@
 import { Provider } from "react-redux";
 import { store } from "@/lib/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import WowFoodPickerPage from "@/games/wow-forever/pages/WowFoodPickerPage";
@@ -78,6 +78,24 @@ describe("What should I eat? page", () => {
     expect(topPick()).toHaveTextContent("Poached Sunscale Salmon");
     expect(screen.getByText(/Best food for a level 35 Warrior leveling\./)).toBeInTheDocument();
     expect(screen.getByText(/Next upgrade at level 55/)).toBeInTheDocument();
+  });
+
+  it("gives a level 59 Warlock a Food and a Drink section, the Mage's free one first", () => {
+    renderAt("/wow-forever/food?lvl=59&class=warlock&act=leveling");
+    const food = within(screen.getByTestId("restore-food"));
+    const drink = within(screen.getByTestId("restore-drink"));
+    expect(food.getByTestId("restore-mage")).toHaveTextContent("Free from a Mage");
+    expect(drink.getByTestId("restore-mage")).toHaveTextContent("Free from a Mage");
+    expect(drink.getByTestId("restore-mage")).toHaveTextContent(/mana over 30 sec/);
+    expect(food.getByTestId("restore-mage")).toHaveTextContent(/health over 30 sec/);
+    expect(food.getAllByTestId("restore-option").length).toBeGreaterThan(0);
+    expect(drink.getAllByTestId("restore-option").length).toBeGreaterThan(0);
+  });
+
+  it("gives a Warrior food but no Drink section", () => {
+    renderAt("/wow-forever/food?lvl=59&class=warrior&act=leveling");
+    expect(screen.getByTestId("restore-food")).toBeInTheDocument();
+    expect(screen.queryByTestId("restore-drink")).not.toBeInTheDocument();
   });
 
   it("changes the answer with the activity and keeps it in the URL", async () => {

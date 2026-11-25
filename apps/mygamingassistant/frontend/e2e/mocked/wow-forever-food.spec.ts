@@ -54,7 +54,7 @@ test("Cooking skill splits what you can cook from what's worth training for", as
   await page.goto("/wow-forever/food?lvl=60&class=priest&spec=holy&act=raid&skill=200");
   await expect(page.locator("#food-top-pick")).toHaveText("Sunny Tea");
   await expect(page.getByRole("heading", { name: "Worth training for" })).toBeVisible();
-  await expect(page.getByText(/Sunrise Omelette/)).toBeVisible();
+  await expect(page.getByTestId("cooked-food").getByText(/Sunrise Omelette/)).toBeVisible();
 });
 
 test("from the Cooking guide: pick Just healing and see the biggest heal", async ({ page }) => {
@@ -66,6 +66,32 @@ test("from the Cooking guide: pick Just healing and see the biggest heal", async
   await page.getByRole("radio", { name: "Just healing" }).click();
   await expect(page.locator("#food-top-pick")).toHaveText("Longjaw Mud Snapper");
   await expect(page.getByText(/Heals the most of what you can eat: 552 health over 24 sec/)).toBeVisible();
+});
+
+test("a level 59 Warlock gets a Food and a Drink section, the Mage's free one first", async ({ page }) => {
+  await page.goto("/wow-forever/food?lvl=59&class=warlock&act=leveling");
+  const food = page.getByTestId("restore-food");
+  const drink = page.getByTestId("restore-drink");
+  await expect(food.getByTestId("restore-mage")).toContainText("Free from a Mage");
+  await expect(drink.getByTestId("restore-mage")).toContainText("Free from a Mage");
+  await expect(drink.getByTestId("restore-mage")).toContainText(/mana over 30 sec/);
+  expect(await drink.getByTestId("restore-option").count()).toBeGreaterThan(0);
+  // The Mage's pick is listed before the other options.
+  expect(await drink.locator("li").first().getAttribute("data-testid")).toBe("restore-mage");
+});
+
+test("a Warrior gets food but no Drink section", async ({ page }) => {
+  await page.goto("/wow-forever/food?lvl=59&class=warrior&act=leveling");
+  await expect(page.getByTestId("restore-food")).toBeVisible();
+  await expect(page.getByTestId("restore-drink")).toHaveCount(0);
+});
+
+test("the Food and Drink sections never scroll sideways on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/wow-forever/food?lvl=59&class=warlock&act=leveling");
+  await expect(page.getByTestId("restore-drink")).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test("the phone layout never scrolls sideways", async ({ page }) => {
@@ -105,7 +131,7 @@ test("the food detail page never scrolls sideways on a phone", async ({ page }) 
 
 test("the other faction's vendors are labelled as ones you can't buy from", async ({ page }) => {
   await page.goto("/wow-forever/food?lvl=20&class=warlock&act=healing&skill=1");
-  await page.getByRole("link", { name: "Longjaw Mud Snapper" }).click();
+  await page.getByTestId("cooked-food").getByRole("link", { name: "Longjaw Mud Snapper" }).click();
   const recipe = page.locator("section", { has: page.getByRole("heading", { name: "Learn the recipe" }) });
   await recipe.getByRole("button", { name: /Show \d+ Horde vendors/ }).click();
   await expect(recipe.getByText("— you can't buy from these")).toBeVisible();

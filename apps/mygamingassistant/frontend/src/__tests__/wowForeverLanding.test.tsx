@@ -37,7 +37,7 @@ describe("WoW Forever hub", () => {
     renderHub();
     const section = screen.getByRole("region", { name: "What’s new on this site" });
     expect(within(section).getAllByRole("listitem")).toHaveLength(WHATS_NEW_HUB_COUNT);
-    expect(within(section).getByRole("link", { name: new RegExp(WHATS_NEW[0].title) })).toHaveAttribute(
+    expect(within(section).getByRole("link", { name: (name) => name.startsWith(WHATS_NEW[0].title) })).toHaveAttribute(
       "href",
       WHATS_NEW[0].to,
     );

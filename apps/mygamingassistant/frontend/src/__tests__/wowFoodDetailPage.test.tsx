@@ -50,7 +50,7 @@ describe("food detail page", () => {
   it("opens from the picker, carrying the question, and Back returns to it", async () => {
     const user = userEvent.setup();
     renderAt("/wow-forever/food?lvl=35&class=warrior");
-    await user.click(screen.getByRole("link", { name: "Poached Sunscale Salmon" }));
+    await user.click(within(screen.getByRole("heading", { level: 2, name: "Poached Sunscale Salmon" })).getByRole("link"));
     expect(screen.getByRole("heading", { level: 1, name: "Poached Sunscale Salmon" })).toBeInTheDocument();
     expect(screen.getByTestId("where").textContent).toMatch(/^\/wow-forever\/food\/\d+\?.*lvl=35/);
 
