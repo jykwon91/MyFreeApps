@@ -288,9 +288,9 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   await page.goto("/wow-forever/professions?p=blacksmithing");
   await expect(page.getByRole("radiogroup", { name: "Your Blacksmithing specialization" }).getByRole("radio", { name: "Armorsmith" })).toBeChecked();
 
-  // No auction prices (stubbed empty), so no prices anywhere; bars are smelted from ore.
-  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  // No auction prices (stubbed empty), so no route choice and no gold; bars are smelted from ore.
+  await expect(page.locator("#route").getByRole("radiogroup", { name: "Route" })).toHaveCount(0);
+  await expect(page.getByText("Cheapest at auction prices")).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
@@ -337,9 +337,9 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   await page.goto("/wow-forever/professions?p=leatherworking");
   await expect(page.getByRole("radiogroup", { name: "Your Leatherworking specialization" }).getByRole("radio", { name: "Tribal" })).toBeChecked();
 
-  // No auction prices (stubbed empty), so no prices anywhere; leather is skinned, with directions to the beasts.
-  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  // No auction prices (stubbed empty), so no route choice and no gold; leather is skinned, with directions to the beasts.
+  await expect(page.locator("#route").getByRole("radiogroup", { name: "Route" })).toHaveCount(0);
+  await expect(page.getByText("Cheapest at auction prices")).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
@@ -407,9 +407,9 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   await page.goto("/wow-forever/professions?p=engineering");
   await expect(page.getByRole("radiogroup", { name: "Your Engineering specialization" }).getByRole("radio", { name: "Gnomish" })).toBeChecked();
 
-  // No auction prices (stubbed empty), so no prices anywhere; bars are smelted from ore.
-  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  // No auction prices (stubbed empty), so no route choice and no gold; bars are smelted from ore.
+  await expect(page.locator("#route").getByRole("radiogroup", { name: "Route" })).toHaveCount(0);
+  await expect(page.getByText("Cheapest at auction prices")).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
