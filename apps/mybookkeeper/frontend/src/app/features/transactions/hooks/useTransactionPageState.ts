@@ -50,6 +50,11 @@ import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/
 import { duplicateConflictMessage } from "@mybookkeeper/api-client/utils/duplicateConflictMessage";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import {
+  accountFromParams,
+  TRANSACTIONS_ACCOUNT_PARAM,
+  withoutAccountParam,
+} from "@/shared/lib/transactions-account-link";
 
 export interface TransactionPageState {
   // Tab
@@ -145,7 +150,11 @@ export function useTransactionPageState(): TransactionPageState {
 
   const { showError, showSuccess } = useToast();
 
-  const [filters, setFilterBar] = useState<Filters>(EMPTY_FILTERS);
+  // Opened from an account on Financial Accounts: start filtered to that account.
+  const [filters, setFilterBar] = useState<Filters>(() => ({
+    ...EMPTY_FILTERS,
+    account_id: accountFromParams(searchParams) ?? EMPTY_FILTERS.account_id,
+  }));
   const [columnFilters, setColumnFilterState] = useState<ColumnFiltersState>([]);
   const [sorting, setSortingState] = useState<SortingState>(DEFAULT_TRANSACTION_SORTING);
   const [storedPagination, setStoredPagination] = useState<PaginationState>(INITIAL_TRANSACTION_PAGINATION);
@@ -177,8 +186,12 @@ export function useTransactionPageState(): TransactionPageState {
     (next: Filters) => {
       setFilterBar(next);
       toFirstPage();
+      // The address named the account the page opened on; once filters change it no longer applies.
+      if (searchParams.has(TRANSACTIONS_ACCOUNT_PARAM)) {
+        setSearchParams(withoutAccountParam, { replace: true });
+      }
     },
-    [toFirstPage],
+    [toFirstPage, searchParams, setSearchParams],
   );
   const setColumnFilters = useCallback(
     (updater: Updater<ColumnFiltersState>) => {

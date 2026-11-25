@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
 import { Button } from "@platform/ui";
 import { FINANCIAL_ACCOUNT_TYPE_LABELS } from "@mybookkeeper/api-client/constants/financialAccountTypes";
 import type { FinancialAccount } from "@mybookkeeper/api-client/types/financial-account/financial-account";
 import { formatAccountBalance, formatAccountDate } from "@mybookkeeper/api-client/utils/financialAccountFormat";
 import { financialAccountLabel } from "@mybookkeeper/api-client/utils/financialAccountLabel";
 import { FINANCIAL_ACCOUNT_MESSAGES as MSG } from "@/shared/lib/financial-account-messages";
+import { transactionsForAccountPath } from "@/shared/lib/transactions-account-link";
 
 export interface FinancialAccountRowProps {
   account: FinancialAccount;
@@ -17,7 +19,7 @@ function balanceNote(account: FinancialAccount): string {
   return MSG.balanceAsOf(formatAccountDate(account.balance_as_of));
 }
 
-/** One account: what it is on the left, what it holds and since when on the right. */
+/** One account: what it is on the left, what it holds and since when on the right, and a link to its transactions. */
 export default function FinancialAccountRow({ account, onEdit, onUpdateBalance }: FinancialAccountRowProps) {
   const details = [
     FINANCIAL_ACCOUNT_TYPE_LABELS[account.account_type],
@@ -40,7 +42,7 @@ export default function FinancialAccountRow({ account, onEdit, onUpdateBalance }
           <p className="text-xs text-muted-foreground mt-0.5">{balanceNote(account)}</p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 mt-2">
+      <div className="flex flex-wrap items-center gap-2 mt-2">
         {isOpen ? (
           <Button type="button" variant="secondary" size="sm" onClick={() => onUpdateBalance(account)} data-testid="financial-account-update-balance">
             {MSG.updateBalance}
@@ -49,6 +51,13 @@ export default function FinancialAccountRow({ account, onEdit, onUpdateBalance }
         <Button type="button" variant="secondary" size="sm" onClick={() => onEdit(account)} data-testid="financial-account-edit">
           {MSG.edit}
         </Button>
+        <Link
+          to={transactionsForAccountPath(account.id)}
+          className="inline-flex min-h-[44px] sm:min-h-[32px] items-center px-2 text-xs font-medium text-primary hover:underline"
+          data-testid="financial-account-transactions"
+        >
+          {MSG.viewTransactions}
+        </Link>
       </div>
     </li>
   );
