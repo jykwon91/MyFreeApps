@@ -1,6 +1,7 @@
 -- MGA PvP Log: logs the enemy players who fight or kill you, and the ones you kill. Open the window from the
 -- MGA menu ("PvP log") or with /mgapvp. When you die to an enemy player it prints one chat line:
 --   MGA PvP Log: Killed by <Name> (<Race> <Class> <level if known>) with <Spell> in <Zone>
+-- The killer comes from the death recap; when the recap can't be read it says "Probably killed by" instead.
 --
 -- The log is Core.lua, the window is Window.lua; this file listens for the game's events.
 --   /mgapvp          open or close the window
@@ -11,6 +12,7 @@
 local M = MGAPvPLog
 local PREFIX = "|cff33aaffMGA PvP Log:|r "
 local SWEEP_SECONDS = 5
+local TICK_SECONDS = 1
 
 local function say(text)
   DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. text)
@@ -51,16 +53,30 @@ MGAHub.Register({
   settings = buildOptions,
 })
 
+-- Forever hides the combat log from addons (COMBAT_LOG_EVENT_UNFILTERED is a restricted event and
+-- CombatLogGetCurrentEventInfo is secure-only), and registering for it is blocked as taint, which breaks the
+-- addon. So this file never touches the combat log: it listens for the events the client does allow (your death,
+-- your kills, and the players you target, mouse over or see on a nameplate) and Core.lua reads the death recap.
 local events = CreateFrame("Frame", "MGAPvPLogEvents")
-events:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 events:RegisterEvent("PLAYER_DEAD")
+events:RegisterEvent("PARTY_KILL")
 events:RegisterEvent("PLAYER_LOGOUT")
 events:RegisterEvent("PLAYER_TARGET_CHANGED")
 events:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 events:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 
-local sinceSweep = 0
+local function sight(unit)
+  M.Sight(unit)
+  M.TrackUnit(unit)
+end
+
+local sinceSweep, sinceTick = 0, 0
 events:SetScript("OnUpdate", function(_, elapsed)
+  sinceTick = sinceTick + elapsed
+  if sinceTick >= TICK_SECONDS then
+    sinceTick = 0
+    M.ResolveDeath(time())
+  end
   sinceSweep = sinceSweep + elapsed
   if sinceSweep >= SWEEP_SECONDS then
     sinceSweep = 0
@@ -69,27 +85,19 @@ events:SetScript("OnUpdate", function(_, elapsed)
   end
 end)
 
-local function onCombat(...)
-  M.Combat(...)
-  M.TrackCombat(...)
-end
-
-events:SetScript("OnEvent", function(_, event, unit)
-  if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-    onCombat(CombatLogGetCurrentEventInfo())
-  elseif event == "PLAYER_DEAD" then
+events:SetScript("OnEvent", function(_, event, first, second)
+  if event == "PLAYER_DEAD" then
     M.Died(time())
+  elseif event == "PARTY_KILL" then
+    M.PartyKill(first, second)
   elseif event == "PLAYER_LOGOUT" then
     M.Flush(time(), true)
   elseif event == "PLAYER_TARGET_CHANGED" then
-    M.LearnUnit("target")
-    M.TrackUnit("target")
+    sight("target")
   elseif event == "UPDATE_MOUSEOVER_UNIT" then
-    M.LearnUnit("mouseover")
-    M.TrackUnit("mouseover")
-  elseif event == "NAME_PLATE_UNIT_ADDED" and unit then
-    M.LearnUnit(unit)
-    M.TrackUnit(unit)
+    sight("mouseover")
+  elseif event == "NAME_PLATE_UNIT_ADDED" and first then
+    sight(first)
   end
 end)
 
