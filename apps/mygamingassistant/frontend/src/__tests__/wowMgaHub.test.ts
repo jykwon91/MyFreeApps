@@ -9,6 +9,8 @@ import lootBindings from "../../addon/MGALoot/Bindings.xml?raw";
 import lootHub from "../../addon/MGALoot/MGAHub.lua?raw";
 import pricesBindings from "../../addon/MGAPrices/Bindings.xml?raw";
 import pricesHub from "../../addon/MGAPrices/MGAHub.lua?raw";
+import pvpLogBindings from "../../addon/MGAPvPLog/Bindings.xml?raw";
+import pvpLogHub from "../../addon/MGAPvPLog/MGAHub.lua?raw";
 import professionsHub from "../../addon/MGAProfessions/MGAHub.lua?raw";
 import waypointsBindings from "../../addon/MGAWaypoints/Bindings.xml?raw";
 import waypointsHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
@@ -63,6 +65,7 @@ describe("the MGA hub's copies", () => {
     "MGADungeonQuests": [dungeonQuestsHub, dungeonQuestsBindings],
     "MGALoot": [lootHub, lootBindings],
     "MGAPrices": [pricesHub, pricesBindings],
+    "MGAPvPLog": [pvpLogHub, pvpLogBindings],
     "MGAWaypoints": [waypointsHub, waypointsBindings],
   };
 

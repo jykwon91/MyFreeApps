@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-25",
+    "title": "New MGA PvP Log addon: who keeps killing you",
+    "summary": "It logs the enemy-faction players who fight or kill you, and the ones you kill: name, race, class, level and guild when the game has shown them, the zone, when, and the spell. When one kills you it prints one chat line naming them. Open the list from the MGA menu or /mgapvp. Download it from the Macros page.",
+    "to": "/wow-forever/macros"
+  },
+  {
     "date": "2026-11-24",
     "title": "The Level board is retired: the Arena opens on Dungeons cleared, and the Race to 60 has a trophy",
     "summary": "Once everyone reaches 60 a level ranking says nothing, so it is gone. The Arena now opens on Dungeons cleared, and a trophy card records that Ozrix Forever was first to level 60. The Trailblazer title goes with it.",
