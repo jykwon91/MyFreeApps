@@ -6,13 +6,12 @@ import { learnSkill, MAX_CRAFT_SKILL, skillColors } from "@/games/wow-forever/cr
 import {
   cheapestRoute,
   enchantSlot,
-  formulaChoices,
-  priceItems,
   usable,
   type CraftContext,
   type EnchantSlot,
   type RouteChoices,
 } from "@/games/wow-forever/crafting/cheapestRoute";
+import { formulaChoices, priceItems } from "@/games/wow-forever/crafting/priceItems";
 import { createPriceBook, formatCost, formatPrice, parsePrice, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";

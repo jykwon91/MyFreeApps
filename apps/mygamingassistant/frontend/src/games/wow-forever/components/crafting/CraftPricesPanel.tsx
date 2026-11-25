@@ -4,7 +4,8 @@ import CraftFormulaChecklist from "@/games/wow-forever/components/crafting/Craft
 import CraftPriceField from "@/games/wow-forever/components/crafting/CraftPriceField";
 import CraftSlotChecklist from "@/games/wow-forever/components/crafting/CraftSlotChecklist";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
-import type { EnchantSlot, PriceItem } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { PriceItem } from "@/games/wow-forever/crafting/priceItems";
 import { autoPriceSource } from "@/games/wow-forever/crafting/autoPriceText";
 import { essencePartner, LESSER_PER_GREATER, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";

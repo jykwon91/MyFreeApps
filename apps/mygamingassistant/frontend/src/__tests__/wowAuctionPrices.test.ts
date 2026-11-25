@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
-import { cheapestRoute, priceItems, type CraftContext } from "@/games/wow-forever/crafting/cheapestRoute";
+import { cheapestRoute, type CraftContext } from "@/games/wow-forever/crafting/cheapestRoute";
+import { priceItems } from "@/games/wow-forever/crafting/priceItems";
 import { createPriceBook } from "@/games/wow-forever/crafting/matPrices";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";

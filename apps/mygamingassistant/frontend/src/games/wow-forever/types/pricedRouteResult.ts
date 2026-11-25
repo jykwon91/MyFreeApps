@@ -1,4 +1,5 @@
-import type { EnchantSlot, PriceItem } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { PriceItem } from "@/games/wow-forever/crafting/priceItems";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { AutoPrice } from "@/games/wow-forever/types/autoPrice";
 import type { CraftRouteMode } from "@/games/wow-forever/types/craftRouteMode";

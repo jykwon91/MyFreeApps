@@ -4,7 +4,7 @@ import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/s
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
 import { craftContext, pricedRoute } from "@/games/wow-forever/crafting/pricedRoute";
-import { priceItems } from "@/games/wow-forever/crafting/cheapestRoute";
+import { priceItems } from "@/games/wow-forever/crafting/priceItems";
 import { formatNet } from "@/games/wow-forever/crafting/matPrices";
 import { AUCTION_CUT, MIN_PRODUCT_LISTINGS } from "@/games/wow-forever/data/auctionHouse/reagentDemandRules";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
