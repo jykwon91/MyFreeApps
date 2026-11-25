@@ -60,15 +60,16 @@ function reagentsOf(file: string): Reagent[] {
   return data.recipes.flatMap((r) => r.reagents);
 }
 
-type Row = [number, number, string];
+/** [item id, market value in copper, name, auctions listing it (default 4: a thin market)]. */
+type Row = [number, number, string, number?];
 
-/** Every item a profession's recipes make, at 5g each: far above the 50c materials, so crafting pays. */
+/** Every item a profession's recipes make, at 5g each with 20 auctions (past the 5 a product needs to count): far above the 50c materials, so crafting pays. */
 function productRows(file: string): Row[] {
   const url = new URL(`../../src/games/wow-forever/data/professions/crafting/${file}.json`, import.meta.url);
   const data = JSON.parse(readFileSync(url, "utf-8")) as { recipes: { creates?: { id: number; name: string } }[] };
   const seen = new Map<number, string>();
   for (const r of data.recipes) if (r.creates) seen.set(r.creates.id, r.creates.name);
-  return [...seen].map(([id, name]) => [id, 50_000, name]);
+  return [...seen].map(([id, name]): Row => [id, 50_000, name, 20]);
 }
 
 /** Golden Rod = 1 Gold Bar + 2 Coarse Grinding Stone, at 50c each = 1s 50c. */
@@ -103,7 +104,7 @@ function priceBody(rows: Row[], faction: string) {
     source_updated_at: UPDATED_AT,
     fetched_at: UPDATED_AT,
     columns: COLUMNS,
-    items: rows.map(([id, value, name]) => [id, value, value, 20, 4, name]),
+    items: rows.map(([id, value, name, listings = 4]) => [id, value, value, 20, listings, name]),
   };
 }
 
@@ -204,10 +205,10 @@ test("Tailoring's Most profit route shows what each craft sells for and nets, an
   await expect(choice.getByRole("radio")).toHaveText(["Cheapest", "Most profit", "Default"]);
   await choice.getByRole("radio", { name: "Most profit" }).click();
   await expect(route.getByText("Most profit at auction prices")).toBeVisible();
-  await expect(route.getByText(/^Estimated net to (reach skill )?\d+: (\+.* profit|~.*)/)).toBeVisible();
+  await expect(route.getByText(/^Estimated net to (reach skill )?\d+: \+.* profit/)).toBeVisible();
   const first = route.getByTestId("craft-row-profit").first();
   await expect(first.getByText("Sells for")).toBeVisible();
-  await expect(first.getByTestId("craft-row-net")).toHaveText(/(profit|cost)$/);
+  await expect(first.getByTestId("craft-row-net")).toHaveText(/^\+.* profit$/);
   await choice.getByRole("radio", { name: "Default" }).click();
   await expect(route.getByText("Default route")).toBeVisible();
   await expect(route.getByTestId("craft-row-profit")).toHaveCount(0);
