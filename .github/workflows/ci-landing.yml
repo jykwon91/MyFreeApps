@@ -6,12 +6,9 @@ name: Landing CI
 # workspace) — this job installs only Playwright, not every app's frontend.
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'sites/landing/**'
-      - 'infra/Caddyfile'
-      - '.github/workflows/ci-landing.yml'
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   # A successful push run is what deploys the landing page (deploy-landing.yml
   # runs on workflow_run of this workflow), so every path that deploy ships is
   # listed here, including the host Caddyfile sync script and the deploy

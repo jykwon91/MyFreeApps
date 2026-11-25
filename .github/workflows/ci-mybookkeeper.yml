@@ -1,8 +1,9 @@
 name: MyBookkeeper CI
 
 on:
-  pull_request:
-    branches: [main]
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this app is affected at all and only then calls this workflow.
+  workflow_call:
   # A successful push run is what deploys this app (deploy-mybookkeeper.yml runs on
   # workflow_run of this workflow), so mobile-only changes are excluded here:
   # they cannot change the web bundle or API image. Mobile has its own CI.
@@ -25,93 +26,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Path filtering lives HERE, at the job level — NOT in `on.pull_request.paths`.
-  #
-  # Several of this workflow's checks are REQUIRED status checks on main. A
-  # `pull_request` workflow skipped by a top-level `paths:` filter never reports
-  # its check contexts at all, so every PR that did not touch mybookkeeper hung forever
-  # on "Expected — Waiting for status to be reported" and could only be landed
-  # with `gh pr merge --admin`. (Same failure mode documented at length in
-  # ci-shared-backend.yml, which solves it by always running its ~5s suite. This
-  # workflow is far too heavy for that, so it skips at the job level instead.)
-  #
-  # A job skipped by an `if:` condition reports SUCCESS to required status
-  # checks, whereas a workflow skipped by a path filter reports nothing at all.
-  # That difference is the entire fix. The `paths:` filter is deliberately KEPT
-  # on `push` — main builds do not need to report contexts.
-  #
-  # DO NOT re-add `paths:` under `on.pull_request`.
-  #
-  # The gate below is `!cancelled() && ... != 'false'`, NOT `== 'true'`.
-  # A plain `needs: changes` would skip every dependent job if the gate job
-  # itself failed — and a skipped job reports SUCCESS, which would let a PR
-  # merge with no tests run at all. This form inverts that: work is skipped
-  # only on an explicit `false`, so any failure of the gate runs everything.
-  changes:
-    name: changes / mybookkeeper
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Detect changes relevant to mybookkeeper
-        id: filter
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -uo pipefail
-          # Non-PR events (push to main) still carry the `paths:` filter below,
-          # so if we are running at all the change is relevant by definition.
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Three-dot semantics: only what THIS PR changed, ignoring commits
-          # that landed on main after it branched.
-          MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")" || MERGE_BASE=""
-          if [ -z "$MERGE_BASE" ]; then
-            echo "::warning::Could not compute merge base; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if ! FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"; then
-            echo "::warning::Could not diff; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "::group::changed files"
-          echo "$FILES"
-          echo "::endgroup::"
-          # Mirrors the `paths:` filter still applied to `push` below, minus the
-          # phone-only files: the mobile app and packages/shared-mobile are built
-          # and tested by ci-mobile-mybookkeeper.yml, and no website or backend job
-          # consumes them. Every failure path above falls back to relevant=true —
-          # this gate may only ever skip work it is certain is unrelated.
-          # Here-strings, not pipes: under pipefail an early-exiting `grep -q`
-          # can SIGPIPE its writer and turn a match into a skip. grep exits 1 for
-          # "no match"; anything above 1 is an error and runs everything.
-          NON_PHONE="$(grep -vE '^(apps/mybookkeeper/mobile/|packages/shared-mobile/)' <<< "$FILES")" && rc=0 || rc=$?
-          if [ "$rc" -gt 1 ]; then
-            echo "::warning::Could not filter phone-only files; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          grep -qE '^(apps/mybookkeeper/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-mybookkeeper\.yml$)' <<< "$NON_PHONE" && rc=0 || rc=$?
-          case "$rc" in
-            1) echo "relevant=false" >> "$GITHUB_OUTPUT" ;;
-            *) echo "relevant=true" >> "$GITHUB_OUTPUT" ;;
-          esac
-
   backend-deps-resolve:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: backend-deps-resolve / mybookkeeper
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -139,8 +54,6 @@ jobs:
         run: uv sync --frozen
 
   backend-tests:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: backend-tests / mybookkeeper
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -221,8 +134,6 @@ jobs:
         run: uv run pytest -q -m "not integration" -n auto
 
   frontend-checks:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-checks / mybookkeeper
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -267,8 +178,6 @@ jobs:
           npm test --workspace=@mybookkeeper/api-client
 
   frontend-tests:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-tests / mybookkeeper (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -323,8 +232,6 @@ jobs:
   # already validates the workspace lockfile resolves cleanly.
 
   frontend-layout-e2e:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-layout-e2e / mybookkeeper (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 10

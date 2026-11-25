@@ -1,8 +1,9 @@
 name: MyJobHunter CI
 
 on:
-  pull_request:
-    branches: [main]
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this app is affected at all and only then calls this workflow.
+  workflow_call:
   # A successful push run is what deploys this app (deploy-myjobhunter.yml runs on
   # workflow_run of this workflow), so mobile-only changes are excluded here:
   # they cannot change the web bundle or API image. Mobile has its own CI.
@@ -25,93 +26,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Path filtering lives HERE, at the job level — NOT in `on.pull_request.paths`.
-  #
-  # Several of this workflow's checks are REQUIRED status checks on main. A
-  # `pull_request` workflow skipped by a top-level `paths:` filter never reports
-  # its check contexts at all, so every PR that did not touch myjobhunter hung forever
-  # on "Expected — Waiting for status to be reported" and could only be landed
-  # with `gh pr merge --admin`. (Same failure mode documented at length in
-  # ci-shared-backend.yml, which solves it by always running its ~5s suite. This
-  # workflow is far too heavy for that, so it skips at the job level instead.)
-  #
-  # A job skipped by an `if:` condition reports SUCCESS to required status
-  # checks, whereas a workflow skipped by a path filter reports nothing at all.
-  # That difference is the entire fix. The `paths:` filter is deliberately KEPT
-  # on `push` — main builds do not need to report contexts.
-  #
-  # DO NOT re-add `paths:` under `on.pull_request`.
-  #
-  # The gate below is `!cancelled() && ... != 'false'`, NOT `== 'true'`.
-  # A plain `needs: changes` would skip every dependent job if the gate job
-  # itself failed — and a skipped job reports SUCCESS, which would let a PR
-  # merge with no tests run at all. This form inverts that: work is skipped
-  # only on an explicit `false`, so any failure of the gate runs everything.
-  changes:
-    name: changes / myjobhunter
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: Detect changes relevant to myjobhunter
-        id: filter
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -uo pipefail
-          # Non-PR events (push to main) still carry the `paths:` filter below,
-          # so if we are running at all the change is relevant by definition.
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Three-dot semantics: only what THIS PR changed, ignoring commits
-          # that landed on main after it branched.
-          MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")" || MERGE_BASE=""
-          if [ -z "$MERGE_BASE" ]; then
-            echo "::warning::Could not compute merge base; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if ! FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"; then
-            echo "::warning::Could not diff; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "::group::changed files"
-          echo "$FILES"
-          echo "::endgroup::"
-          # Mirrors the `paths:` filter still applied to `push` below, minus the
-          # phone-only files: the mobile app and packages/shared-mobile are built
-          # and tested by ci-mobile-myjobhunter.yml, and no website or backend job
-          # consumes them. Every failure path above falls back to relevant=true —
-          # this gate may only ever skip work it is certain is unrelated.
-          # Here-strings, not pipes: under pipefail an early-exiting `grep -q`
-          # can SIGPIPE its writer and turn a match into a skip. grep exits 1 for
-          # "no match"; anything above 1 is an error and runs everything.
-          NON_PHONE="$(grep -vE '^(apps/myjobhunter/mobile/|packages/shared-mobile/)' <<< "$FILES")" && rc=0 || rc=$?
-          if [ "$rc" -gt 1 ]; then
-            echo "::warning::Could not filter phone-only files; running the full suite."
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          grep -qE '^(apps/myjobhunter/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-myjobhunter\.yml$)' <<< "$NON_PHONE" && rc=0 || rc=$?
-          case "$rc" in
-            1) echo "relevant=false" >> "$GITHUB_OUTPUT" ;;
-            *) echo "relevant=true" >> "$GITHUB_OUTPUT" ;;
-          esac
-
   backend-deps-resolve:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: backend-deps-resolve / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -133,21 +48,6 @@ jobs:
           pip install -r requirements.txt
 
   backend-tests:
-    needs: changes
-    # `!cancelled()` (not a `relevant` test) so the job still RUNS — and so still
-    # expands its matrix into the five required contexts — even if the `changes`
-    # gate job itself failed. The per-step conditions below then evaluate an empty
-    # `relevant`, which is != 'false', so the full suite runs. Fail-safe either way.
-    if: ${{ !cancelled() }}
-    # NOTE: unlike every other job here, the gate is applied per-STEP, not at
-    # the job level. A matrix job skipped by a job-level `if:` does not have its
-    # matrix expanded, so GitHub reports ONE check literally named
-    # "backend-tests / myjobhunter / ${{ matrix.shard.name }}" instead of the five
-    # shard contexts. All five are REQUIRED status checks on main, so the PR would
-    # stay blocked forever — the exact bug this gating was introduced to fix.
-    #
-    # Running the job and skipping its steps keeps the five real context names and
-    # costs only a few seconds of runner startup per shard.
     name: backend-tests / myjobhunter / ${{ matrix.shard.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -161,8 +61,8 @@ jobs:
         # CI the moment it exists. (Until 2026-11 each shard listed its files
         # by path, and ~50 files were in no list — they never ran, and several
         # had rotted.) tests/test_ci_shards.py fails if these names drift
-        # from tests/ci_shards.py. The names are required status checks on
-        # main: rename or add one only together with branch protection.
+        # from tests/ci_shards.py. Their results feed `ci-gate`, the required
+        # status check defined in ci.yml, so renaming one needs no protection change.
         shard:
           - name: fast
           - name: crud
@@ -200,11 +100,9 @@ jobs:
 
     steps:
       - name: Checkout
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
@@ -212,19 +110,16 @@ jobs:
           cache-dependency-path: apps/myjobhunter/backend/requirements.txt
 
       - name: Install backend dependencies
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run alembic migrations
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: PYTHONPATH=. alembic upgrade head
 
       - name: Run pytest (${{ matrix.shard.name }})
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         env:
           MJH_TEST_SHARD: ${{ matrix.shard.name }}
@@ -233,8 +128,6 @@ jobs:
         run: python -m pytest -q --timeout=60 tests
 
   frontend-build:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-build / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -275,8 +168,6 @@ jobs:
           npm test --workspace=@myjobhunter/api-client
 
   caddy-image:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: caddy-image / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -298,8 +189,6 @@ jobs:
         run: docker run --rm myjobhunter-caddy:ci test -f /srv/frontend/index.html
 
   frontend-layout-e2e:
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-layout-e2e / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -169,8 +169,10 @@ class TestRender:
         assert job["with"] == {"project": f"apps/{_SLUG}/mobile", "expo-app": True}
         # `on` parses as YAML's boolean true.
         triggers = workflow[True]
-        assert f"apps/{_SLUG}/mobile/**" in triggers["pull_request"]["paths"]
-        assert triggers["push"]["paths"] == triggers["pull_request"]["paths"]
+        # Pull requests reach it through ci.yml (workflow_call); pushes keep their path filter.
+        assert "workflow_call" in triggers
+        assert "pull_request" not in triggers
+        assert f"apps/{_SLUG}/mobile/**" in triggers["push"]["paths"]
         assert "{{" not in (repo / dest).read_text("utf-8").replace("${{", "")
 
     def test_no_mobile_workflow_without_the_flag(self, repo: Path) -> None:

@@ -1,9 +1,8 @@
 name: Gitleaks
 
+# Pull requests are scanned by the `repo-checks` job in ci.yml; this workflow covers pushes to main.
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 permissions:

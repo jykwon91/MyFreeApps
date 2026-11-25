@@ -1,15 +1,9 @@
 name: MyPizzaTracker CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/mypizzatracker/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-mypizzatracker.yml'
-      - '!packages/shared-mobile/**'
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   push:
     branches: [main]
     paths:

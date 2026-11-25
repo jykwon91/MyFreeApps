@@ -11,8 +11,9 @@ name: Shared Frontend CI
 # that skip it on "Expected — Waiting for status to be reported."
 
 on:
-  pull_request:
-    branches: [main]
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   push:
     branches: [main]
 

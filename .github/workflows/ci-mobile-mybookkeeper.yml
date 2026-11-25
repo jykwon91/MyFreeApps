@@ -5,17 +5,9 @@
 name: MyBookkeeper Mobile CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/mybookkeeper/mobile/**'
-      - 'apps/mybookkeeper/api-client/**'
-      - 'packages/shared-core/**'
-      - 'packages/shared-mobile/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/_mobile-checks.yml'
-      - '.github/workflows/ci-mobile-mybookkeeper.yml'
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   push:
     branches: [main]
     paths:

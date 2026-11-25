@@ -4,22 +4,9 @@ name: Mobile Foundation CI
 # rendered ci-mobile-<app>.yml.
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'packages/shared-core/**'
-      - 'packages/shared-mobile/**'
-      - 'infra/templates/scaffold-mobile/**'
-      - 'packages/shared-backend/platform_shared/infra/new_app.py'
-      - 'packages/shared-backend/platform_shared/infra/mobile_lock.py'
-      - 'packages/shared-backend/platform_shared/infra/new_mobile.py'
-      - 'packages/shared-backend/platform_shared/infra/render.py'
-      - 'packages/shared-backend/platform_shared/infra/route_source.py'
-      - 'packages/shared-backend/platform_shared/infra/screen_map.py'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/_mobile-checks.yml'
-      - '.github/workflows/ci-mobile.yml'
+  # Pull requests run this through ci.yml, which decides once (.github/scripts/ci_changes.py)
+  # whether this area is affected and only then calls this workflow.
+  workflow_call:
   push:
     branches: [main]
     paths:
