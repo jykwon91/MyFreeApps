@@ -170,19 +170,23 @@ uv lock --check
 | `apps/myjobhunter/.env` | Compose-level — only `DB_PASSWORD` |
 | `apps/myjobhunter/backend/.env.docker` | App-level — all other secrets; see `backend/.env.docker.example` |
 
-**First-time setup** (new VPS only — run once from `/srv/myfreeapps`):
+**First-time setup** (new VPS only). Seed both files in one shot from `/srv/myfreeapps`. Secrets
+(SECRET_KEY, ENCRYPTION_KEY, DB_PASSWORD) are generated, FRONTEND_URL and CORS_ORIGINS are stamped
+with the myfreeapps.org domain, and the shared SMTP login is copied from MyBookkeeper:
 ```bash
-sudo bash apps/myjobhunter/scripts/seed-env-from-mbk.sh
-# Then fill in the MJH-specific blanks:
-vim apps/myjobhunter/backend/.env.docker
-# Required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY,
-#   EMAIL_BACKEND=smtp with SMTP_HOST, SMTP_USER and SMTP_PASSWORD (ASCII)
-# Optional: TAVILY_API_KEY (Phase 4)
+cd /srv/myfreeapps
+PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myjobhunter \
+    --copy-from mybookkeeper --copy-keys SMTP_USER,SMTP_PASSWORD,EMAIL_FROM_ADDRESS
 ```
+It prints the values still blank. Fill them in `apps/myjobhunter/backend/.env.docker`: the required
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY, SENTRY_DSN and
+ANTHROPIC_API_KEY, and optionally TAVILY_API_KEY. Then re-run with `--check`, which also catches a
+blank SMTP host or a non-ASCII SMTP login before the boot guard does.
 
-The seed script reads safe-to-reuse keys from MBK's running config (Anthropic API key, lockout
-tunables, log level) and generates fresh secrets for per-app values (SECRET_KEY, ENCRYPTION_KEY,
-DB_PASSWORD). FRONTEND_URL and CORS_ORIGINS are pre-filled with the myfreeapps.org domain.
+No-SSH alternative: set the `MYJOBHUNTER_*` repo secrets (Sentry, SMTP, Turnstile secret, MinIO,
+Anthropic, seed admin) and the `MYJOBHUNTER_VITE_TURNSTILE_SITE_KEY` repo variable, then dispatch
+the "Seed VPS env files" workflow: `gh workflow run seed-env.yml -f app=myjobhunter`. The Google
+OAuth and Tavily values still go in by hand.
 
 **Day-to-day deploys:** Push to main or merge a PR — GitHub Actions deploys automatically.
 
@@ -207,7 +211,7 @@ docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
 ```
 
 **When to SSH into the server:**
-- First-time env file setup (seed-env-from-mbk.sh)
+- First-time env file setup (`seed_env`, unless you use the workflow)
 - Restore from backup
 - Check logs: `docker compose -f apps/myjobhunter/docker-compose.yml logs api --tail=50`
 - Debug production issues
