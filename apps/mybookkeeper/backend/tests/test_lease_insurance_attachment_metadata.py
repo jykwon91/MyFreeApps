@@ -19,6 +19,7 @@ import pytest
 
 from app.services.insurance import insurance_policy_service
 from app.services.leases import lease_attachment_service, lease_import_service
+from app.services.leases.resolved_lease_references import ResolvedLeaseReferences
 from tests.gps_photo import gps_of, photo_with_gps
 
 _DRAFT_LEASE = SimpleNamespace(
@@ -83,7 +84,7 @@ def _lease_import(stack: ExitStack, recorded: _Recorded) -> Upload:
     svc = lease_import_service
     stack.enter_context(patch.object(svc, "get_storage", return_value=recorded.storage))
     stack.enter_context(patch.object(svc, "unit_of_work", _fake_uow))
-    stack.enter_context(patch.object(svc, "resolve_lease_listing_id", new=AsyncMock(return_value=None)))
+    stack.enter_context(patch.object(svc, "resolve_lease_references", new=AsyncMock(return_value=ResolvedLeaseReferences(None, None))))
     stack.enter_context(
         patch.object(svc.signed_lease_repo, "create", new=AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))),
     )

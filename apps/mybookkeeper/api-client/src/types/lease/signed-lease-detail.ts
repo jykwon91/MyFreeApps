@@ -13,6 +13,8 @@ export interface SignedLeaseDetail {
   /** Decrypted applicant name from applicants.legal_name. Null if not set. */
   applicant_legal_name: string | null;
   listing_id: string | null;
+  /** The house this lease's rent is filed under. Null = none recorded. */
+  property_id: string | null;
   kind: "generated" | "imported";
   values: Record<string, unknown>;
   status: SignedLeaseStatus;

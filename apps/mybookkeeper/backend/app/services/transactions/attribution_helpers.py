@@ -12,8 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
 from app.repositories.applicants import applicant_repo
-from app.repositories.listings import listing_repo
-from app.services.leases.listing_resolution import resolve_listing_id_for_applicant
+from app.services.leases.listing_resolution import resolve_property_id_for_applicant
 
 
 async def _get_lease_signed_applicants(
@@ -39,20 +38,12 @@ async def _get_property_id_for_applicant(
     applicant: Applicant,
     organization_id: uuid.UUID,
 ) -> uuid.UUID | None:
-    """Resolve the property_id linked to an applicant via their listing.
+    """Resolve the property an applicant's rent is filed under.
 
-    Walks: applicant → signed_lease (or inquiry) → listing → property_id.
-    Returns the property_id, or None when the chain is broken.
-
-    A lease without a ``listing_id`` used to end the walk here, which left
-    every auto-attributed payment for that tenant with no property — the money
-    landed in the dashboard's "Unassigned" bucket instead of their property.
-    ``resolve_listing_id_for_applicant`` falls back to the inquiry's listing.
+    Prefers the house their lease records (``signed_leases.property_id``), so a
+    tenant of a house with no listing is still tied to it; falls back to the
+    lease's listing, then the inquiry's listing. Returns None when nothing
+    names a house — the money then lands in the dashboard's "Unassigned"
+    bucket.
     """
-    listing_id = await resolve_listing_id_for_applicant(db, applicant, organization_id)
-    if listing_id is None:
-        return None
-    listing = await listing_repo.get_by_id(db, listing_id, organization_id)
-    if listing is None:
-        return None
-    return listing.property_id
+    return await resolve_property_id_for_applicant(db, applicant, organization_id)

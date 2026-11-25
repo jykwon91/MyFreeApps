@@ -12,10 +12,11 @@ describe("lease upload forms", () => {
   });
 
   it("sends the import fields, trimmed, as signed", () => {
-    const form = leaseImportForm({ applicantId: "a1", listingId: "li1", startsOn: "2026-01-01", endsOn: "2026-12-31", notes: "  hi " }, [file]);
+    const form = leaseImportForm({ applicantId: "a1", listingId: "li1", propertyId: "p1", startsOn: "2026-01-01", endsOn: "2026-12-31", notes: "  hi " }, [file]);
     expect(form.get("applicant_id")).toBe("a1");
     expect(form.get("status")).toBe("signed");
     expect(form.get("listing_id")).toBe("li1");
+    expect(form.get("property_id")).toBe("p1");
     expect(form.get("starts_on")).toBe("2026-01-01");
     expect(form.get("ends_on")).toBe("2026-12-31");
     expect(form.get("notes")).toBe("hi");

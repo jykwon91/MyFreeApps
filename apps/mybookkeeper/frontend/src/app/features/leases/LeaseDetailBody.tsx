@@ -29,6 +29,7 @@ import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPick
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import LeaseTemplateSources from "@/app/features/leases/LeaseTemplateSources";
+import LeaseHouseCard from "@/app/features/leases/LeaseHouseCard";
 import { LEASE_DOCUMENTS_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
@@ -353,6 +354,8 @@ export default function LeaseDetailBody({ leaseId }: Props) {
               </div>
             </section>
           ) : null}
+
+          <LeaseHouseCard key={lease.property_id ?? "none"} leaseId={lease.id} propertyId={lease.property_id} canWrite={canWrite} />
 
           {/* Tabs */}
           <Tabs

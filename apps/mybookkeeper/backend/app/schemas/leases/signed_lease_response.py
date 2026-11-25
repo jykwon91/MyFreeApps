@@ -24,6 +24,7 @@ class SignedLeaseResponse(BaseModel):
     applicant_id: uuid.UUID
     applicant_legal_name: str | None = None
     listing_id: uuid.UUID | None = None
+    property_id: uuid.UUID | None = None
     kind: str
     values: dict[str, Any]
     status: str

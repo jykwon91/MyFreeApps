@@ -1,7 +1,8 @@
 """Resolve the property address printed on a rent receipt.
 
 Split out of ``receipt_service`` so that module stays under the file-size
-growth guard. The walk is applicant → signed_lease → listing → property, with
+growth guard. The walk is applicant → signed_lease → its house (else its
+listing's house), with
 the tenant's originating inquiry standing in when a lease carries no
 ``listing_id`` (see ``listing_resolution``).
 """
@@ -11,6 +12,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
@@ -46,11 +48,7 @@ async def resolve_property_address(
     )
     lease_id = leases[0].id if leases else None
     for lease in leases:
-        if not lease.listing_id:
-            continue
-        address = await property_address_for_listing(
-            db, listing_id=lease.listing_id, organization_id=organization_id,
-        )
+        address = await _lease_property_address(db, lease=lease, organization_id=organization_id)
         if address:
             return address, lease.id
 
@@ -73,6 +71,21 @@ async def resolve_property_address(
     return ADDRESS_FALLBACK, lease_id
 
 
+async def _lease_property_address(
+    db: AsyncSession, *, lease: SignedLease, organization_id: uuid.UUID,
+) -> str | None:
+    """The address of the house the lease records, else of its listing's house."""
+    if lease.property_id:
+        address = await _property_address(db, property_id=lease.property_id, organization_id=organization_id)
+        if address:
+            return address
+    if not lease.listing_id:
+        return None
+    return await property_address_for_listing(
+        db, listing_id=lease.listing_id, organization_id=organization_id,
+    )
+
+
 async def property_address_for_listing(
     db: AsyncSession,
     *,
@@ -83,9 +96,13 @@ async def property_address_for_listing(
     listing = await listing_repo.get_by_id(db, listing_id, organization_id)
     if listing is None or not listing.property_id:
         return None
-    prop = await property_repo.get_by_id(
-        db, listing.property_id, organization_id=organization_id
-    )
+    return await _property_address(db, property_id=listing.property_id, organization_id=organization_id)
+
+
+async def _property_address(
+    db: AsyncSession, *, property_id: uuid.UUID, organization_id: uuid.UUID,
+) -> str | None:
+    prop = await property_repo.get_by_id(db, property_id, organization_id=organization_id)
     if prop is None or not prop.address:
         return None
     return prop.address

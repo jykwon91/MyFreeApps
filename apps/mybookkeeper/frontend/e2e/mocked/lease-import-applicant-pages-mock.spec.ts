@@ -1,7 +1,7 @@
 /**
  * No-backend E2E: the Import signed lease dialog can pick any applicant, not just the first page of them.
  * A host with more applicants than one page holds loads the next page with Load more, picks an applicant
- * from it, and the lease is imported for that applicant. Runs under playwright.layout.config.ts.
+ * from it, picks the house, and the lease is imported for that applicant and house. Runs under playwright.layout.config.ts.
  */
 import type { Request } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
@@ -10,6 +10,7 @@ import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { APPLICANT_DETAIL } from "./fixtures/mockApplicant";
 import { DRAFT_LEASE, LEASE_ID } from "./fixtures/mockLease";
+import { HOUSES, MAIN_HOUSE } from "./fixtures/mockProperty";
 
 const PAGE_SIZE = 25;
 const LATE_ID = "00000000-0000-0000-0000-0000000000e1";
@@ -36,6 +37,7 @@ test("a lease is imported for an applicant past the first page", async ({ page }
     if (offset === 0) return route.fulfill(json({ items: FIRST_PAGE, total: PAGE_SIZE + 1, has_more: true }));
     return route.fulfill(json({ items: [LATE], total: PAGE_SIZE + 1, has_more: false }));
   });
+  await page.route(/\/api\/properties(\?|$)/, (route) => route.fulfill(json(HOUSES)));
   for (const list of [/\/api\/listings(\?|$)/, /\/api\/signed-leases(\?|$)/]) {
     await page.route(list, (route) => route.fulfill(json({ items: [], total: 0, has_more: false })));
   }
@@ -59,9 +61,13 @@ test("a lease is imported for an applicant past the first page", async ({ page }
   expect(offsets).toEqual([0, PAGE_SIZE]);
 
   await page.getByTestId("import-file-input").setInputFiles({ name: "lease.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4") });
+  // An applicant with no inquiry starts with no house, and the dialog won't import without one.
+  await expect(page.getByTestId("import-submit")).toBeDisabled();
+  await page.getByTestId("import-property-select").selectOption({ label: MAIN_HOUSE.name });
   await page.getByTestId("import-submit").click();
 
   await expect.poll(() => imports.length).toBe(1);
   expect(imports[0]).toContain(LATE_ID);
+  expect(imports[0]).toContain(MAIN_HOUSE.id);
   await expect(page).toHaveURL(new RegExp(`/leases/${LEASE_ID}$`));
 });

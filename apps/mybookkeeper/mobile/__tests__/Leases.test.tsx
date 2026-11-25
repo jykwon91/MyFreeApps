@@ -62,6 +62,7 @@ function aLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDetail {
     applicant_id: "a1",
     applicant_legal_name: "Dana Reed",
     listing_id: null,
+    property_id: null,
     kind: "imported",
     values: { "[DOB]": "1990-01-15", "[PHONE]": "555-0100" },
     status: "active",

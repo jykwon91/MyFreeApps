@@ -19,6 +19,10 @@ import LeaseGenerateFormFieldsSkeleton from "@/app/features/leases/LeaseGenerate
 import { MULTI_TEMPLATE_SKELETON_FIELD_COUNT } from "@/shared/lib/lease-generate-constants";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
+import LeaseHouseField from "@/app/features/leases/LeaseHouseField";
+import { LEASE_PROPERTY_MESSAGES } from "@/shared/lib/lease-property-messages";
+import { isListingPropertyMismatchFailure } from "@mybookkeeper/api-client/utils/isListingPropertyMismatchFailure";
+import { isLeasePropertyNotFoundFailure } from "@mybookkeeper/api-client/utils/isLeasePropertyNotFoundFailure";
 
 export interface LeaseGenerateFormProps {
   /** Single-template legacy mode. Mutually exclusive with `templateIds`. */
@@ -31,6 +35,10 @@ export interface LeaseGenerateFormProps {
   listingId?: string | null;
   /** When set, the new lease is created as a successor to this parent. */
   parentLeaseId?: string | null;
+  /** The house the lease starts on: the applicant's inquiry listing's house. The host must end up with one. */
+  defaultPropertyId?: string | null;
+  /** The default house is still being looked up. */
+  isResolvingProperty?: boolean;
 }
 
 /**
@@ -54,11 +62,16 @@ export default function LeaseGenerateForm({
   applicantId,
   listingId,
   parentLeaseId,
+  defaultPropertyId,
+  isResolvingProperty = false,
 }: LeaseGenerateFormProps) {
   const navigate = useNavigate();
   const [createLease, { isLoading: isCreating }] = useCreateSignedLeaseMutation();
 
   const [edits, setEdits] = useState<PlaceholderEdits>({});
+  const [pickedPropertyId, setPickedPropertyId] = useState<string | null>(null);
+  const propertyId = pickedPropertyId ?? defaultPropertyId ?? "";
+  const needsProperty = !isResolvingProperty && propertyId === "";
 
   // Track whether we're showing the "Pull from source" confirmation inline.
   const [showPullConfirm, setShowPullConfirm] = useState(false);
@@ -135,7 +148,11 @@ export default function LeaseGenerateForm({
     e.preventDefault();
     // Backstop: a disabled default button already blocks implicit (Enter)
     // submission, but never post before the defaults have loaded.
-    if (isBlocked || isCreating) return;
+    if (isBlocked || isCreating || isResolvingProperty) return;
+    if (needsProperty) {
+      showError(LEASE_PROPERTY_MESSAGES.required);
+      return;
+    }
     if (missing.length > 0) {
       showError(
         `Missing: ${missing.map((f) => f.placeholder.display_label).join(", ")}`,
@@ -147,6 +164,7 @@ export default function LeaseGenerateForm({
         template_ids: submitTemplateIds,
         applicant_id: applicantId,
         listing_id: listingId ?? null,
+        property_id: propertyId,
         values: leaseValues(editableFields, edits),
         ...(parentLeaseId ? { parent_lease_id: parentLeaseId } : {}),
       }).unwrap();
@@ -166,7 +184,11 @@ export default function LeaseGenerateForm({
         detail && typeof detail === "object"
           ? (detail as { code?: unknown }).code
           : undefined;
-      if (code === "INVALID_PARENT_LEASE") {
+      if (isListingPropertyMismatchFailure(e)) {
+        showError(LEASE_PROPERTY_MESSAGES.listingMismatch);
+      } else if (isLeasePropertyNotFoundFailure(e)) {
+        showError(LEASE_PROPERTY_MESSAGES.propertyNotFound);
+      } else if (code === "INVALID_PARENT_LEASE") {
         showError(
           "The parent lease can't have a successor in its current state.",
         );
@@ -191,6 +213,15 @@ export default function LeaseGenerateForm({
           onRetry={() => void activeQuery.refetch()}
         />
       ) : null}
+      <LeaseHouseField
+        id="lease-generate-property"
+        value={propertyId}
+        onChange={setPickedPropertyId}
+        isPrefilled={pickedPropertyId === null && Boolean(defaultPropertyId)}
+        isLoading={isResolvingProperty}
+        disabled={isCreating}
+        testId="lease-generate-property"
+      />
       {/* Pull from source button + inline confirmation */}
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs text-muted-foreground">
@@ -283,7 +314,7 @@ export default function LeaseGenerateForm({
           type="submit"
           isLoading={isCreating || isLoadingDefaults}
           loadingText={isCreating ? "Creating draft..." : "Loading details..."}
-          disabled={isBlocked || missing.length > 0}
+          disabled={isBlocked || missing.length > 0 || needsProperty || isResolvingProperty}
           data-testid="lease-generate-submit"
         >
           Create draft lease

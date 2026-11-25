@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class SignedLeaseImportRequest(BaseModel):
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
+    property_id: uuid.UUID | None = None
     starts_on: _dt.date | None = None
     ends_on: _dt.date | None = None
     notes: str | None = Field(default=None, max_length=2000)

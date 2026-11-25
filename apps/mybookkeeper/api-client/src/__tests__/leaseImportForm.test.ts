@@ -30,10 +30,11 @@ describe("leaseImportFields", () => {
   });
 
   it("sends what was given and trims the notes", () => {
-    expect(leaseImportFields({ applicantId: "a1", listingId: "l1", startsOn: "2026-05-01", endsOn: "2027-04-30", notes: "  Signed in person  " })).toEqual({
+    expect(leaseImportFields({ applicantId: "a1", listingId: "l1", propertyId: "p1", startsOn: "2026-05-01", endsOn: "2027-04-30", notes: "  Signed in person  " })).toEqual({
       applicant_id: "a1",
       status: "signed",
       listing_id: "l1",
+      property_id: "p1",
       starts_on: "2026-05-01",
       ends_on: "2027-04-30",
       notes: "Signed in person",

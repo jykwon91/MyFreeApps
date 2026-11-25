@@ -69,6 +69,7 @@ function servePeople(listPath: string): { paths: string[]; offsets: number[] } {
     }
     if (path === "/applicants/person-3") return person(3);
     if (path === "/listings") return { items: [], total: 0, has_more: false };
+    if (path === "/properties") return [];
     return { ok: true, transaction_id: "txn-1" };
   });
   return asked;

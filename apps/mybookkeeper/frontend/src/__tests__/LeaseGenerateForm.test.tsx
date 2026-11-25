@@ -13,6 +13,7 @@ import { store } from "@/shared/store";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
 import { queryData } from "@/test/rtk-query-data";
 import { queryStatus } from "@/test/rtk-query-status";
+import { LEASE_PROPERTY_MESSAGES } from "@/shared/lib/lease-property-messages";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 
 // ---------------------------------------------------------------------------
@@ -32,6 +33,18 @@ vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
 
 vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useCreateSignedLeaseMutation: () => mockUseCreateSignedLeaseMutation(),
+}));
+
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
+  useGetPropertiesQuery: () => ({
+    data: [
+      { id: "prop-1", name: "Main House", is_active: true },
+      { id: "prop-2", name: "Back Cottage", is_active: true },
+    ],
+    error: undefined,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => ({
@@ -117,7 +130,7 @@ function renderForm(applicantId: string) {
   return render(
     <MemoryRouter>
       <Provider store={store}>
-        <LeaseGenerateForm template={TEMPLATE} applicantId={applicantId} />
+        <LeaseGenerateForm template={TEMPLATE} applicantId={applicantId} defaultPropertyId="prop-1" />
       </Provider>
     </MemoryRouter>,
   );
@@ -190,7 +203,7 @@ describe("LeaseGenerateForm", () => {
       rerender(
         <MemoryRouter>
           <Provider store={store}>
-            <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-2" />
+            <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-2" defaultPropertyId="prop-1" />
           </Provider>
         </MemoryRouter>,
       );
@@ -271,6 +284,7 @@ describe("LeaseGenerateForm", () => {
               templateIds={["tpl-1", "tpl-2"]}
               templateLabels={{ "tpl-1": "Master Lease", "tpl-2": "Addendum" }}
               applicantId="applicant-1"
+              defaultPropertyId="prop-1"
             />
           </Provider>
         </MemoryRouter>,
@@ -411,7 +425,7 @@ describe("LeaseGenerateForm", () => {
       rerender(
         <MemoryRouter>
           <Provider store={store}>
-            <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" />
+            <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" defaultPropertyId="prop-1" />
           </Provider>
         </MemoryRouter>,
       );
@@ -471,7 +485,7 @@ describe("LeaseGenerateForm", () => {
     rerender(
       <MemoryRouter>
         <Provider store={store}>
-          <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" />
+          <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" defaultPropertyId="prop-1" />
         </Provider>
       </MemoryRouter>,
     );
@@ -490,5 +504,73 @@ describe("LeaseGenerateForm", () => {
     renderForm("applicant-1");
 
     expect(screen.queryByTestId("lease-generate-fields-skeleton")).not.toBeInTheDocument();
+  });
+
+  describe("the house", () => {
+    function renderWithHouse(defaultPropertyId: string | null, isResolvingProperty = false) {
+      return render(
+        <MemoryRouter>
+          <Provider store={store}>
+            <LeaseGenerateForm
+              template={TEMPLATE}
+              applicantId="applicant-1"
+              defaultPropertyId={defaultPropertyId}
+              isResolvingProperty={isResolvingProperty}
+            />
+          </Provider>
+        </MemoryRouter>,
+      );
+    }
+
+    beforeEach(() => {
+      mockUseGetGenerateDefaultsQuery.mockReturnValue(DEFAULTS_FROM_APPLICANT);
+    });
+
+    it("starts on the inquiry's house and says where it came from", () => {
+      mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn(), { isLoading: false }]);
+      renderWithHouse("prop-1");
+
+      expect(screen.getByTestId("lease-generate-property")).toHaveValue("prop-1");
+      expect(screen.getByTestId("lease-generate-property-hint")).toHaveTextContent(LEASE_PROPERTY_MESSAGES.prefilledHint);
+      expect(screen.getByTestId("lease-generate-submit")).not.toBeDisabled();
+    });
+
+    it("won't create a lease without a house, and sends the one picked", async () => {
+      const unwrap = vi.fn().mockResolvedValue({ id: "lease-1" });
+      const createMutation = vi.fn().mockReturnValue({ unwrap });
+      mockUseCreateSignedLeaseMutation.mockReturnValue([createMutation, { isLoading: false }]);
+      renderWithHouse(null);
+
+      expect(screen.getByTestId("lease-generate-property-hint")).toHaveTextContent(LEASE_PROPERTY_MESSAGES.hint);
+      expect(screen.getByTestId("lease-generate-submit")).toBeDisabled();
+      fireEvent.submit(screen.getByTestId("lease-generate-form"));
+      expect(createMutation).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByTestId("lease-generate-property"), { target: { value: "prop-2" } });
+      expect(screen.getByTestId("lease-generate-submit")).not.toBeDisabled();
+      fireEvent.submit(screen.getByTestId("lease-generate-form"));
+      await Promise.resolve();
+
+      expect(createMutation).toHaveBeenCalledWith(expect.objectContaining({ property_id: "prop-2" }));
+    });
+
+    it("shows a skeleton and holds submit while the inquiry's house is looked up", () => {
+      mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn(), { isLoading: false }]);
+      renderWithHouse(null, true);
+
+      expect(screen.getByTestId("lease-generate-property-skeleton")).toBeInTheDocument();
+      expect(screen.getByTestId("lease-generate-submit")).toBeDisabled();
+    });
+
+    it("says so when the listing is for another house", async () => {
+      const { showError } = await import("@platform/ui");
+      const unwrap = vi.fn().mockRejectedValue({ status: 422, data: { detail: { code: "LISTING_PROPERTY_MISMATCH", message: "x" } } });
+      mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn().mockReturnValue({ unwrap }), { isLoading: false }]);
+      renderWithHouse("prop-1");
+
+      fireEvent.submit(screen.getByTestId("lease-generate-form"));
+
+      await vi.waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_PROPERTY_MESSAGES.listingMismatch));
+    });
   });
 });

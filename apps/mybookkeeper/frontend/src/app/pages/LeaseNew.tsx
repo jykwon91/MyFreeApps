@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useLeaseTemplateNames } from "@mybookkeeper/api-client/hooks/useLeaseTemplateNames";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useInquiryPropertyId } from "@mybookkeeper/api-client/hooks/useInquiryPropertyId";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
@@ -18,7 +19,7 @@ import { Skeleton, useLiveSearchParams } from "@platform/ui";
  *
  * 1. Pick 1+ templates (checkbox list).
  * 2. Pick an applicant (approved / lease_sent stages only).
- * 3. Fill in the merged placeholder set and submit.
+ * 3. Pick the house (pre-filled from the applicant's inquiry listing), fill in the merged placeholder set and submit.
  *
  * URL params:
  *   ?template_ids=<uuid>,<uuid>&applicant_id=<uuid>
@@ -73,6 +74,7 @@ export default function LeaseNew() {
   } = useGetApplicantByIdQuery(resolvedApplicantId ?? "", {
     skip: !resolvedApplicantId,
   });
+  const inquiryProperty = useInquiryPropertyId(applicant?.inquiry_id);
 
   function handleToggleTemplate(t: LeaseTemplateSummary): void {
     setSelectedTemplateIds((prev) => {
@@ -243,6 +245,8 @@ export default function LeaseNew() {
             templateLabels={templateLabels}
             applicantId={resolvedApplicantId!}
             parentLeaseId={urlParentLeaseId}
+            defaultPropertyId={inquiryProperty.propertyId}
+            isResolvingProperty={inquiryProperty.isResolving}
           />
         </section>
       ) : null}

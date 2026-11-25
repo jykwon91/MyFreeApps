@@ -9,6 +9,9 @@ export interface SignedLeaseCreateRequest {
   template_ids: string[];
   applicant_id: string;
   listing_id?: string | null;
+  /** The house the lease is for. The backend refuses (422 LISTING_PROPERTY_MISMATCH)
+   *  a listing for another house. */
+  property_id?: string | null;
   values: Record<string, unknown>;
   /** Optional successor pointer. When set, the parent must exist in the
    *  caller's tenant, be in status signed/active/ended, and not already

@@ -49,6 +49,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail>): SignedLeaseDetail {
     applicant_id: "app-1",
     applicant_legal_name: null,
     listing_id: null,
+    property_id: null,
     kind: "imported",
     values: {},
     status: "signed",
