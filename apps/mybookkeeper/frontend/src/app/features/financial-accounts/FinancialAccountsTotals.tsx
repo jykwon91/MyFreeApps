@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { FinancialAccountTotals } from "@mybookkeeper/api-client/types/financial-account/financial-account-totals";
 import { formatAccountBalance } from "@mybookkeeper/api-client/utils/financialAccountFormat";
 import { FINANCIAL_ACCOUNT_MESSAGES as MSG } from "@/shared/lib/financial-account-messages";
@@ -18,23 +19,29 @@ export default function FinancialAccountsTotals({ totals }: FinancialAccountsTot
       {totals.map((total) => (
         <div key={total.currency} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FinancialAccountTotalTile
-            label={showCurrency ? `${MSG.assets} (${total.currency})` : MSG.assets}
+            label={showCurrency ? `${MSG.totalAssets} (${total.currency})` : MSG.totalAssets}
             value={formatAccountBalance(total.assets_cents, total.currency)}
             testId="financial-accounts-total-assets"
           />
           <FinancialAccountTotalTile
-            label={showCurrency ? `${MSG.liabilities} (${total.currency})` : MSG.liabilities}
+            label={showCurrency ? `${MSG.totalLiabilities} (${total.currency})` : MSG.totalLiabilities}
             value={formatAccountBalance(total.liabilities_cents, total.currency)}
             testId="financial-accounts-total-liabilities"
           />
           <FinancialAccountTotalTile
-            label={showCurrency ? `${MSG.net} (${total.currency})` : MSG.net}
+            label={showCurrency ? `${MSG.totalNet} (${total.currency})` : MSG.totalNet}
             value={formatAccountBalance(total.net_cents, total.currency)}
             testId="financial-accounts-total-net"
             emphasis
           />
         </div>
       ))}
+      <p className="text-sm text-muted-foreground">
+        {MSG.totalsNote}{" "}
+        <Link to="/net-worth" className="underline underline-offset-2 hover:text-foreground" data-testid="financial-accounts-see-net-worth">
+          {MSG.seeNetWorth}
+        </Link>
+      </p>
     </div>
   );
 }

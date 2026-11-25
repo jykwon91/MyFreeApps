@@ -4,7 +4,7 @@ import { FINANCIAL_ACCOUNT_MESSAGES as MSG } from "@/shared/lib/financial-accoun
 const SKELETON_SECTIONS = [3, 2] as const;
 const TOTAL_TILES = 3;
 
-/** Same shape as the loaded page: three total tiles, then two sections of account rows. */
+/** Same shape as the loaded page: three total tiles, a net worth link line, then two sections of account rows. */
 export default function FinancialAccountsSkeleton() {
   return (
     <LoadingRegion label={MSG.loading} className="space-y-6" data-testid="financial-accounts-skeleton">
@@ -16,6 +16,7 @@ export default function FinancialAccountsSkeleton() {
           </div>
         ))}
       </div>
+      <Skeleton className="h-4 w-56" />
       {SKELETON_SECTIONS.map((rows, section) => (
         <div key={section} className="space-y-2" data-testid="financial-accounts-skeleton-section">
           <Skeleton className="h-3 w-24" />
