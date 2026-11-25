@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
 import { HERBALISM_NODES } from "@/games/wow-forever/data/professions/gathering/herbalism";
@@ -20,9 +22,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
 
 function renderAt(path: string) {
   return render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[path]}>
       <WowProfessionsPage />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

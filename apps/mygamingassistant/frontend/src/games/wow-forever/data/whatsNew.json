@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "Your level, class and profession skill now come from the character you picked",
+    "summary": "After \"Use for MGA's pages\", the World Map, Making gold, Trainers and the profession guides start from that character's level, class, faction and skill, and keep up as Blizzard updates it. Professions opens on the character's own profession and lists theirs first. Type a different value and it sticks; a small \"Use <name>'s\" button puts the character's back.",
+    "to": "/wow-forever/professions"
+  },
+  {
+    "date": "2026-11-25",
     "title": "World Map: \"flight master mount hyjal\" works",
     "summary": "Search a kind of NPC and a zone in either order (\"innkeeper feralas\", \"hyjal flight path\", \"flight master in mount hyjal\"). Flight masters the old NPC list lacked, like both in Mount Hyjal and Riverglades, are now searchable and marked on the map.",
     "to": "/wow-forever/map"

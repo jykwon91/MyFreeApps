@@ -14,9 +14,9 @@ export function isGatheringProfession(profession: string | null): profession is 
   return GATHERING_GROUP.options.some((o) => o.id === profession);
 }
 
-/** A `?p=` value: any listed profession; anything else opens Cooking. */
-export function parseGuideProfession(raw: string | null): GuideProfession {
-  return isGuideProfession(raw) ? raw : PROFESSION.cooking;
+/** A `?p=` value: any listed profession; anything else opens `fallback` (the character's first profession) or Cooking. */
+export function parseGuideProfession(raw: string | null, fallback: GuideProfession = PROFESSION.cooking): GuideProfession {
+  return isGuideProfession(raw) ? raw : fallback;
 }
 
 /** Any listed profession — crafting, gathering or secondary. */

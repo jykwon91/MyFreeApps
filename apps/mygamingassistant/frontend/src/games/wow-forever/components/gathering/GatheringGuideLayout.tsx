@@ -11,11 +11,14 @@ import type { GatheringLoadState } from "@/games/wow-forever/types/gathering/gat
 import type { ZonedData } from "@/games/wow-forever/types/gathering/zonedData";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
+import type { CharacterDefaultState } from "@/games/wow-forever/types/character/characterDefaultState";
+
 interface GatheringGuideLayoutProps<T extends ZonedData> {
   guide: GatheringGuideBase;
   state: GatheringLoadState<T>;
   skill: number | null;
   onSkillChange: (skill: number | null) => void;
+  characterDefault: CharacterDefaultState | null;
   faction: PlayerFaction;
   zoneId: number | null;
   /** The kind's "right now": what to gather at your skill and where. */
@@ -34,6 +37,7 @@ export default function GatheringGuideLayout<T extends ZonedData>({
   state,
   skill,
   onSkillChange,
+  characterDefault,
   faction,
   zoneId,
   renderNow,
@@ -46,6 +50,7 @@ export default function GatheringGuideLayout<T extends ZonedData>({
         state={state}
         skill={skill}
         onSkillChange={onSkillChange}
+        characterDefault={characterDefault}
         faction={faction}
         zoneId={zoneId}
         renderResults={renderNow}

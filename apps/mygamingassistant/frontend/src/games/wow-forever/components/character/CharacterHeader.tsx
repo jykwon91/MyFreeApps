@@ -6,6 +6,7 @@ import { GUILD_PAGE_PATH, GUILD_SLUG } from "@/games/wow-forever/data/guild/guil
 import { LEADERBOARD_PARAMS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { BADGE } from "@/games/wow-forever/data/badgeStyles";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { selectCharacter } from "@/games/wow-forever/lib/character/selectCharacter";
 import { playerSettingsFromCharacter, settingsMatchCharacter } from "@/games/wow-forever/lib/character/characterPlayerSettings";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
@@ -28,7 +29,7 @@ export default function CharacterHeader({ character }: { character: CharacterRes
           {character.name} {character.surname}
         </h2>
         {wanted ? (
-          <Button variant="secondary" size="sm" onClick={() => updateSettings(wanted)} disabled={inUse} className="min-h-[36px]">
+          <Button variant="secondary" size="sm" onClick={() => selectCharacter(wanted, updateSettings)} disabled={inUse} className="min-h-[36px]">
             {inUse ? (
               <>
                 <Check className="mr-1 h-4 w-4" aria-hidden /> MGA&apos;s pages use this character

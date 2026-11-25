@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import WowGoldPage from "@/games/wow-forever/pages/WowGoldPage";
 import { GOLD_CHECKLIST_STORAGE_KEY } from "@/games/wow-forever/components/gold/GoldDontDoSection";
@@ -25,9 +27,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
 
 function renderAt(path: string) {
   return render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[path]}>
       <WowGoldPage />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

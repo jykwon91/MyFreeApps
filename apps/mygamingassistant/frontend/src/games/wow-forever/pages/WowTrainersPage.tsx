@@ -11,6 +11,8 @@ import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 import { findTrainerSubject } from "@/games/wow-forever/data/trainers/trainerSubjects";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 const PAGE_TITLE = "Trainers";
@@ -20,6 +22,7 @@ export default function WowTrainersPage() {
   const { subject: slug } = useParams<{ subject: string }>();
   const subject = slug ? findTrainerSubject(slug) : undefined;
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   useDocumentTitle(subject ? `${subject.label} trainers · WoW Forever` : `${PAGE_TITLE} · WoW Forever`);
 
   return (
@@ -49,6 +52,7 @@ export default function WowTrainersPage() {
           />
         </div>
         <LevelCapNote />
+        <UseCharacterReset state={characterDefault} />
       </div>
       {subject?.kind === "class" ? (
         <ClassTrainersView

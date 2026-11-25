@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
@@ -31,9 +33,11 @@ vi.mock("@/games/wow-forever/hooks/useWalkGraphs", async (importOriginal) => {
 
 function renderPage() {
   return render(
+    <Provider store={store}>
     <MemoryRouter>
       <WowWorldMapPage />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 
@@ -499,9 +503,11 @@ describe("WoW Forever World Map page", () => {
   describe("search and where you are", { timeout: 20_000 }, () => {
     function renderAt(path: string) {
       return render(
+        <Provider store={store}>
         <MemoryRouter initialEntries={[path]}>
           <WowWorldMapPage />
-        </MemoryRouter>,
+        </MemoryRouter>
+</Provider>,
       );
     }
 

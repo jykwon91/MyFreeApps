@@ -3,9 +3,13 @@ import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
+import { PLAYER_OVERRIDE_FIELDS } from "@/games/wow-forever/data/character/playerOverrideFields";
+import type { PlayerOverrideField } from "@/games/wow-forever/types/character/playerOverrideField";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 export const PLAYER_SETTINGS_STORAGE_KEY = "mga.wowForever.worldMap.player.v1";
+/** Which of faction / class / level the player typed over the selected character's own. */
+export const PLAYER_OVERRIDES_STORAGE_KEY = "mga.wowForever.worldMap.playerOverrides.v1";
 
 /** Who the player is and where they stand. Remembered between visits. */
 export interface PlayerSettings {
@@ -59,10 +63,10 @@ function readRaw(): string | null {
   }
 }
 
-interface Snapshot {
+interface Snapshot<T = PlayerSettings> {
   /** The stored string this value was read from (or couldn't replace). */
   raw: string | null;
-  value: PlayerSettings;
+  value: T;
 }
 
 // One store for every caller, so a change on one part of a page (the auction
@@ -78,7 +82,7 @@ function notify(): void {
 }
 
 function onStorage(event: StorageEvent): void {
-  if (event.key === null || event.key === PLAYER_SETTINGS_STORAGE_KEY) notify();
+  if (event.key === null || event.key === PLAYER_SETTINGS_STORAGE_KEY || event.key === PLAYER_OVERRIDES_STORAGE_KEY) notify();
 }
 
 function subscribe(listener: () => void): () => void {
@@ -100,8 +104,84 @@ function getSnapshot(): PlayerSettings {
   return cached.value;
 }
 
+function parseOverrides(raw: unknown): PlayerOverrideField[] | null {
+  if (!Array.isArray(raw)) return null;
+  return PLAYER_OVERRIDE_FIELDS.filter((field) => raw.includes(field));
+}
+
+const NO_OVERRIDES: readonly PlayerOverrideField[] = [];
+let overridesCache: Snapshot<readonly PlayerOverrideField[]> | null = null;
+let overridesUnsaved: Snapshot<readonly PlayerOverrideField[]> | null = null;
+
+function readOverridesRaw(): string | null {
+  try {
+    return window.localStorage.getItem(PLAYER_OVERRIDES_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getOverridesSnapshot(): readonly PlayerOverrideField[] {
+  const raw = readOverridesRaw();
+  if (overridesUnsaved && overridesUnsaved.raw === raw) return overridesUnsaved.value;
+  overridesUnsaved = null;
+  if (!overridesCache || overridesCache.raw !== raw) {
+    overridesCache = { raw, value: readStored(PLAYER_OVERRIDES_STORAGE_KEY, parseOverrides, NO_OVERRIDES) };
+  }
+  return overridesCache.value;
+}
+
+function writeOverrides(next: readonly PlayerOverrideField[]): void {
+  writeStored(PLAYER_OVERRIDES_STORAGE_KEY, next);
+  const raw = readOverridesRaw();
+  if (raw === JSON.stringify(next)) overridesCache = { raw, value: next };
+  else overridesUnsaved = { raw, value: next };
+}
+
+/** The fields the player typed over the selected character's own (empty with no character). */
+export function usePlayerOverrides(): readonly PlayerOverrideField[] {
+  return useSyncExternalStore(subscribe, getOverridesSnapshot);
+}
+
+/**
+ * A patch naming a character (`characterSlug`) selects it: its values replace every override.
+ * Any other change to faction / class / level is the player typing over the selected character.
+ */
+function trackOverrides(prev: PlayerSettings, patch: Partial<PlayerSettings>): void {
+  if (patch.characterSlug !== undefined) {
+    if (getOverridesSnapshot().length > 0) writeOverrides(NO_OVERRIDES);
+    return;
+  }
+  if (prev.characterSlug === null) return;
+  const current = getOverridesSnapshot();
+  const merged = PLAYER_OVERRIDE_FIELDS.filter(
+    (field) => current.includes(field) || (patch[field] !== undefined && patch[field] !== prev[field]),
+  );
+  if (merged.length !== current.length) writeOverrides(merged);
+}
+
 function updatePlayerSettings(patch: Partial<PlayerSettings>): void {
   const prev = getSnapshot();
+  trackOverrides(prev, patch);
+  writeSettings(prev, patch);
+}
+
+/**
+ * The selected character's current faction / class / level, for the fields the player hasn't typed over.
+ * Ignored when `wanted` is for another character than the selected one.
+ */
+export function followCharacterSettings(wanted: Pick<PlayerSettings, PlayerOverrideField | "characterSlug">): void {
+  const prev = getSnapshot();
+  if (prev.characterSlug === null || prev.characterSlug !== wanted.characterSlug) return;
+  const overridden = getOverridesSnapshot();
+  const patch: Partial<PlayerSettings> = {};
+  for (const field of PLAYER_OVERRIDE_FIELDS) {
+    if (!overridden.includes(field) && prev[field] !== wanted[field]) Object.assign(patch, { [field]: wanted[field] });
+  }
+  if (Object.keys(patch).length > 0) writeSettings(prev, patch);
+}
+
+function writeSettings(prev: PlayerSettings, patch: Partial<PlayerSettings>): void {
   const next = { ...prev, ...patch };
   // A new zone means the old position (map percent on the old zone) is meaningless.
   if (patch.zoneId !== undefined && patch.zoneId !== prev.zoneId && patch.position === undefined) {

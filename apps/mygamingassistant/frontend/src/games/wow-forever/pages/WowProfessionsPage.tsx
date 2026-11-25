@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import ProfessionGuideView from "@/games/wow-forever/components/professions/ProfessionGuideView";
 import GuideSectionNav from "@/games/wow-forever/components/shared/GuideSectionNav";
@@ -9,6 +10,10 @@ import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedTogg
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
+import { useSelectedCharacter } from "@/games/wow-forever/hooks/useSelectedCharacter";
+import { characterGuideProfessions } from "@/games/wow-forever/lib/character/characterGuideProfessions";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { PROFESSION_PARAM, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
@@ -19,8 +24,11 @@ import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOp
 /** /wow-forever/professions — how to train each profession and the fastest route to 300. */
 export default function WowProfessionsPage() {
   const [params, setParams] = useSearchParams();
-  const profession = parseGuideProfession(params.get(PROFESSION_PARAM));
+  const { character } = useSelectedCharacter();
+  const mine = useMemo(() => (character ? characterGuideProfessions(character) : []), [character]);
+  const profession = parseGuideProfession(params.get(PROFESSION_PARAM), mine[0]);
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
 
   function selectProfession(next: GuideProfession) {
     setParams({ [PROFESSION_PARAM]: next }, { replace: true });
@@ -35,7 +43,7 @@ export default function WowProfessionsPage() {
         backLabel="Back to WoW Forever"
       />
       <div className="space-y-3">
-        <ProfessionPicker value={profession} onChange={selectProfession} />
+        <ProfessionPicker value={profession} onChange={selectProfession} mine={mine} />
         <div className="flex flex-wrap gap-3">
           <SegmentedToggle
             label="Faction"
@@ -53,6 +61,7 @@ export default function WowProfessionsPage() {
           />
         </div>
         <LevelCapNote />
+        <UseCharacterReset state={characterDefault} />
         <GuideSectionNav sections={guideSections(profession)} />
       </div>
 
