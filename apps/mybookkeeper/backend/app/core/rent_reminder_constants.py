@@ -18,6 +18,13 @@ MAX_SEND_DAYS_BEFORE = 14
 SEND_WINDOW_START = _dt.time(9, 0)
 SEND_WINDOW_END = _dt.time(20, 0)
 
+# Appended to every text (not the email). Carriers expect opt-out wording in
+# texts from a toll-free number, and the verification sample shows it. Twilio
+# handles the STOP reply itself. Plain ASCII keeps the text in GSM-7.
+# The reminder ends on the sign-off ("- Jason, your landlord"), so the suffix
+# starts with the full stop that closes it.
+SMS_OPT_OUT_SUFFIX = ". Reply STOP to opt out."
+
 # How often the scheduler checks for due reminders.
 REMINDER_TICK_MINUTES = 60
 

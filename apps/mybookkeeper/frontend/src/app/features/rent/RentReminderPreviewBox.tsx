@@ -9,6 +9,7 @@ import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/
 import { mayHaveBeenSentRefusalMessage } from "@mybookkeeper/api-client/utils/mayHaveBeenSentRefusalMessage";
 import { rentReminderChannelWords } from "@mybookkeeper/api-client/utils/rentReminderChannelWords";
 import { rentReminderPlanChannels } from "@mybookkeeper/api-client/utils/rentReminderPlanChannels";
+import { RENT_REMINDER_SMS_OPT_OUT_NOTE } from "@mybookkeeper/api-client/constants/rentReminderSmsOptOut";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
@@ -114,6 +115,12 @@ export default function RentReminderPreviewBox({
       >
         {preview.message}
       </blockquote>
+
+      {plan.sms_enabled ? (
+        <p className="text-xs text-muted-foreground" data-testid="rent-reminder-sms-opt-out-note">
+          {RENT_REMINDER_SMS_OPT_OUT_NOTE}
+        </p>
+      ) : null}
 
       {canWrite && !alreadySent && preview.send_now_message !== preview.message ? (
         <p className="text-xs text-muted-foreground" data-testid="rent-reminder-send-now-message">

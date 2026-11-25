@@ -306,6 +306,7 @@ class TestScheduledSend:
         assert to == ["sonu@example.com"]
         assert "$300" in subject
         assert "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday)." in body
+        assert "STOP" not in body
         assert wired["email"].call_args.kwargs["reply_to"] == "jason@example.com"
         [row] = await _sends(db)
         assert (row.status, row.due_date, row.amount) == (
@@ -496,6 +497,8 @@ class TestSms:
         to, body = wired["sms"].call_args.args
         assert to == "+17135550100"
         assert body.startswith("Hi Sonu, reminder: rent of $300")
+        assert body.endswith(" - Jason, your landlord. Reply STOP to opt out.")
+        assert row.message_body + ". Reply STOP to opt out." == body
         assert wired["sms"].call_args.kwargs["request_id"] == f"{row.id}:1"
         assert (row.status, row.provider_message_id) == ("sent_to_provider", SID_1)
 

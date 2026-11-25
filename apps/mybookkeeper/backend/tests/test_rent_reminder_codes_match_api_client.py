@@ -17,6 +17,7 @@ from app.core.rent_reminder_constants import (
     REMINDER_ERROR_CODES,
     REMINDER_MAY_HAVE_BEEN_SENT_CODE,
     SMS_FAILED_CODE_PREFIX,
+    SMS_OPT_OUT_SUFFIX,
     SMS_REFUSED_CODE_PREFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_SEND_STATUSES
@@ -101,3 +102,14 @@ def test_a_moved_file_shape_fails_with_a_clear_message() -> None:
         assert "update this test's parser" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected a clear failure")
+
+
+def test_sms_opt_out_suffix_matches() -> None:
+    source = (API_CLIENT / "constants" / "rentReminderSmsOptOut.ts").read_text(encoding="utf-8")
+    literal = _between(
+        source,
+        "export const RENT_REMINDER_SMS_OPT_OUT_SUFFIX =",
+        ";\n",
+        file="rentReminderSmsOptOut.ts",
+    )
+    assert re.findall(r'"([^"]+)"', literal) == [SMS_OPT_OUT_SUFFIX]

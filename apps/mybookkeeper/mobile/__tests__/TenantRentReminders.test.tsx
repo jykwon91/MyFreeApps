@@ -140,6 +140,7 @@ describe("what the section shows", () => {
     expect(screen.getByText("Goes out Sat, Nov 2 at 6:00 PM CDT")).toBeTruthy();
     expect(screen.getByText("Hi Dana, rent of $300 is due tomorrow (Sunday).")).toBeTruthy();
     expect(screen.getByText("Goes by email and text.")).toBeTruthy();
+    expect(screen.getByText('Texts also end with "Reply STOP to opt out."')).toBeTruthy();
     expect(screen.getByText(REMINDER_MESSAGES.dontCheckPaid)).toBeTruthy();
     expect(await screen.findByText("Email · $300.00 due Sun, Oct 27")).toBeTruthy();
     expect(screen.getByText("Sent")).toBeTruthy();

@@ -47,6 +47,7 @@ from app.core.rent_reminder_constants import (
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
+    SMS_OPT_OUT_SUFFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
@@ -138,7 +139,7 @@ async def _send(outbound: ReminderOutbound) -> str | None:
     return await asyncio.to_thread(
         sms_service.send_or_raise,
         phone,
-        outbound.body,
+        outbound.body + SMS_OPT_OUT_SUFFIX,
         request_id=format_reminder_request_id(outbound.send_id, outbound.attempt),
     )
 

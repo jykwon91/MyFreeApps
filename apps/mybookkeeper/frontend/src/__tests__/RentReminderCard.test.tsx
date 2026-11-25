@@ -273,6 +273,9 @@ describe("RentReminderCard", () => {
       "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday).",
     );
     expect(screen.getByTestId("rent-reminder-send-at")).toHaveTextContent("Sat, Oct 31");
+    expect(screen.getByTestId("rent-reminder-sms-opt-out-note")).toHaveTextContent(
+      'Texts also end with "Reply STOP to opt out."',
+    );
 
     // Email already went out for this due date, so the text waits for the
     // next one — the two never go out at different times.
@@ -329,6 +332,7 @@ describe("RentReminderCard", () => {
       unwrap: () => Promise.resolve([{ ...FAILED_TEXT, channel: "email", status: "sent" }]),
     });
     renderCard();
+    expect(screen.queryByTestId("rent-reminder-sms-opt-out-note")).toBeNull();
     const button = screen.getByTestId("rent-reminder-send-now");
     expect(button).toHaveTextContent("Send email now");
     fireEvent.click(button);

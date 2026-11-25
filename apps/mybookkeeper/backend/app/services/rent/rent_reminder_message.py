@@ -4,7 +4,8 @@
 
 The due-date phrase is relative to the day the reminder is *sent* ("today",
 "tomorrow", otherwise "on Sunday, Nov 1"), so a reminder that goes out late
-still reads correctly. The same text is used for email and SMS.
+still reads correctly. The same text is used for email and SMS; texts
+also get ``SMS_OPT_OUT_SUFFIX`` appended when they are sent.
 
 Texts come from a Twilio number the tenant doesn't know, so the message is
 signed with the operator's first name. The sign-off uses a plain hyphen, not a
