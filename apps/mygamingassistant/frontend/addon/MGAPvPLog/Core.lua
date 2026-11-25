@@ -1,35 +1,44 @@
--- MGA PvP Log, the log itself: which enemy players hit you or got hit by you, how each fight ended, and
--- what the window shows. No frames here; MGAPvPLog.lua feeds it combat log events and Window.lua draws it.
+-- MGA PvP Log, the log itself: which enemy players fought you or killed you, and what the window shows. No
+-- frames here; MGAPvPLog.lua feeds it what you can see and Window.lua draws it.
+--
+-- WoW Forever hides the combat log from addons (see MGAPvPLog.lua), so nothing here knows who hit you. It works
+-- from what the client does hand over:
+--   * a sighting: a hostile player you target, mouse over or see on a nameplate (name, level, guild, class, race);
+--   * a fight: a sighting of a hostile player who is in combat while you are, and is your target or is targeting you;
+--   * your killer: the game's death recap names whoever landed the killing blow. When the recap can't be read, the
+--     hostile player you saw fighting you last is named instead, and always as "probably".
 --
 -- Saved per character in MGAPvPLogDB = { version, settings = { chat }, log = { entry... }, enemies = { [guid] = enemy } }.
 --   enemy: name, race, class, classFile, level, guild (only what the game told us), firstSeen, lastSeen,
---          taken / dealt (damage they did to you / you did to them), killedYou, youKilled, fights.
---   entry: guid, outcome ("killedMe" | "iKilled" | "fought"), spell, zone, time, taken, dealt.
+--          killedYou, youKilled, fights.
+--   entry: guid, outcome ("killedMe" | "iKilled" | "fought"), spell (the killing blow, from the recap), probable
+--          (true when the killer is a guess), zone, time.
 -- The log keeps the last MAX_LOG entries; an enemy with no entry left in it is forgotten, totals included.
 
 MGAPvPLog = MGAPvPLog or {}
 local M = MGAPvPLog
 
 M.MAX_LOG = 200
-M.FIGHT_WINDOW = 60 -- seconds without a hit before a fight counts as over
-M.KILL_WINDOW = 10 -- a death is blamed on whoever hit you in the last this many seconds
+M.FIGHT_WINDOW = 60 -- seconds without a sighting before a fight counts as over
+M.KILL_WINDOW = 10 -- with no readable recap, a death is blamed on whoever was fighting you in the last this many seconds
+M.RECAP_WAIT = 3 -- seconds to wait for the death recap before guessing
+M.SEEN_KEEP = 600 -- seconds a sighted player is remembered, for matching the recap's killer by name
+local DEATH_DEBOUNCE = 5 -- a second death event this close to the first is the same death
 
-local TYPE_PLAYER = COMBATLOG_OBJECT_TYPE_PLAYER or 0x400
-local REACTION_HOSTILE = COMBATLOG_OBJECT_REACTION_HOSTILE or 0x40
-local DAMAGE_SPELL_EVENTS = {
-  SPELL_DAMAGE = true, RANGE_DAMAGE = true, SPELL_PERIODIC_DAMAGE = true, DAMAGE_SHIELD = true, DAMAGE_SPLIT = true,
-}
+local sighted = {} -- guid -> { guid, name, level, guild, race, class, classFile, first, last, seq, engagedAt }
+local pending = {} -- guid -> the fight in progress: first, last, zone
+local seq = 0
+local awaiting -- { at } while a death waits for its recap
+local resolvedAt, lastRecapSig
 
-local hitCount = 0
-local pending = {} -- guid -> the fight in progress: first, last, taken, dealt, zone, spell, lastSpellDealt, lastHitMe
-
-local function hasFlag(flags, bit)
-  return flags ~= nil and math.floor(flags / bit) % 2 == 1
+-- A value the client hides from addons is "secret": it can't be compared, stored or joined. Every value the client
+-- hands over that it may hide goes through here first; a secret one comes back as nil.
+local function open(value)
+  if issecretvalue and issecretvalue(value) then return nil end
+  return value
 end
 
-local function hostilePlayer(flags)
-  return hasFlag(flags, TYPE_PLAYER) and hasFlag(flags, REACTION_HOSTILE)
-end
+M.Open = open
 
 function M.DB()
   MGAPvPLogDB = MGAPvPLogDB or {}
@@ -63,35 +72,89 @@ local function currentZone()
   return zone
 end
 
--- Race and class from the guid; asked again until the game answers (it can't for a player never seen).
-local function readPlayerInfo(guid, enemy)
-  if enemy.race and enemy.class then return end
+-- Who a player unit is: guid and name ("Name", or "Name-Realm" from another realm). Nil for anything that is not
+-- a player, or when the client keeps the identity back.
+local function identity(unit)
+  if open(UnitExists(unit)) ~= true or open(UnitIsPlayer(unit)) ~= true then return nil end
+  local guid = open(UnitGUID(unit))
+  local name, realm = UnitName(unit)
+  name, realm = open(name), open(realm)
+  if type(guid) ~= "string" or type(name) ~= "string" or name == "" then return nil end
+  if type(realm) == "string" and realm ~= "" then name = name .. "-" .. realm end
+  return guid, cleanName(name)
+end
+
+function M.PlayerName(unit)
+  local _, name = identity(unit)
+  return name
+end
+
+-- You in combat and the player in combat, and the fight is with you: they are your target, or you are theirs.
+local function fightingMe(unit)
+  if open(UnitAffectingCombat("player")) ~= true or open(UnitAffectingCombat(unit)) ~= true then return false end
+  return open(UnitIsUnit(unit, "target")) == true or open(UnitIsUnit(unit .. "target", "player")) == true
+end
+
+local function fightWith(guid, now)
+  local p = pending[guid]
+  if not p then
+    p = { first = now }
+    pending[guid] = p
+  end
+  p.last, p.zone = now, currentZone()
+end
+
+-- Class and race from the guid, asked again until the game answers (it can't for a player never seen).
+local function readClassAndRace(guid, s)
+  if s.race and s.class then return end
   local ok, class, classFile, race = pcall(GetPlayerInfoByGUID, guid)
-  if ok and class then
-    enemy.class, enemy.classFile, enemy.race = class, classFile, race
+  if ok then
+    class, classFile, race = open(class), open(classFile), open(race)
+    if type(class) == "string" and type(race) == "string" then s.class, s.classFile, s.race = class, classFile, race end
   end
 end
 
--- Level and guild from a unit we are looking at, only for an enemy already logged.
-function M.LearnUnit(unit)
-  local guid = UnitGUID(unit)
-  local enemy = guid and M.DB().enemies[guid]
-  if not enemy then return end
-  local level = UnitLevel(unit)
-  if level and level > 0 then enemy.level = level end -- -1 is "??": unknown, not a level
-  local guild = GetGuildInfo(unit)
-  if guild then enemy.guild = guild end
+-- A unit token (target, mouseover, nameplateN): remembers a hostile player you can see, and logs the fight when they
+-- are fighting you. Nothing happens while you are dead (the dead look at everything).
+function M.Sight(unit)
+  if open(UnitIsDeadOrGhost("player")) == true then return end
+  local guid, name = identity(unit)
+  if not guid or open(UnitIsEnemy("player", unit)) ~= true then return end
+  local now = time()
+  seq = seq + 1
+  local s = sighted[guid]
+  if not s then
+    s = { guid = guid, first = now }
+    sighted[guid] = s
+  end
+  s.name, s.last, s.seq = name, now, seq
+  local level = open(UnitLevel(unit))
+  if type(level) == "number" and level > 0 then s.level = level end -- -1 is "??": unknown, not a level
+  local guild = open((GetGuildInfo(unit)))
+  if type(guild) == "string" and guild ~= "" then s.guild = guild end
+  readClassAndRace(guid, s)
+  if fightingMe(unit) then
+    s.engagedAt = now
+    M.Flush(now)
+    fightWith(guid, now)
+  end
 end
 
-local function noteEnemy(guid, name, now)
+-- The enemy record for a sighted (or already logged) player, made on first need and brought up to date.
+local function noteEnemy(guid, now)
   local enemies = M.DB().enemies
+  local s = sighted[guid]
   local enemy = enemies[guid]
   if not enemy then
-    enemy = { name = cleanName(name), firstSeen = now, taken = 0, dealt = 0, killedYou = 0, youKilled = 0, fights = 0 }
+    enemy = { name = cleanName(s and s.name), firstSeen = s and s.first or now, killedYou = 0, youKilled = 0, fights = 0 }
     enemies[guid] = enemy
   end
   enemy.lastSeen = now
-  readPlayerInfo(guid, enemy)
+  if s then
+    enemy.name = s.name
+    enemy.level, enemy.guild = s.level or enemy.level, s.guild or enemy.guild
+    if s.race and s.class then enemy.race, enemy.class, enemy.classFile = s.race, s.class, s.classFile end
+  end
   return enemy
 end
 
@@ -109,13 +172,14 @@ local function prune(d)
   end
 end
 
-local function commit(guid, outcome, spell)
+local function commit(guid, outcome, now, spell, probable)
   local d = M.DB()
   local p = pending[guid]
   pending[guid] = nil
-  local enemy = d.enemies[guid]
+  local enemy = noteEnemy(guid, now)
   local entry = {
-    guid = guid, outcome = outcome, spell = spell, zone = p.zone, time = p.last, taken = p.taken, dealt = p.dealt,
+    guid = guid, outcome = outcome, spell = spell, probable = probable or nil,
+    zone = p and p.zone or currentZone(), time = (outcome == "fought" and p) and p.last or now,
   }
   table.insert(d.log, entry)
   enemy.fights = enemy.fights + 1
@@ -127,48 +191,15 @@ local function commit(guid, outcome, spell)
   return entry, enemy
 end
 
--- The fight with this enemy so far, started if this is its first hit.
-local function fightWith(guid, name, now)
-  M.Flush(now)
-  local enemy = noteEnemy(guid, name, now)
-  local p = pending[guid]
-  if not p then
-    p = { first = now, taken = 0, dealt = 0 }
-    pending[guid] = p
-  end
-  p.last, p.zone = now, currentZone()
-  if not enemy.level then
-    M.LearnUnit("target")
-    M.LearnUnit("mouseover")
-  end
-  return p, enemy
-end
-
--- Ends the fights nothing has happened in for FIGHT_WINDOW seconds (all of them with `everything`) as "fought".
+-- Ends the fights nothing has been seen of for FIGHT_WINDOW seconds (all of them with `everything`) as "fought", and
+-- forgets players not seen for SEEN_KEEP seconds.
 function M.Flush(now, everything)
   for guid, p in pairs(pending) do
-    if everything or now - p.last > M.FIGHT_WINDOW then commit(guid, "fought", p.spell) end
+    if everything or now - p.last > M.FIGHT_WINDOW then commit(guid, "fought", now) end
   end
-end
-
-function M.TookHit(guid, name, spell, amount, now)
-  local p, enemy = fightWith(guid, name, now)
-  p.taken = p.taken + (amount or 0)
-  enemy.taken = enemy.taken + (amount or 0)
-  hitCount = hitCount + 1
-  p.spell, p.lastHitMe, p.hitSeq = spell, now, hitCount
-end
-
-function M.DealtHit(guid, name, spell, amount, now)
-  local p, enemy = fightWith(guid, name, now)
-  p.dealt = p.dealt + (amount or 0)
-  enemy.dealt = enemy.dealt + (amount or 0)
-  p.lastSpellDealt = spell
-end
-
-function M.IKilled(guid, name, now)
-  local p = fightWith(guid, name, now)
-  commit(guid, "iKilled", p.lastSpellDealt)
+  for guid, s in pairs(sighted) do
+    if now - s.last > M.SEEN_KEEP and not pending[guid] then sighted[guid] = nil end
+  end
 end
 
 -- "Orc Warrior 60": whatever of race, class and level is known.
@@ -184,52 +215,108 @@ local PREFIX = "|cff33aaffMGA PvP Log:|r "
 
 local function deathLine(enemy, entry)
   local who = M.Who(enemy)
-  local line = "Killed by " .. enemy.name .. (who ~= "" and (" (" .. who .. ")") or "")
+  local line = (entry.probable and "Probably killed by " or "Killed by ") .. enemy.name .. (who ~= "" and (" (" .. who .. ")") or "")
   if entry.spell then line = line .. " with " .. entry.spell end
   if entry.zone then line = line .. " in " .. entry.zone end
   return line
 end
 
--- You died: blames whoever hit you last within KILL_WINDOW seconds, logs it and says so (if the chat line is on).
-function M.Died(now)
-  M.Flush(now)
-  local killer
-  for guid, p in pairs(pending) do
-    -- time() is whole seconds, so hits in the same second are ordered by arrival (hitSeq)
-    if p.lastHitMe and now - p.lastHitMe <= M.KILL_WINDOW and (not killer
-        or p.lastHitMe > pending[killer].lastHitMe
-        or (p.lastHitMe == pending[killer].lastHitMe and p.hitSeq > pending[killer].hitSeq)) then
-      killer = guid
+-- The death recap's killing blow (its first event): the killer's name and the spell. Returns
+--   name, spell  the recap names who landed it;
+--   false        the recap is readable but names nobody (the environment, or a hidden source);
+--   nil          nothing readable yet: no recap, a secret one, or the previous death's still showing.
+local function recapKiller()
+  if not (C_DeathRecap and C_DeathRecap.HasRecapEvents and C_DeathRecap.GetRecapEvents) then return nil end
+  local ok, has = pcall(C_DeathRecap.HasRecapEvents)
+  if not ok or open(has) ~= true then return nil end
+  local got, events = pcall(C_DeathRecap.GetRecapEvents)
+  events = got and open(events) or nil
+  local blow = type(events) == "table" and events[1] or nil
+  if type(blow) ~= "table" then return nil end
+  if issecretvalue and issecretvalue(blow.sourceName) then return nil end
+  local signature = table.concat({ tostring(open(blow.timestamp)), tostring(open(blow.spellId)), tostring(blow.sourceName), tostring(open(blow.amount)) }, "|")
+  if signature == lastRecapSig then return nil end
+  lastRecapSig = signature
+  local name = blow.sourceName
+  if open(blow.hideCaster) == true or type(name) ~= "string" or name == "" then return false end
+  local event, spell = open(blow.event), open(blow.spellName)
+  if event == "SWING_DAMAGE" then spell = "Melee" end
+  return cleanName(name), type(spell) == "string" and spell or nil
+end
+
+-- The sighted (else already logged) player with this name.
+local function guidNamed(name)
+  local wanted, best, bestSeq = name:lower(), nil, -1
+  for guid, s in pairs(sighted) do
+    if s.name:lower() == wanted and s.seq > bestSeq then best, bestSeq = guid, s.seq end
+  end
+  if best then return best end
+  for guid, enemy in pairs(M.DB().enemies) do
+    if enemy.name:lower() == wanted then return guid end
+  end
+  return nil
+end
+
+-- With no readable recap: the hostile player who was fighting you most recently, within KILL_WINDOW seconds of the
+-- death; failing that, the hostile player seen most recently in that time.
+local function probableKiller(at)
+  local best, bestFighting, bestSeq
+  for guid, s in pairs(sighted) do
+    if s.last <= at and at - s.last <= M.KILL_WINDOW then
+      local fighting = s.engagedAt ~= nil and at - s.engagedAt <= M.KILL_WINDOW
+      if not best or (fighting and not bestFighting) or (fighting == bestFighting and s.seq > bestSeq) then
+        best, bestFighting, bestSeq = guid, fighting, s.seq
+      end
     end
   end
-  if not killer then return end
-  local spell = pending[killer].spell
-  for _, p in pairs(pending) do p.lastHitMe = nil end -- a second death event must not blame anyone again
-  local entry, enemy = commit(killer, "killedMe", spell)
-  if M.AutoTrack then M.AutoTrack(enemy) end
+  return best
+end
+
+local function finishDeath(guid, spell, probable, at)
+  local entry, enemy = commit(guid, "killedMe", at, spell, probable)
+  if not probable and M.AutoTrack then M.AutoTrack(enemy) end -- a guess never goes on the kill-on-sight list
   if M.DB().settings.chat then DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. deathLine(enemy, entry)) end
 end
 
--- One combat log event (the values CombatLogGetCurrentEventInfo returns).
-function M.Combat(_, subevent, _, sourceGuid, sourceName, sourceFlags, _, destGuid, destName, destFlags, _, a12, a13, _, a15)
-  local me = UnitGUID("player")
-  if subevent == "PARTY_KILL" then
-    if sourceGuid == me and hostilePlayer(destFlags) then M.IKilled(destGuid, destName, time()) end
-    return
+-- You died: the recap may take a moment to fill in, so ResolveDeath is asked again until it does (or RECAP_WAIT passes).
+function M.Died(now)
+  if awaiting or (resolvedAt and now - resolvedAt < DEATH_DEBOUNCE) then return end
+  M.Flush(now)
+  awaiting = { at = now }
+  M.ResolveDeath(now)
+end
+
+-- Names the killer once the recap can be read. A recap that names someone nobody saw is not blamed on a player: it
+-- could as well be a creature. Without a readable recap the guess is made after RECAP_WAIT seconds.
+function M.ResolveDeath(now)
+  if not awaiting then return end
+  local at = awaiting.at
+  local killer, spell = recapKiller()
+  if killer == nil and now - at < M.RECAP_WAIT then return end
+  awaiting, resolvedAt = nil, at
+  if killer then
+    local guid = guidNamed(killer)
+    if guid then finishDeath(guid, spell, false, at) end
+  elseif killer == nil then
+    local guid = probableKiller(at)
+    if guid then finishDeath(guid, nil, true, at) end
   end
-  local spell, amount
-  if subevent == "SWING_DAMAGE" then
-    spell, amount = "Melee", a12
-  elseif DAMAGE_SPELL_EVENTS[subevent] then
-    spell, amount = a13, a15
-  else
-    return
+end
+
+-- Your kill: PARTY_KILL with you as the attacker and a hostile player you have seen as the target. A secret
+-- attacker is never counted (a group member's kill would look the same); a secret target means the dead hostile
+-- player you are looking at.
+function M.PartyKill(attackerGuid, targetGuid)
+  local me = open(UnitGUID("player"))
+  local attacker, target = open(attackerGuid), open(targetGuid)
+  if not attacker or attacker ~= me then return end
+  if not target and open(UnitIsDead("target")) == true then
+    M.Sight("target")
+    target = open(UnitGUID("target"))
   end
-  if destGuid == me and hostilePlayer(sourceFlags) then
-    M.TookHit(sourceGuid, sourceName, spell, amount, time())
-  elseif sourceGuid == me and hostilePlayer(destFlags) then
-    M.DealtHit(destGuid, destName, spell, amount, time())
-  end
+  if type(target) ~= "string" or not (sighted[target] or M.DB().enemies[target]) then return end
+  M.Flush(time())
+  commit(target, "iKilled", time())
 end
 
 -- What the window shows -----------------------------------------------------------------------
@@ -281,9 +368,9 @@ function M.Rows(filter)
     if entry.zone then table.insert(parts, entry.zone) end
     table.insert(parts, M.Ago(now - entry.time))
     local what = WHAT[entry.outcome]
-    if entry.spell then what = what .. (entry.outcome == "fought" and ", last hit with " or " with ") .. entry.spell end
+    if entry.probable then what = "Probably killed you" end
+    if entry.spell then what = what .. " with " .. entry.spell end
     table.insert(parts, what)
-    if entry.taken > 0 or entry.dealt > 0 then table.insert(parts, "you took " .. entry.taken .. ", dealt " .. entry.dealt) end
     if enemy.killedYou > 0 then table.insert(parts, "killed you ×" .. enemy.killedYou) end
     if enemy.youKilled > 0 then table.insert(parts, "you killed ×" .. enemy.youKilled) end
     table.insert(rows, { head = head, detail = table.concat(parts, " · "), name = enemy.name, tracked = M.IsTracked(enemy.name) })
@@ -295,5 +382,7 @@ function M.Clear()
   local d = M.DB()
   d.log, d.enemies = {}, {}
   for guid in pairs(pending) do pending[guid] = nil end
+  for guid in pairs(sighted) do sighted[guid] = nil end
+  awaiting, resolvedAt, lastRecapSig = nil, nil, nil
   changed()
 end

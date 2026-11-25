@@ -1,6 +1,6 @@
 -- MGA PvP Log, tracking: a kill-on-sight list. The game never tells an addon where an enemy player is, so this
--- only notices them when they come within your own sight: in the combat log, on a nameplate, as your target or
--- mouseover, or as the target of someone in your group. Each sighting remembers WHERE YOU WERE (zone, subzone
+-- only notices them when they come within your own sight: on a nameplate, as your target or mouseover, or as
+-- the target of someone in your group. Each sighting remembers WHERE YOU WERE (zone, subzone
 -- and your map position), never their exact spot, and warns you once (chat line, sound, banner).
 --
 -- Saved in MGAPvPLogDB.tracked = { [lowercase name] = { name, auto, seen, alerted } } and, in settings,
@@ -14,7 +14,6 @@ M.LEFT_AFTER = 20 -- not seen for this long = they left; seeing them again warns
 M.SCAN_UNITS = 40
 
 local BANNER_SECONDS = 4
-local TYPE_PLAYER = COMBATLOG_OBJECT_TYPE_PLAYER or 0x400
 
 local function key(name)
   return (name or ""):lower()
@@ -151,19 +150,11 @@ function M.Sighted(name, now)
   if M.Refresh then M.Refresh() end
 end
 
--- Combat log: either side of any event, when that side is a player (never yourself).
-function M.TrackCombat(_, _, _, sourceGuid, sourceName, sourceFlags, _, destGuid, destName, destFlags)
-  if next(tracked()) == nil then return end
-  local me, now = UnitGUID("player"), time()
-  if sourceGuid ~= me and sourceFlags and math.floor(sourceFlags / TYPE_PLAYER) % 2 == 1 then M.Sighted(sourceName, now) end
-  if destGuid ~= me and destFlags and math.floor(destFlags / TYPE_PLAYER) % 2 == 1 then M.Sighted(destName, now) end
-end
-
--- A unit token: nameplate, target, mouseover, or a group member's target.
+-- A unit token: nameplate, target, mouseover, or a group member's target. A name the client hides is skipped.
 function M.TrackUnit(unit)
-  if next(tracked()) == nil or not UnitExists(unit) or not UnitIsPlayer(unit) then return end
-  local name, realm = UnitName(unit)
-  M.Sighted((realm and realm ~= "") and (name .. "-" .. realm) or name, time())
+  if next(tracked()) == nil then return end
+  local name = M.PlayerName(unit)
+  if name then M.Sighted(name, time()) end
 end
 
 -- The targets of everyone in your group, looked at every few seconds while anyone is tracked.

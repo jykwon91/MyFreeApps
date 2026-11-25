@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "The PvP Log addon works again, and no longer shows the \"blocked from an action\" pop-up",
+    "summary": "Forever hides the combat log from addons, so the PvP Log addon was blocked and logged nothing. It now works from what you can see: it finds your killer in the game's death recap, or names the enemy who was fighting you last as \"probably\" when the recap can't be read, and logs the hostile players you fight or kill. The kill-on-sight list, warnings and Go to last seen still work. Download the new version (1.2.0) from the Macros page.",
+    "to": "/wow-forever/macros"
+  },
+  {
+    "date": "2026-11-25",
     "title": "What should I eat? now covers food and drink, with the Mage's free ones first",
     "summary": "The page now has a Food and a Drink section (Warriors and Rogues get food only). Each starts with what a Mage conjures for free at the highest rank you can use, then more options from cheapest to dearest: dropped, bought from a vendor, or cooked, with how much each restores and where to get it.",
     "to": "/wow-forever/food"
