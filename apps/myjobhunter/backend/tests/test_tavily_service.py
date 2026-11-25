@@ -13,13 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.config import settings
 from app.services.integrations.tavily_service import (
     TavilyInvalidResponseError,
     TavilyNotConfiguredError,
     search_company,
     search_company_overview,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fail-loud: key missing + NOT in dev
@@ -30,8 +30,7 @@ class TestTavilyFailLoud:
     @pytest.mark.asyncio
     async def test_raises_when_key_empty_and_not_dev(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """search_company raises TavilyNotConfiguredError when key is absent."""
-        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
-        from app.core.config import settings
+        monkeypatch.setattr(settings, "environment", "production")
         monkeypatch.setattr(settings, "tavily_api_key", "")
 
         with pytest.raises(TavilyNotConfiguredError):
@@ -40,12 +39,13 @@ class TestTavilyFailLoud:
     @pytest.mark.asyncio
     async def test_raises_when_env_is_production(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Explicitly production-flagged env still raises."""
-        monkeypatch.setenv("MYJOBHUNTER_ENV", "production")
-        from app.core.config import settings
+        monkeypatch.setattr(settings, "environment", "production")
         monkeypatch.setattr(settings, "tavily_api_key", "")
 
-        with pytest.raises(TavilyNotConfiguredError):
+        with pytest.raises(TavilyNotConfiguredError) as raised:
             await search_company("Acme Corp")
+        assert "TAVILY_API_KEY" in str(raised.value)
+        assert "development" not in str(raised.value)
 
 
 # ---------------------------------------------------------------------------
@@ -57,8 +57,7 @@ class TestTavilyDevStub:
     @pytest.mark.asyncio
     async def test_returns_stub_when_key_empty_and_dev(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Returns stub results (no network call) when in dev mode."""
-        monkeypatch.setenv("MYJOBHUNTER_ENV", "development")
-        from app.core.config import settings
+        monkeypatch.setattr(settings, "environment", "development")
         monkeypatch.setattr(settings, "tavily_api_key", "")
 
         results = await search_company("TestCorp")
@@ -72,14 +71,36 @@ class TestTavilyDevStub:
     async def test_stub_source_types_are_valid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Stub results use valid source_type values."""
         valid_types = {"glassdoor", "teamblind", "reddit", "levels", "payscale", "news", "official", "other"}
-        monkeypatch.setenv("MYJOBHUNTER_ENV", "development")
-        from app.core.config import settings
+        monkeypatch.setattr(settings, "environment", "development")
         monkeypatch.setattr(settings, "tavily_api_key", "")
 
         results = await search_company("AnyCompany")
 
         for r in results:
             assert r["source_type"] in valid_types, f"Invalid source_type: {r['source_type']}"
+
+    @pytest.mark.asyncio
+    async def test_overview_returns_stub_when_key_empty_and_dev(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(settings, "environment", "development")
+        monkeypatch.setattr(settings, "tavily_api_key", "")
+
+        results = await search_company_overview("TestCorp")
+
+        assert len(results) >= 1
+        assert all("url" in r for r in results)
+
+    @pytest.mark.asyncio
+    async def test_raises_when_environment_only_defaulted_to_development(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """An env file without ENVIRONMENT defaults to "development"; that must
+        not switch production to fake results."""
+        monkeypatch.setattr(settings, "environment", "development")
+        monkeypatch.setattr(type(settings), "environment_is_explicit", property(lambda _self: False))
+        monkeypatch.setattr(settings, "tavily_api_key", "")
+
+        with pytest.raises(TavilyNotConfiguredError):
+            await search_company("Acme Corp")
 
 
 # ---------------------------------------------------------------------------
@@ -91,9 +112,8 @@ class TestTavilyHappyPath:
     @pytest.mark.asyncio
     async def test_parses_results_correctly(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Results are parsed from the Tavily API response shape."""
-        from app.core.config import settings
         monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
-        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+        monkeypatch.setattr(settings, "environment", "production")
 
         fake_response_data = {
             "results": [
@@ -132,9 +152,8 @@ class TestTavilyHappyPath:
     @pytest.mark.asyncio
     async def test_skips_results_without_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Results missing a URL are filtered out."""
-        from app.core.config import settings
         monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
-        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+        monkeypatch.setattr(settings, "environment", "production")
 
         fake_response_data = {
             "results": [
@@ -171,9 +190,8 @@ class TestTavilyMalformedBody:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """search_company raises TavilyInvalidResponseError (not bare ValueError) on truncated body."""
-        from app.core.config import settings
         monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
-        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+        monkeypatch.setattr(settings, "environment", "production")
 
         mock_response = MagicMock()
         mock_response.json.side_effect = ValueError("No JSON object could be decoded")
@@ -194,9 +212,8 @@ class TestTavilyMalformedBody:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """search_company_overview raises TavilyInvalidResponseError (not bare ValueError) on truncated body."""
-        from app.core.config import settings
         monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
-        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+        monkeypatch.setattr(settings, "environment", "production")
 
         mock_response = MagicMock()
         mock_response.json.side_effect = ValueError("No JSON object could be decoded")
