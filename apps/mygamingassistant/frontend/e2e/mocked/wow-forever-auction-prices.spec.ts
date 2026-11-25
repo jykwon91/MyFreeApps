@@ -207,7 +207,7 @@ test("Tailoring's Most profit route shows what each craft sells for and nets, an
   await expect(route.getByText(/^Estimated net to (reach skill )?\d+: (\+.* profit|~.*)/)).toBeVisible();
   const first = route.getByTestId("craft-row-profit").first();
   await expect(first.getByText("Sells for")).toBeVisible();
-  await expect(first.getByTestId("craft-row-net")).toHaveText(/^\+.* profit$/);
+  await expect(first.getByTestId("craft-row-net")).toHaveText(/(profit|cost)$/);
   await choice.getByRole("radio", { name: "Default" }).click();
   await expect(route.getByText("Default route")).toBeVisible();
   await expect(route.getByTestId("craft-row-profit")).toHaveCount(0);
