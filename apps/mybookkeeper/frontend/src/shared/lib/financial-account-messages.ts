@@ -18,6 +18,7 @@ export const FINANCIAL_ACCOUNT_MESSAGES = {
   closedOn: (date: string) => `Closed ${date}`,
   updateBalance: "Update balance",
   edit: "Edit",
+  viewTransactions: "Transactions",
   saved: "Account saved.",
   added: "Account added.",
   saveFailed: "Couldn't save the account. Please try again.",
