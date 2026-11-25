@@ -24,6 +24,9 @@ class SignedLeaseCreateRequest(BaseModel):
     template_id: uuid.UUID | None = None
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
+    # The house the lease is for. When omitted, it comes from the listing,
+    # else from the applicant's inquiry listing.
+    property_id: uuid.UUID | None = None
     # Successor-lease pointer: when set, the new draft is positioned as the
     # successor to ``parent_lease_id``. The service validates that the
     # parent is in a status that allows succession (signed / active / ended).

@@ -28,7 +28,7 @@ from app.services.leases._lease_helpers import (
 )
 from app.services.leases.lease_attachments_present import attachments_present_check
 from app.services.leases.lease_lifecycle_service import get_lease
-from app.services.leases.lease_references import resolve_lease_listing_id
+from app.services.leases.lease_references import resolve_lease_references
 from app.services.storage.attachment_content import (
     UnreadableImage,
     UnsupportedAttachmentType,
@@ -113,6 +113,7 @@ async def import_signed_lease(
     status: str,
     files: list[tuple[bytes, str]],  # (content, filename)
     parent_lease_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     """Create an imported signed lease from externally-signed PDFs.
 
@@ -145,10 +146,11 @@ async def import_signed_lease(
     # One moment for the lease's signed_at and every file's uploaded_at: the files are the lock point itself.
     now = _dt.datetime.now(_dt.timezone.utc)
     async with unit_of_work() as db:
-        listing_id = await resolve_lease_listing_id(
+        references = await resolve_lease_references(
             db,
             applicant_id=applicant_id,
             listing_id=listing_id,
+            property_id=property_id,
             organization_id=organization_id,
             user_id=user_id,
         )
@@ -166,7 +168,8 @@ async def import_signed_lease(
             user_id=user_id,
             organization_id=organization_id,
             applicant_id=applicant_id,
-            listing_id=listing_id,
+            listing_id=references.listing_id,
+            property_id=references.property_id,
             values={},
             starts_on=starts_on,
             ends_on=ends_on,

@@ -62,6 +62,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     applicant_id: "app-1",
     applicant_legal_name: null,
     listing_id: null,
+    property_id: null,
     kind: "generated",
     values: {},
     status: "draft",

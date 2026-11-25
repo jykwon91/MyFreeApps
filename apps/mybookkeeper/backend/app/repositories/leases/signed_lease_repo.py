@@ -26,6 +26,7 @@ async def create(
     status: str = "draft",
     kind: str = "generated",
     parent_lease_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
 ) -> SignedLease:
     """Insert a signed_leases row.
 
@@ -40,6 +41,7 @@ async def create(
         organization_id=organization_id,
         applicant_id=applicant_id,
         listing_id=listing_id,
+        property_id=property_id,
         values=values,
         starts_on=starts_on,
         ends_on=ends_on,

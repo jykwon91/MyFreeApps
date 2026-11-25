@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
+import { LEASE_PROPERTY_MESSAGES } from "@/shared/lib/lease-property-messages";
 import type { ApplicantListResponse } from "@mybookkeeper/api-client/types/applicant/applicant-list-response";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
@@ -72,6 +73,24 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   })),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
+  useGetPropertiesQuery: () => ({
+    data: [
+      { id: "prop-1", name: "Main House", is_active: true },
+      { id: "prop-2", name: "Back Cottage", is_active: true },
+    ],
+    error: undefined,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
+}));
+
+// The applicant's inquiry was for Main House unless a test says otherwise.
+const mockUseInquiryPropertyId = vi.fn();
+vi.mock("@mybookkeeper/api-client/hooks/useInquiryPropertyId", () => ({
+  useInquiryPropertyId: (inquiryId: unknown) => mockUseInquiryPropertyId(inquiryId),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -98,6 +117,7 @@ describe("LeaseImportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockImportMutation.mockReset();
+    mockUseInquiryPropertyId.mockReturnValue({ propertyId: "prop-1", isResolving: false });
   });
 
   it("renders the dialog with required elements", () => {
@@ -182,6 +202,7 @@ describe("LeaseImportDialog", () => {
       expect(mockImportMutation).toHaveBeenCalledOnce();
       const form = mockImportMutation.mock.calls[0][0] as FormData;
       expect(form.get("applicant_id")).toBe("app-1");
+      expect(form.get("property_id")).toBe("prop-1");
       expect(form.get("status")).toBe("signed");
       expect(form.getAll("files")).toEqual([file]);
     });
@@ -279,5 +300,58 @@ describe("LeaseImportDialog", () => {
     const removeBtn = screen.getByTestId("import-remove-file-0");
     fireEvent.click(removeBtn);
     expect(screen.queryByText("lease.pdf")).not.toBeInTheDocument();
+  });
+
+  describe("the house", () => {
+    function pickApplicantAndFile() {
+      fireEvent.change(screen.getByTestId("import-applicant-select"), { target: { value: "app-1" } });
+      fireEvent.change(screen.getByTestId("import-file-input"), { target: { files: [makeFile("lease.pdf")] } });
+    }
+
+    it("starts on the inquiry's house and says where it came from", () => {
+      renderDialog();
+      pickApplicantAndFile();
+
+      expect(screen.getByTestId("import-property-select")).toHaveValue("prop-1");
+      expect(screen.getByTestId("import-property-select-hint")).toHaveTextContent(LEASE_PROPERTY_MESSAGES.prefilledHint);
+    });
+
+    it("won't import without a house, and sends the one picked", async () => {
+      mockUseInquiryPropertyId.mockReturnValue({ propertyId: null, isResolving: false });
+      mockImportMutation.mockImplementation(() => ({
+        unwrap: vi.fn().mockResolvedValue({ id: "lease-1", attachments: [], kind: "imported", status: "signed", templates: [] }),
+      }));
+      renderDialog();
+      pickApplicantAndFile();
+
+      expect(screen.getByTestId("import-submit")).toBeDisabled();
+      fireEvent.change(screen.getByTestId("import-property-select"), { target: { value: "prop-2" } });
+      expect(screen.getByTestId("import-submit")).not.toBeDisabled();
+      fireEvent.submit(screen.getByTestId("lease-import-form"));
+
+      await waitFor(() => expect(mockImportMutation).toHaveBeenCalledOnce());
+      expect((mockImportMutation.mock.calls[0][0] as FormData).get("property_id")).toBe("prop-2");
+    });
+
+    it("holds the import while the inquiry's house is looked up", () => {
+      mockUseInquiryPropertyId.mockReturnValue({ propertyId: null, isResolving: true });
+      renderDialog();
+      pickApplicantAndFile();
+
+      expect(screen.getByTestId("import-property-select-skeleton")).toBeInTheDocument();
+      expect(screen.getByTestId("import-submit")).toBeDisabled();
+    });
+
+    it("says so when the listing is for another house", async () => {
+      const { showError } = await import("@platform/ui");
+      mockImportMutation.mockImplementation(() => ({
+        unwrap: vi.fn().mockRejectedValue({ status: 422, data: { detail: { code: "LISTING_PROPERTY_MISMATCH", message: "x" } } }),
+      }));
+      renderDialog();
+      pickApplicantAndFile();
+      fireEvent.submit(screen.getByTestId("lease-import-form"));
+
+      await waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_PROPERTY_MESSAGES.listingMismatch));
+    });
   });
 });

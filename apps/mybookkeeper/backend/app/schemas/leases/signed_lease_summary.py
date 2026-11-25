@@ -16,6 +16,8 @@ class SignedLeaseSummary(BaseModel):
     template_ids: list[uuid.UUID] = []
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
+    # The house rent for this lease is filed under. NULL = none recorded.
+    property_id: uuid.UUID | None = None
     kind: str
     status: str
     starts_on: _dt.date | None = None

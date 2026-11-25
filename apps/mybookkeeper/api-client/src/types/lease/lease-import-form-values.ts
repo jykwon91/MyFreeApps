@@ -2,6 +2,7 @@
 export interface LeaseImportFormValues {
   applicantId: string;
   listingId: string;
+  propertyId: string;
   startsOn: string;
   endsOn: string;
   notes: string;

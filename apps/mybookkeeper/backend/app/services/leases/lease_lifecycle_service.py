@@ -16,7 +16,10 @@ from app.db.session import unit_of_work
 from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_repo
 from app.services.leases.lease_documents_lock import lease_documents_locked
-from app.services.leases.lease_references import resolve_lease_listing_id
+from app.services.leases.lease_references import (
+    property_change_fields,
+    resolve_lease_references,
+)
 from app.repositories.leases import (
     lease_template_placeholder_repo,
     lease_template_repo,
@@ -55,6 +58,7 @@ async def create_lease(
     listing_id: uuid.UUID | None,
     values: dict[str, Any],
     parent_lease_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     """Create a draft signed lease from one or more templates.
 
@@ -118,9 +122,10 @@ async def create_lease(
 
         starts, ends = _denormalise_dates(values)
 
-        listing_id = await resolve_lease_listing_id(
+        references = await resolve_lease_references(
             db,
             listing_id=listing_id,
+            property_id=property_id,
             applicant_id=applicant_id,
             organization_id=organization_id,
             user_id=user_id,
@@ -131,7 +136,8 @@ async def create_lease(
             user_id=user_id,
             organization_id=organization_id,
             applicant_id=applicant_id,
-            listing_id=listing_id,
+            listing_id=references.listing_id,
+            property_id=references.property_id,
             values=values,
             starts_on=starts,
             ends_on=ends,
@@ -277,7 +283,10 @@ async def update_lease(
     status: str | None,
     values: dict[str, Any] | None,
     auto_email_tenant: bool | None = None,
+    property_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
+    """Apply the host's edits. The house can change at any status — it is how
+    an existing lease gets filed under the right property."""
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
             db,
@@ -306,6 +315,11 @@ async def update_lease(
 
         if auto_email_tenant is not None:
             fields["auto_email_tenant"] = auto_email_tenant
+
+        if property_id is not None:
+            fields.update(await property_change_fields(
+                db, lease=lease, property_id=property_id, organization_id=organization_id,
+            ))
 
         if values is not None:
             if lease.status != "draft" or await lease_documents_locked(db, lease):

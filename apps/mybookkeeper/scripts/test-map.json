@@ -1690,6 +1690,8 @@
         "backend/app/core/lease_render_constants.py",
         "backend/app/repositories/lock_timeout_repo.py",
         "backend/app/api/lease_render_error_mapping.py",
+        "backend/app/api/lease_reference_error_mapping.py",
+        "backend/app/core/lease_property_constants.py",
         "backend/app/api/signed_lease_import_files.py",
         "backend/tests/audited_row_factory.py"
       ],
@@ -1700,6 +1702,9 @@
         "test_lease_templates_api.py",
         "test_lease_import_api.py",
         "test_lease_references.py",
+        "test_lease_property.py",
+        "test_lease_property_migration.py",
+        "test_listing_resolution.py",
         "test_lease_import_heuristic.py",
         "test_default_source_resolver.py",
         "test_lease_client_local_date.py",
@@ -1739,6 +1744,7 @@
         "LeaseImportDialog.test.tsx",
         "PeoplePickersLoadMore.test.tsx",
         "LeaseGenerateForm.test.tsx",
+        "LeaseHouseCard.test.tsx",
         "LeaseNew.test.tsx",
         "ApplicantPicker.test.tsx",
         "LeaseTemplatesLoadMore.test.tsx",
@@ -1766,6 +1772,7 @@
         "lease-documents-locked.spec.ts",
         "mocked/lease-template-source-mock.spec.ts",
         "mocked/lease-import-applicant-pages-mock.spec.ts",
+        "mocked/lease-house-mock.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts",
         "mocked/sections-retry-mock.spec.ts"
       ]

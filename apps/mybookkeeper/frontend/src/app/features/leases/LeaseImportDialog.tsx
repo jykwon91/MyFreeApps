@@ -12,6 +12,11 @@ import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportF
 import { LEASE_IMPORT_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
 import { leaseImportForm } from "@/shared/lib/lease-upload-form";
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { useInquiryPropertyId } from "@mybookkeeper/api-client/hooks/useInquiryPropertyId";
+import { isListingPropertyMismatchFailure } from "@mybookkeeper/api-client/utils/isListingPropertyMismatchFailure";
+import { isLeasePropertyNotFoundFailure } from "@mybookkeeper/api-client/utils/isLeasePropertyNotFoundFailure";
+import LeaseHouseField from "@/app/features/leases/LeaseHouseField";
+import { LEASE_PROPERTY_MESSAGES } from "@/shared/lib/lease-property-messages";
 
 export interface LeaseImportDialogProps {
   onClose: () => void;
@@ -34,15 +39,19 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
 
   const [applicantId, setApplicantId] = useState("");
   const [listingId, setListingId] = useState("");
+  const [pickedPropertyId, setPickedPropertyId] = useState<string | null>(null);
+  const inquiryProperty = useInquiryPropertyId(applicants.find((a) => a.id === applicantId)?.inquiry_id);
+  const propertyId = pickedPropertyId ?? inquiryProperty.propertyId ?? "";
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const values: LeaseImportFormValues = { applicantId, listingId, startsOn, endsOn, notes };
+  const values: LeaseImportFormValues = { applicantId, listingId, propertyId, startsOn, endsOn, notes };
   const problems = leaseImportProblems(values, files.length);
-  const isValid = Object.keys(problems).length === 0;
+  // The house is required here; the shared form rules leave it optional for the phone app, which has no picker yet.
+  const isValid = Object.keys(problems).length === 0 && propertyId !== "" && !inquiryProperty.isResolving;
   const endsOnFeedback = {
     id: "import-ends-on",
     error: problems.endsOn && LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn],
@@ -73,8 +82,10 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
         `Lease imported with ${count} ${count === 1 ? "attachment" : "attachments"}.`,
       );
       navigate(`/leases/${result.id}`);
-    } catch {
-      showError("Couldn't import the lease. Please check the files and try again.");
+    } catch (error: unknown) {
+      if (isListingPropertyMismatchFailure(error)) showError(LEASE_PROPERTY_MESSAGES.listingMismatch);
+      else if (isLeasePropertyNotFoundFailure(error)) showError(LEASE_PROPERTY_MESSAGES.propertyNotFound);
+      else showError("Couldn't import the lease. Please check the files and try again.");
     }
   }
 
@@ -102,7 +113,10 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
             <PagedSelect
               id="import-applicant"
               value={applicantId}
-              onChange={(e) => setApplicantId(e.target.value)}
+              onChange={(e) => {
+                setApplicantId(e.target.value);
+                setPickedPropertyId(null);
+              }}
               required
               className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
               data-testid="import-applicant-select"
@@ -113,6 +127,16 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
               pages={applicantPages}
             />
           </div>
+
+          <LeaseHouseField
+            id="import-property"
+            value={propertyId}
+            onChange={setPickedPropertyId}
+            isPrefilled={pickedPropertyId === null && Boolean(inquiryProperty.propertyId)}
+            isLoading={inquiryProperty.isResolving}
+            disabled={isLoading}
+            testId="import-property-select"
+          />
 
           {/* Listing (optional) */}
           <div className="space-y-1">

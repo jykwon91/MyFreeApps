@@ -205,6 +205,7 @@ async def _to_detail(
         applicant_id=lease.applicant_id,
         applicant_legal_name=applicant_legal_name,
         listing_id=lease.listing_id,
+        property_id=lease.property_id,
         kind=lease.kind,
         values=dict(lease.values or {}),
         status=lease.status,
@@ -412,14 +413,17 @@ async def _load_resolution_context(
             organization_id=organization_id,
             user_id=user_id,
         )
-    property_record = None
-    if lease.listing_id is not None:
+    property_id = lease.property_id
+    if property_id is None and lease.listing_id is not None:
         listing = await listing_repo.get_by_id(
             db, lease.listing_id, organization_id,
         )
-        if listing is not None and listing.property_id is not None:
-            property_record = await property_repo.get_by_id(
-                db, listing.property_id, organization_id,
-            )
+        if listing is not None:
+            property_id = listing.property_id
+    property_record = None
+    if property_id is not None:
+        property_record = await property_repo.get_by_id(
+            db, property_id, organization_id,
+        )
     user_record = await user_repo.get_by_id(db, user_id)
     return applicant, inquiry, property_record, user_record

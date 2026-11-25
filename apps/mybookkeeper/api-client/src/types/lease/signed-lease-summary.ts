@@ -8,6 +8,8 @@ export interface SignedLeaseSummary {
   template_ids: string[];
   applicant_id: string;
   listing_id: string | null;
+  /** The house this lease's rent is filed under. Null = none recorded. */
+  property_id: string | null;
   kind: "generated" | "imported";
   status: SignedLeaseStatus;
   starts_on: string | null;

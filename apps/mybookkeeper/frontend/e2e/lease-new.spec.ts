@@ -3,6 +3,7 @@ import { deleteSignedLease } from "./fixtures/signed-leases";
 import { deleteTemplate } from "./fixtures/lease-templates";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 import { deleteApplicant } from "./fixtures/applicants";
+import { createProperty, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * E2E tests for /leases/new — the generate-lease page.
@@ -211,8 +212,11 @@ test.describe("Lease New page (/leases/new)", () => {
       const seededApplicantIds: string[] = [];
       const seededLeaseIds: string[] = [];
       const seededInquiryIds: string[] = [];
+      const seededPropertyIds: string[] = [];
 
       try {
+        const house = await createProperty(api, { name: `E2E Lease House ${runId}` });
+        seededPropertyIds.push(house.id);
         const templateId = await seedTemplate(api, {
           name: `E2E Generate Full ${runId}`,
         });
@@ -283,6 +287,9 @@ test.describe("Lease New page (/leases/new)", () => {
         await page.waitForLoadState("networkidle");
         const submitBtn = page.getByTestId("lease-generate-submit");
         await expect(submitBtn).toBeVisible({ timeout: 10_000 });
+        // The inquiry has no listing, so there's no house to start on: submit waits for one.
+        await expect(submitBtn).toBeDisabled();
+        await page.getByTestId("lease-generate-property").selectOption({ label: `E2E Lease House ${runId}` });
         // Submit stays disabled until the placeholder defaults have loaded.
         await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
         const createResponse = page.waitForResponse(
@@ -304,11 +311,14 @@ test.describe("Lease New page (/leases/new)", () => {
         await page.waitForURL(/\/leases\/[0-9a-f-]{36}$/, { timeout: 15_000 });
         const leaseId = page.url().split("/leases/")[1];
         if (leaseId) seededLeaseIds.push(leaseId);
+        expect(((await created.json()) as { property_id: string | null }).property_id).toBe(house.id);
+        await expect(page.getByTestId("lease-house-name")).toHaveText(`E2E Lease House ${runId}`);
       } finally {
         for (const id of seededLeaseIds) await deleteSignedLease(api, id);
         for (const id of seededTemplateIds) await deleteTemplate(api, id);
         for (const id of seededApplicantIds) await deleteApplicant(api, id);
         for (const id of seededInquiryIds) await deleteInquiry(api, id);
+        for (const id of seededPropertyIds) await deleteProperty(api, id);
       }
     },
   );

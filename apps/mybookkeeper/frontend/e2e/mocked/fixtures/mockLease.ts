@@ -30,6 +30,7 @@ export const DRAFT_LEASE: SignedLeaseDetail = {
   applicant_id: APPLICANT_ID,
   applicant_legal_name: "Jane Doe",
   listing_id: null,
+  property_id: null,
   kind: "generated",
   values: {},
   status: "draft",

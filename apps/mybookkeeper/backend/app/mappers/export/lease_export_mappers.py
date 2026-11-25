@@ -64,6 +64,7 @@ SIGNED_LEASES_EXPORT: Final = TableExportMapper(
         "organization_id",
         "applicant_id",
         "listing_id",
+        "property_id",
         "parent_lease_id",
         "kind",
         "values",

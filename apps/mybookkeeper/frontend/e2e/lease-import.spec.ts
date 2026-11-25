@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteApplicant } from "./fixtures/applicants";
 import { deleteSignedLease } from "./fixtures/signed-leases";
+import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { toastRegion } from "@platform/ui/test-support/toast";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -154,6 +155,7 @@ test.describe("Import Signed Lease", () => {
       const applicantName = `E2E Dialog Submit ${runId}`;
       const seededApplicantIds: string[] = [];
       const seededLeaseIds: string[] = [];
+      const house = await createProperty(api, { name: `E2E Import House ${runId}` });
 
       try {
         const applicantId = await seedApplicant(api, applicantName);
@@ -170,9 +172,10 @@ test.describe("Import Signed Lease", () => {
         const dialog = page.getByTestId("lease-import-dialog");
         await expect(dialog).toBeVisible({ timeout: 5000 });
 
-        // Select applicant.
+        // Select applicant, then the house (an applicant with no inquiry has none to start on).
         const applicantSelect = page.getByTestId("import-applicant-select");
         await applicantSelect.selectOption({ label: applicantName });
+        await page.getByTestId("import-property-select").selectOption({ label: `E2E Import House ${runId}` });
 
         // Upload a PDF.
         const pdfFixture = path.join(
@@ -210,9 +213,11 @@ test.describe("Import Signed Lease", () => {
         expect(leaseRes.status(), await leaseRes.text()).toBe(200);
         const lease = (await leaseRes.json()) as {
           kind: string;
+          property_id: string | null;
           attachments: { filename: string; is_available: boolean; presigned_url: string | null }[];
         };
         expect(lease.kind).toBe("imported");
+        expect(lease.property_id).toBe(house.id);
         expect(lease.attachments.map((a) => [a.filename, a.is_available])).toEqual([
           ["advertising-invoice.pdf", true],
         ]);
@@ -228,6 +233,7 @@ test.describe("Import Signed Lease", () => {
         for (const id of seededApplicantIds) {
           await deleteApplicant(api, id);
         }
+        await deleteProperty(api, house.id);
       }
     },
   );
@@ -237,6 +243,7 @@ test.describe("Import Signed Lease", () => {
     async ({ authedPage: page, api }) => {
       const applicantName = `E2E Import Broken Photo ${Date.now()}`;
       const applicantId = await seedApplicant(api, applicantName);
+      const house = await createProperty(api, { name: `${applicantName} house` });
 
       try {
         await page.goto("/leases");
@@ -247,6 +254,7 @@ test.describe("Import Signed Lease", () => {
         const dialog = page.getByTestId("lease-import-dialog");
         await expect(dialog).toBeVisible({ timeout: 5000 });
         await page.getByTestId("import-applicant-select").selectOption({ label: applicantName });
+        await page.getByTestId("import-property-select").selectOption({ label: `${applicantName} house` });
 
         // JPEG magic bytes on a body that isn't an image, labelled as a PDF:
         // the server reads the bytes, sees a photo, and can't re-encode it.
@@ -272,6 +280,7 @@ test.describe("Import Signed Lease", () => {
         expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
       } finally {
         await deleteApplicant(api, applicantId);
+        await deleteProperty(api, house.id);
       }
     },
   );

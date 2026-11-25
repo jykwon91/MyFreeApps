@@ -24,6 +24,7 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.insurance import insurance_policy_repo
 from app.services.insurance import insurance_attachment_present, insurance_policy_service
 from app.services.leases import lease_attachment_service, lease_import_service
+from app.services.leases.resolved_lease_references import ResolvedLeaseReferences
 from app.services.screening import screening_service
 from app.services.screening.report_processor import ProcessedReport
 from tests.lease_regenerate_support import lease_with_rendered_attachment, real_uow  # noqa: F401 — fixture
@@ -61,7 +62,7 @@ async def _lease_import(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> Pa
     user_id, org_id = uuid.uuid4(), uuid.uuid4()
     svc = lease_import_service
     monkeypatch.setattr(svc, "clean_attachment", lambda *_a: PDF)
-    monkeypatch.setattr(svc, "resolve_lease_listing_id", AsyncMock(return_value=None))
+    monkeypatch.setattr(svc, "resolve_lease_references", AsyncMock(return_value=ResolvedLeaseReferences(None, None)))
     monkeypatch.setattr(svc, "get_lease", AsyncMock())
 
     async def upload() -> object:

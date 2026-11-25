@@ -24,6 +24,7 @@ from fastapi import (
 )
 from platform_shared.api.storage_http import storage_not_configured_http_exception
 
+from app.api.lease_reference_error_mapping import lease_reference_errors
 from app.api.lease_render_error_mapping import lease_render_errors
 from app.api.signed_lease_import_files import read_import_files
 from app.core.context import RequestContext
@@ -72,21 +73,19 @@ async def create_lease(
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        return await signed_lease_service.create_lease(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            template_ids=payload.resolved_template_ids,
-            applicant_id=payload.applicant_id,
-            listing_id=payload.listing_id,
-            values=payload.values,
-            parent_lease_id=payload.parent_lease_id,
-        )
+        with lease_reference_errors():
+            return await signed_lease_service.create_lease(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                template_ids=payload.resolved_template_ids,
+                applicant_id=payload.applicant_id,
+                listing_id=payload.listing_id,
+                property_id=payload.property_id,
+                values=payload.values,
+                parent_lease_id=payload.parent_lease_id,
+            )
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
-    except signed_lease_service.ApplicantNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Applicant not found") from exc
-    except signed_lease_service.ListingNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Listing not found") from exc
     except signed_lease_service.MissingRequiredValuesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except signed_lease_service.InvalidParentLeaseError as exc:
@@ -105,6 +104,7 @@ async def create_lease(
 async def import_lease(
     applicant_id: uuid.UUID = Form(...),
     listing_id: uuid.UUID | None = Form(None),
+    property_id: uuid.UUID | None = Form(None),
     starts_on: _dt.date | None = Form(None),
     ends_on: _dt.date | None = Form(None),
     notes: str | None = Form(None),
@@ -123,22 +123,20 @@ async def import_lease(
     file_tuples = await read_import_files(files)
 
     try:
-        return await signed_lease_service.import_signed_lease(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            applicant_id=applicant_id,
-            listing_id=listing_id,
-            starts_on=starts_on,
-            ends_on=ends_on,
-            notes=notes,
-            status=status,
-            files=file_tuples,
-            parent_lease_id=parent_lease_id,
-        )
-    except signed_lease_service.ApplicantNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Applicant not found") from exc
-    except signed_lease_service.ListingNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Listing not found") from exc
+        with lease_reference_errors():
+            return await signed_lease_service.import_signed_lease(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                applicant_id=applicant_id,
+                listing_id=listing_id,
+                property_id=property_id,
+                starts_on=starts_on,
+                ends_on=ends_on,
+                notes=notes,
+                status=status,
+                files=file_tuples,
+                parent_lease_id=parent_lease_id,
+            )
     except signed_lease_service.InvalidParentLeaseError as exc:
         raise HTTPException(
             status_code=422,
@@ -205,7 +203,7 @@ async def update_lease(
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        with lease_render_errors():
+        with lease_render_errors(), lease_reference_errors():
             return await signed_lease_service.update_lease(
                 user_id=ctx.user_id,
                 organization_id=ctx.organization_id,
@@ -214,6 +212,7 @@ async def update_lease(
                 status=payload.status,
                 values=payload.values,
                 auto_email_tenant=payload.auto_email_tenant,
+                property_id=payload.property_id,
             )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc

@@ -66,6 +66,16 @@ class SignedLease(Base):
         index=True,
         nullable=True,
     )
+    # The house the lease is for. Rent attribution reads it first, so a tenant
+    # is tied to a house even when that house has no listing. Set from the
+    # request, else the listing, else the applicant's inquiry listing; the
+    # service checks it is one of the organization's properties.
+    property_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("properties.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
 
     # Successor-lease pointer: when the host creates a new lease that
     # supersedes this one (rent change, term change, occupants change),

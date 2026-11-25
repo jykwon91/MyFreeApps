@@ -9,6 +9,7 @@ export function aLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseD
     applicant_id: "a1",
     applicant_legal_name: "Dana Reed",
     listing_id: null,
+    property_id: null,
     kind: "imported",
     values: {},
     status: "active",

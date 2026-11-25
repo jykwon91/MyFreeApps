@@ -34,7 +34,7 @@ from app.services.leases._lease_helpers import (
     ApplicantNotFoundError,
     ListingNotFoundError,
 )
-from app.services.leases.lease_references import resolve_lease_listing_id
+from app.services.leases.lease_references import resolve_lease_references
 
 ORG = uuid.uuid4()
 USER = uuid.uuid4()
@@ -70,7 +70,7 @@ async def _listing(db: AsyncSession, *, org_id: uuid.UUID, user_id: uuid.UUID) -
 
 
 # ---------------------------------------------------------------------------
-# resolve_lease_listing_id
+# resolve_lease_references
 # ---------------------------------------------------------------------------
 
 
@@ -79,12 +79,13 @@ async def test_keeps_an_explicit_listing_of_the_same_organization(db: AsyncSessi
     applicant = await _applicant(db, org_id=ORG, user_id=USER)
     listing = await _listing(db, org_id=ORG, user_id=USER)
 
-    resolved = await resolve_lease_listing_id(
-        db, applicant_id=applicant.id, listing_id=listing.id,
+    resolved = await resolve_lease_references(
+        db, applicant_id=applicant.id, listing_id=listing.id, property_id=None,
         organization_id=ORG, user_id=USER,
     )
 
-    assert resolved == listing.id
+    assert resolved.listing_id == listing.id
+    assert resolved.property_id == listing.property_id
 
 
 @pytest.mark.asyncio
@@ -93,8 +94,8 @@ async def test_rejects_a_listing_of_another_organization(db: AsyncSession) -> No
     foreign = await _listing(db, org_id=OTHER_ORG, user_id=OTHER_USER)
 
     with pytest.raises(ListingNotFoundError):
-        await resolve_lease_listing_id(
-            db, applicant_id=applicant.id, listing_id=foreign.id,
+        await resolve_lease_references(
+            db, applicant_id=applicant.id, listing_id=foreign.id, property_id=None,
             organization_id=ORG, user_id=USER,
         )
 
@@ -104,8 +105,8 @@ async def test_rejects_an_applicant_of_another_organization(db: AsyncSession) ->
     foreign = await _applicant(db, org_id=OTHER_ORG, user_id=OTHER_USER)
 
     with pytest.raises(ApplicantNotFoundError):
-        await resolve_lease_listing_id(
-            db, applicant_id=foreign.id, listing_id=None,
+        await resolve_lease_references(
+            db, applicant_id=foreign.id, listing_id=None, property_id=None,
             organization_id=ORG, user_id=USER,
         )
 
@@ -122,12 +123,13 @@ async def test_defaults_to_the_inquiry_listing_when_none_is_sent(db: AsyncSessio
     await db.flush()
     applicant = await _applicant(db, org_id=ORG, user_id=USER, inquiry_id=inquiry.id)
 
-    resolved = await resolve_lease_listing_id(
-        db, applicant_id=applicant.id, listing_id=None,
+    resolved = await resolve_lease_references(
+        db, applicant_id=applicant.id, listing_id=None, property_id=None,
         organization_id=ORG, user_id=USER,
     )
 
-    assert resolved == listing.id
+    assert resolved.listing_id == listing.id
+    assert resolved.property_id == listing.property_id
 
 
 # ---------------------------------------------------------------------------
