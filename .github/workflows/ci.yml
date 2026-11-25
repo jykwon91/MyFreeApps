@@ -259,7 +259,6 @@ jobs:
     steps:
       - name: Every relevant required area passed
         env:
-          CANCELLED: ${{ cancelled() }}
           MBK_RELEVANT: ${{ needs.changes.outputs.mybookkeeper }}
           MBK_RESULT: ${{ needs.mybookkeeper.result }}
           MJH_RELEVANT: ${{ needs.changes.outputs.myjobhunter }}
@@ -270,7 +269,7 @@ jobs:
           set -u
           failed=0
           check() {
-            # $1 area, $2 relevant flag, $3 job result. Only an explicit `false` excuses a skip.
+            # $1 area, $2 relevant flag, $3 job result. Only an explicit `false` excuses a skip, so a cancelled run fails.
             if [ "$2" = "false" ]; then
               echo "$1: not affected by this PR"
             elif [ "$3" = "success" ]; then
@@ -283,8 +282,4 @@ jobs:
           check mybookkeeper "$MBK_RELEVANT" "$MBK_RESULT"
           check myjobhunter "$MJH_RELEVANT" "$MJH_RESULT"
           check shared-backend "$SHARED_BACKEND_RELEVANT" "$SHARED_BACKEND_RESULT"
-          if [ "$CANCELLED" = "true" ]; then
-            echo "::error::The run was cancelled"
-            failed=1
-          fi
           exit "$failed"
