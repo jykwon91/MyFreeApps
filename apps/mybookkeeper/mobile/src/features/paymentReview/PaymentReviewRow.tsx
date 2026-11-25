@@ -1,4 +1,5 @@
 import { attributionPayoutLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
+import { PERSONAL_TRANSFER_LABELS } from "@mybookkeeper/api-client/constants/personalTransferLabels";
 import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { ClampedText, ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
@@ -13,6 +14,7 @@ import {
   confirmLabel,
   isPayout,
   payerName,
+  personalTransferActionLabel,
   pickActionLabel,
   pickLabel,
   proposedTarget,
@@ -30,7 +32,8 @@ interface PaymentReviewRowProps {
 
 export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { isConfirming, isSkipping, linkTenant, bookProperty, askToLinkTenant, askToSkip } = usePaymentReviewActions(item);
+  const { isConfirming, isSkipping, isMarkingPersonal, linkTenant, bookProperty, askToLinkTenant, askToSkip, markPersonalTransfer } =
+    usePaymentReviewActions(item);
   // A sheet loads its list when it first mounts, so a row nobody opens loads nothing.
   const [hasOpenedSheet, setHasOpenedSheet] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
@@ -38,7 +41,7 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
   const transaction = item.transaction;
   const payout = isPayout(item);
   const target = proposedTarget(item);
-  const isBusy = isConfirming || isSkipping;
+  const isBusy = isConfirming || isSkipping || isMarkingPersonal;
   const amount = transaction ? formatCurrency(Number(transaction.amount)) : null;
   const dateLine = transaction
     ? [shortDate(transaction.transaction_date), payout && transaction.channel ? attributionPayoutLabel(transaction.channel) : null].filter(Boolean).join(" · ")
@@ -112,6 +115,19 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
               onPress={openSheet}
             >
               {pickLabel(item)}
+            </LoadingButton>
+          )}
+          {payout ? null : (
+            <LoadingButton
+              accessibilityHint={MESSAGES.personalTransferHint}
+              accessibilityLabel={personalTransferActionLabel(item)}
+              disabled={isBusy}
+              isLoading={isMarkingPersonal}
+              loadingText={PERSONAL_TRANSFER_LABELS.markOnCardPending}
+              onPress={() => void markPersonalTransfer()}
+              variant="secondary"
+            >
+              {PERSONAL_TRANSFER_LABELS.markOnCard}
             </LoadingButton>
           )}
           <LoadingButton

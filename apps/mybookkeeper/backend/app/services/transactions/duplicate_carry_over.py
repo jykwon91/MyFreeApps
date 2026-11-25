@@ -5,6 +5,7 @@ Pure: it reads and sets attributes on already-loaded rows and touches no session
 from app.core.duplicate_merge_constants import CARRY_OVER_FIELD_GROUPS, CONFLICTING_LINK_LABELS
 from app.models.transactions.transaction import Transaction
 from app.services.transactions.merge_conflict_error import MergeConflictError
+from app.services.transactions.personal_transfer_status import carry_personal_transfer
 
 
 def _is_set(value: object) -> bool:
@@ -25,7 +26,8 @@ def carry_over_fields(survivor: Transaction, removed: list[Transaction]) -> None
     """Copy each field group the survivor lacks from the first removed row that has it.
 
     Raises ``MergeConflictError`` before changing anything when two rows hold
-    different tenants, vendors or activities.
+    different tenants, vendors or activities. A removed row's personal-transfer
+    mark moves to the survivor, so merging never puts that money back in the totals.
     """
     updates: dict[str, object] = {}
     conflicts: list[str] = []
@@ -46,3 +48,5 @@ def carry_over_fields(survivor: Transaction, removed: list[Transaction]) -> None
         raise MergeConflictError(_conflict_message(conflicts))
     for field, value in updates.items():
         setattr(survivor, field, value)
+    for txn in removed:
+        carry_personal_transfer(txn, survivor)

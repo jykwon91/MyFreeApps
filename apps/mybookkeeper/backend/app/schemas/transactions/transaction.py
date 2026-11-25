@@ -30,7 +30,7 @@ def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
 
 TransactionType = Literal["income", "expense", "transfer"]
 TransactionScope = Literal["rental", "business", "personal"]
-TransactionStatus = Literal["pending", "approved", "needs_review", "duplicate", "unverified"]
+TransactionStatus = Literal["pending", "approved", "needs_review", "duplicate", "unverified", "personal_transfer"]
 # Same values as the chk_txn_category constraint: a row the database accepts has
 # to survive being read back.
 TransactionCategory = Literal[

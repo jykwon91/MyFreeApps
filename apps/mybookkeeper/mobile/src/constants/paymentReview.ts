@@ -43,4 +43,7 @@ export const PAYMENT_REVIEW_MESSAGES = {
   propertyGone: "I can't find that property anymore. Pick another one.",
   noTarget: "I need a tenant or property to link this to. Pick one and try again.",
   couldntSave: "I couldn't save that. Want to try again?",
+  personalTransferHint: "Not rent: money from a friend or relative. I'll skip this sender from now on.",
+  undo: "Undo",
+  undoHint: "Puts this payment back in Payment Review",
 } as const;

@@ -14,6 +14,7 @@ from app.repositories.tax import tax_return_repo
 from app.schemas.transactions.duplicate import DuplicateMergeOverrides
 from app.services.transactions.duplicate_absorb import absorb_duplicates
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
+from app.services.transactions.personal_transfer_status import set_status
 from app.services.transactions.scope_rules import apply_scope_rules
 from app.services.transactions.transfer_rules import transfer_overrides
 
@@ -154,8 +155,8 @@ async def merge_transactions(
             setattr(survivor, field, value)
         apply_scope_rules(survivor)
 
-        # Mark the survivor as approved and reviewed
-        survivor.status = COUNTED_STATUS
+        # Mark the survivor as approved and reviewed (a personal transfer stays one)
+        set_status(survivor, COUNTED_STATUS)
         survivor.duplicate_reviewed_at = datetime.now(timezone.utc)
         await tax_return_repo.flag_unfiled_if_totals_moved(db, survivor, old_survivor_tax_inputs)
 

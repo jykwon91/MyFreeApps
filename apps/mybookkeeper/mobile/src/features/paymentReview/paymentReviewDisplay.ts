@@ -1,4 +1,5 @@
 import { attributionPayoutLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
+import { PERSONAL_TRANSFER_LABELS } from "@mybookkeeper/api-client/constants/personalTransferLabels";
 import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
 import { TENANT_PICKER_MESSAGES } from "../../constants/tenantPicker";
@@ -64,6 +65,10 @@ export function pickActionLabel(item: AttributionReviewItem): string {
 
 export function skipActionLabel(item: AttributionReviewItem): string {
   return `Skip ${paymentPhrase(item)}`;
+}
+
+export function personalTransferActionLabel(item: AttributionReviewItem): string {
+  return `${PERSONAL_TRANSFER_LABELS.markOnCard}: ${paymentPhrase(item)}`;
 }
 
 export function rowLabel(item: AttributionReviewItem): string {

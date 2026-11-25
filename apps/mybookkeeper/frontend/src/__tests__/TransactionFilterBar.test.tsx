@@ -53,7 +53,7 @@ describe("TransactionFilterBar", () => {
     const status = screen.getByRole("combobox", { name: "Filter by status" });
 
     expect(within(status).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified",
+      "All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified", "Personal Transfer",
     ]);
     await userEvent.selectOptions(status, "needs_review");
 

@@ -20,6 +20,7 @@ from app.schemas.transactions.transaction_selection_ref import TransactionSelect
 from app.services.classification import rule_learning_service
 from app.services.transactions.capital_improvement import placed_in_service_date_for
 from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
+from app.services.transactions.personal_transfer_status import assert_status_editable
 from app.services.transactions.reference_ownership import assert_references_owned
 from app.services.transactions.scope_rules import apply_scope_rules, scope_overrides
 from app.services.transactions.transfer_rules import transfer_overrides
@@ -205,6 +206,8 @@ async def update_transaction(
         for field in updates:
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
+        if "status" in updates:
+            assert_status_editable(txn, updates["status"])
         await assert_references_owned(
             db, organization_id=ctx.organization_id, user_id=ctx.user_id, fields=updates,
         )

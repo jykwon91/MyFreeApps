@@ -74,6 +74,7 @@ TRANSACTIONS_EXPORT: Final = TableExportMapper(
         "address",
         "payment_method",
         "status",
+        "status_before_personal_transfer",
         "review_fields",
         "review_reason",
         "reconciled",

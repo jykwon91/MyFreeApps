@@ -1,12 +1,13 @@
 """Unified test-helpers router.
 
-Aggregates the sub-routers (auth, seed, lease_template_seed, document_seed, extraction_seed, gmail_seed, gmail_sync_seed, rent_seed, tax_seed, tax_advisor_seed, mocks) into a single router
+Aggregates the sub-routers (auth, seed, attribution_seed, lease_template_seed, document_seed, extraction_seed, gmail_seed, gmail_sync_seed, rent_seed, tax_seed, tax_advisor_seed, mocks) into a single router
 suitable for conditional mounting in ``app/main.py``.
 """
 
 from fastapi import APIRouter
 
 from app.test_helpers import (
+    attribution_seed,
     auth,
     document_seed,
     extraction_seed,
@@ -25,6 +26,7 @@ router = APIRouter(tags=["test"])
 
 router.include_router(auth.router)
 router.include_router(seed.router)
+router.include_router(attribution_seed.router)
 router.include_router(lease_template_seed.router)
 router.include_router(document_seed.router)
 router.include_router(extraction_seed.router)

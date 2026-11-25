@@ -12,6 +12,8 @@ import {
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import AttributionChannelBadge from "./AttributionChannelBadge";
 import AttributionTenantPicker from "./AttributionTenantPicker";
+import PersonalTransferButton from "../personal-transfer/PersonalTransferButton";
+import { usePersonalTransferActions } from "../personal-transfer/usePersonalTransferActions";
 
 export interface AttributionReviewItemProps {
   item: ReviewItemType;
@@ -39,6 +41,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const [confirmReview, { isLoading: isConfirming }] = useConfirmAttributionReviewMutation();
   const [rejectReview, { isLoading: isRejecting }] = useRejectAttributionReviewMutation();
   const [attributeManually, { isLoading: isAttributing }] = useAttributeTransactionManuallyMutation();
+  const { mark: markPersonalTransfer, isMarking } = usePersonalTransferActions();
   const [isActing, setIsActing] = useState(false);
   const [pickedApplicantId, setPickedApplicantId] = useState<string>("");
   const [pickedPropertyId, setPickedPropertyId] = useState<string>("");
@@ -126,7 +129,9 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const amount = txn ? formatCurrency(parseFloat(txn.amount)) : "—";
   const txnDate = formatLocaleDate(txn?.transaction_date);
 
-  const anyLoading = (isConfirming || isRejecting || isAttributing) && isActing;
+  const isResolving = (isConfirming || isRejecting || isAttributing) && isActing;
+  // A mark in flight holds every other action, so the card can't be resolved twice.
+  const anyLoading = isResolving || isMarking;
   const rejectLabel = rejectLabelFor(isPropertyRow, isUnmatched);
 
   // ---- Row-shape resolution (mutually exclusive) ------------------------
@@ -276,7 +281,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           </div>
         )}
       </div>
-      <div data-testid="attribution-review-item-actions" className="flex items-center gap-2 shrink-0">
+      <div data-testid="attribution-review-item-actions" className="flex flex-wrap items-center gap-2 shrink-0">
         {isFuzzyApplicant && (
           <LoadingButton
             variant="primary"
@@ -284,7 +289,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
             isLoading={isConfirming && isActing}
             loadingText="Saving..."
             onClick={handleConfirm}
-            disabled={(isRejecting || isAttributing) && isActing}
+            disabled={((isRejecting || isAttributing) && isActing) || isMarking}
           >
             <CheckCircle className="h-4 w-4 mr-1" aria-hidden="true" />
             Yes, that's them
@@ -297,7 +302,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
             isLoading={isConfirming && isActing}
             loadingText="Assigning..."
             onClick={() => handleConfirmProperty(proposedProperty.id)}
-            disabled={(isRejecting || isAttributing) && isActing}
+            disabled={((isRejecting || isAttributing) && isActing) || isMarking}
           >
             <Home className="h-4 w-4 mr-1" aria-hidden="true" />
             Assign to {truncateName(proposedProperty.name)}
@@ -309,11 +314,18 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           isLoading={isRejecting && isActing}
           loadingText="Skipping..."
           onClick={handleReject}
-          disabled={(isConfirming || isAttributing) && isActing}
+          disabled={((isConfirming || isAttributing) && isActing) || isMarking}
         >
           <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
           {rejectLabel}
         </LoadingButton>
+        {!isPropertyRow && txn && (
+          <PersonalTransferButton
+            onMark={() => void markPersonalTransfer(txn.id)}
+            isMarking={isMarking}
+            disabled={isResolving}
+          />
+        )}
       </div>
     </div>
   );

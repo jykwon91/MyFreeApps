@@ -31,7 +31,9 @@ from app.services.transactions.attribution_helpers import (
     _get_lease_signed_applicants,
     _get_property_id_for_applicant,
 )
+from app.services.transactions import personal_transfer_service
 from app.services.transactions.attribution_matcher import find_best_match, resolve_alias
+from app.services.transactions.personal_transfer_status import is_personal_transfer
 from app.services.transactions.rent_payment_rules import file_as_rent
 
 logger = logging.getLogger(__name__)
@@ -103,6 +105,13 @@ async def _attribute_payment(
     # (confirm / manual-link read them back to seed the learned alias).
     txn.payer_name = payer_name
     txn.payer_handle = payer_handle
+
+    # A personal transfer (marked on a copy this row replaces, or from a
+    # remembered sender) is not rent, so there is nothing to attribute or review.
+    if is_personal_transfer(txn) or await personal_transfer_service.mark_if_remembered_sender(
+        db, txn, organization_id,
+    ):
+        return
 
     # Pass 0 — learned alias. A payer the host previously confirmed / linked to
     # a tenant auto-attributes without review ("remember for next time"). This
@@ -329,6 +338,7 @@ async def confirm_review(
                     source="confirm",
                     payer_handle=txn.payer_handle,
                 )
+                await personal_transfer_service.forget_sender_of(db, txn, organization_id)
             await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
             return {"ok": True, "transaction_id": str(txn.id)}
 
@@ -388,6 +398,8 @@ async def attribute_manually(
         txn = await txn_repo.get_by_id(db, transaction_id, organization_id)
         if not txn:
             raise ValueError("Transaction not found")
+        if is_personal_transfer(txn):
+            raise ValueError("This is marked as a personal transfer. Use \"Not a personal transfer\" first")
         old_tax_inputs = tax_total_inputs(txn)
 
         applicant = await applicant_repo.get(
@@ -437,6 +449,7 @@ async def attribute_manually(
                 source="manual_link",
                 payer_handle=txn.payer_handle,
             )
+            await personal_transfer_service.forget_sender_of(db, txn, organization_id)
         await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
         return {"ok": True, "transaction_id": str(txn.id)}
 

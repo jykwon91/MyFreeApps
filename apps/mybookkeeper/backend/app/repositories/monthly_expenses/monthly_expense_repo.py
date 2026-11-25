@@ -16,6 +16,7 @@ from app.core.tags import (
     TRANSACTION_TYPE_INCOME,
     TRANSACTION_TYPE_TRANSFER,
 )
+from app.core.transaction_statuses import NOT_MONEY_STATUSES
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.mortgage.mortgage import Mortgage
 from app.models.transactions.spending_category import SpendingCategory
@@ -24,18 +25,17 @@ from app.models.user.user import User
 from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentArrival
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 
-_DUPLICATE_STATUS = "duplicate"
-
 MortgagePaymentParts = tuple[int | None, int | None, int | None]
 
 
 def _live_rows(organization_id: uuid.UUID, start: _dt.date, end: _dt.date) -> list[ColumnElement[bool]]:
     """Live rows dated ``start``..``end``. A row still waiting for review is
-    money that really moved, so it counts; one marked a duplicate never does."""
+    money that really moved, so it counts; a duplicate or a personal transfer
+    never does."""
     return [
         Transaction.organization_id == organization_id,
         Transaction.deleted_at.is_(None),
-        Transaction.status != _DUPLICATE_STATUS,
+        Transaction.status.not_in(NOT_MONEY_STATUSES),
         Transaction.transaction_date >= start,
         Transaction.transaction_date <= end,
     ]

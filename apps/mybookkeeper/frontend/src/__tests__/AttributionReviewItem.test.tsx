@@ -24,7 +24,11 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
+vi.mock("@/app/features/personal-transfer/usePersonalTransferActions", () => ({
+  usePersonalTransferActions: vi.fn(),
+}));
 
+import { usePersonalTransferActions } from "@/app/features/personal-transfer/usePersonalTransferActions";
 import {
   useAttributeTransactionManuallyMutation,
   useConfirmAttributionReviewMutation,
@@ -135,6 +139,16 @@ function setAttributeLoading(isLoading: boolean) {
   ] as unknown as ReturnType<typeof useAttributeTransactionManuallyMutation>);
 }
 
+const markTrigger = vi.fn(() => Promise.resolve(true));
+function setMarking(isMarking: boolean) {
+  vi.mocked(usePersonalTransferActions).mockReturnValue({
+    mark: markTrigger,
+    unmark: vi.fn(),
+    isMarking,
+    isUnmarking: false,
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   confirmTrigger = vi.fn(resolvedUnwrap);
@@ -146,6 +160,7 @@ beforeEach(() => {
     { isLoading: false },
   ] as unknown as ReturnType<typeof useRejectAttributionReviewMutation>);
   setAttributeLoading(false);
+  setMarking(false);
   vi.mocked(useListTenantPagesInfiniteQuery).mockReturnValue(tenantPages([{ id: "a1", legal_name: "Bob Tenant" }]));
   vi.mocked(useGetPropertiesQuery).mockReturnValue({
     data: [
@@ -168,6 +183,31 @@ function renderItem(item: ReviewItemType) {
 }
 
 describe("AttributionReviewItem", () => {
+  it("rent rows offer 'Personal transfer'; payouts don't", () => {
+    const { unmount } = renderItem(rentUnmatched());
+    expect(
+      within(screen.getByTestId("attribution-review-item-actions")).getByRole("button", { name: /Personal transfer/ }),
+    ).toBeInTheDocument();
+    unmount();
+    renderItem(airbnbUnmatched());
+    expect(screen.queryByRole("button", { name: /Personal transfer/ })).not.toBeInTheDocument();
+  });
+
+  it("marks the card's own payment as a personal transfer", () => {
+    const item = rentUnmatched();
+    renderItem(item);
+    fireEvent.click(screen.getByRole("button", { name: /Personal transfer/ }));
+    expect(markTrigger).toHaveBeenCalledWith(item.transaction?.id);
+  });
+
+  it("holds the card's other actions while a mark is in flight", () => {
+    setMarking(true);
+    renderItem(rentUnmatched());
+    const actions = within(screen.getByTestId("attribution-review-item-actions"));
+    expect(actions.getByRole("button", { name: /Marking/ })).toBeDisabled();
+    for (const button of actions.getAllByRole("button")) expect(button).toBeDisabled();
+  });
+
   it("renders a main column and an actions column inside the item row", () => {
     renderItem(rentFuzzy());
     const row = screen.getByTestId("attribution-review-item");

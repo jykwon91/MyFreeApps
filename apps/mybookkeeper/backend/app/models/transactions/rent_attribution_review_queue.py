@@ -40,7 +40,9 @@ class RentAttributionReviewQueue(Base):
 
     # "fuzzy" = Levenshtein ≤ 2 candidate found; "unmatched" = no candidate
     confidence: Mapped[str] = mapped_column(String(10), nullable=False)
-    # "pending" → "confirmed" or "rejected" when the host reviews
+    # "pending" → "confirmed" or "rejected" when the host reviews; "personal"
+    # when the payment is marked a personal transfer (not rent); "dismissed"
+    # when its transaction is deleted. Values live in core/attribution_review_statuses.
     status: Mapped[str] = mapped_column(String(15), nullable=False, default="pending", server_default="pending")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -54,7 +56,7 @@ class RentAttributionReviewQueue(Base):
             name="chk_rarq_confidence",
         ),
         CheckConstraint(
-            "status IN ('pending', 'confirmed', 'rejected')",
+            "status IN ('pending', 'confirmed', 'rejected', 'personal', 'dismissed')",
             name="chk_rarq_status",
         ),
         Index(

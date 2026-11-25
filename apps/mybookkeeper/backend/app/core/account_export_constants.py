@@ -152,6 +152,7 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "rent_reminder_plans": {},
     "rent_reminder_sends": {"key_version": _KEY_VERSION},
     "payer_alias": {},
+    "personal_transfer_senders": {},
     "rent_attribution_review_queue": {},
     "documents": {
         "file_content": "Raw file bytes; the export is JSON and lists each file's details.",

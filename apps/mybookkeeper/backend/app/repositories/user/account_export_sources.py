@@ -95,6 +95,7 @@ from app.models.tax.tax_return import TaxReturn
 from app.models.tax.tax_year_profile import TaxYearProfile
 from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.payer_alias import PayerAlias
+from app.models.transactions.personal_transfer_sender import PersonalTransferSender
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.transactions.rent_attribution_review_queue import (
@@ -175,6 +176,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(RentReminderPlan, Scope.WORKSPACE_MEMBER),
     Source(RentReminderSend, Scope.WORKSPACE_MEMBER),
     Source(PayerAlias, Scope.WORKSPACE),
+    Source(PersonalTransferSender, Scope.WORKSPACE),
     Source(RentAttributionReviewQueue, Scope.WORKSPACE),
     # Documents and transactions
     Source(Document, Scope.WORKSPACE_MEMBER),

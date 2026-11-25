@@ -4,6 +4,7 @@ export const STATUS_COLUMN_FILTER_OPTIONS = [
   { value: "approved", label: "Approved" },
   { value: "needs_review", label: "Needs Review" },
   { value: "duplicate", label: "Duplicate" },
+  { value: "personal_transfer", label: "Personal Transfer" },
 ];
 
 /** The choices of the table's Type filter. */
