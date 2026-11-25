@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Wait for every check on a PR to finish, then squash-merge it with --admin
-# only if none failed. Never uses --auto. Exits 1 and lists the failures when a
-# check fails, 2 on timeout. Polling here costs no tokens; an agent polling
+# only if none failed and every required check on main (branch protection, e.g.
+# `ci-gate`) has reported pass or skipped. --admin bypasses GitHub's own
+# required-check rule, so this script enforces it instead. Never uses --auto.
+# Exits 1 and lists the failures when a check fails, 2 on timeout, 3 when the
+# required checks can't be read. Polling here costs no tokens; an agent polling
 # `gh pr checks` itself pays for every look.
 #
 #   scripts/agent/pr-merge-on-green.sh <pr> [--no-merge] [--timeout-min N]
@@ -20,6 +23,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+base="$(gh pr view "$pr" --json baseRefName --jq .baseRefName)"
+if ! required="$(gh api "repos/$repo/branches/$base/protection/required_status_checks" --jq '.contexts[]' 2>/dev/null)"; then
+  echo "PR #$pr: can't read the required checks on $base; not merging" >&2
+  exit 3
+fi
+
 deadline=$(( $(date +%s) + timeout_min * 60 ))
 while :; do
   # Buckets: pass, fail, pending, skipping, cancel.
@@ -32,9 +42,15 @@ while :; do
       echo "$failed"
       exit 1
     fi
-    [ "$pending" = "0" ] && break
+    missing=""
+    while IFS= read -r ctx; do
+      [ -n "$ctx" ] || continue
+      printf '%s
+' "$checks" | awk -F'	' -v c="$ctx" '$2==c && ($1=="pass" || $1=="skipping") {ok=1} END {exit !ok}' || missing="$missing $ctx"
+    done <<< "$required"
+    [ "$pending" = "0" ] && [ -z "$missing" ] && break
   fi
-  [ "$(date +%s)" -lt "$deadline" ] || { echo "PR #$pr: checks still pending after ${timeout_min}m" >&2; exit 2; }
+  [ "$(date +%s)" -lt "$deadline" ] || { echo "PR #$pr: checks still pending after ${timeout_min}m${missing:+ (required check not reported:$missing)}" >&2; exit 2; }
   sleep 30
 done
 
