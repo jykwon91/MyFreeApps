@@ -64,12 +64,13 @@ test("an icon that fails to load becomes a same-size placeholder, and the name s
   await page.goto("/wow-forever/professions?p=tailoring&skill=1");
 
   const firstRow = page.locator("li[id^='craft-']").first();
+  // Every image fails on its own clock: measure only once none is left, or a 16px material placeholder can come first.
+  await expect(firstRow.getByTestId("game-icon")).toHaveCount(0);
   const placeholder = firstRow.getByTestId("game-icon-placeholder").first();
   await expect(placeholder).toBeVisible();
   const box = await placeholder.boundingBox();
   expect(box?.width).toBeCloseTo(24, 0);
   expect(box?.height).toBeCloseTo(24, 0);
-  await expect(firstRow.getByTestId("game-icon")).toHaveCount(0);
   await expect(firstRow).toContainText("Linen");
 });
 
