@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from platform_shared.infra import seed_env
+from platform_shared.infra.env_file import parse_env
 
 COMPOSE_EXAMPLE = """\
 # Compose-level env file — only contains DB_PASSWORD.
@@ -67,7 +68,28 @@ def run(repo: Path, *extra: str) -> int:
 
 
 def read_env(path: Path) -> dict[str, str]:
-    return seed_env._parse_env(path.read_text(encoding="utf-8"))
+    return parse_env(path.read_text(encoding="utf-8"))
+
+
+_FILLED_KEYS = ("SENTRY_DSN", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS",
+                "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY")
+
+
+def _seed_filled(repo: Path, **values: str) -> None:
+    """Seed, fill every operator key, then set ``values`` over the result."""
+    run(repo)
+    applied: set[str] = set()
+    docker_path = repo / "apps" / "testapp" / "backend" / ".env.docker"
+    lines = docker_path.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        key = line.split("=", 1)[0]
+        if key in values:
+            lines[i] = f"{key}={values[key]}"
+            applied.add(key)
+        elif key in _FILLED_KEYS and line == f"{key}=":
+            lines[i] = f"{key}=some-value"
+    assert applied == set(values), f"not in the env file: {set(values) - applied}"
+    docker_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestFreshSeed:
@@ -282,13 +304,45 @@ class TestCheckMode:
         assert "BLANK SENTRY_DSN" in out
 
     def test_check_passes_when_filled(self, repo: Path):
-        run(repo)
-        docker_path = repo / "apps" / "testapp" / "backend" / ".env.docker"
-        filled = docker_path.read_text(encoding="utf-8")
-        for key in ("SENTRY_DSN", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS",
-                    "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"):
-            filled = filled.replace(f"{key}=", f"{key}=some-value", 1)
-        docker_path.write_text(filled, encoding="utf-8")
+        _seed_filled(repo)
+        assert run(repo, "--check") == 0
+
+    def test_check_fails_on_a_blank_smtp_host(self, repo: Path, capsys):
+        _seed_filled(repo, SMTP_HOST="")
+        capsys.readouterr()
+        assert run(repo, "--check") == 1
+        assert "BLANK SMTP_HOST" in capsys.readouterr().out
+
+    def test_check_names_a_non_ascii_smtp_login_without_printing_it(self, repo: Path, capsys):
+        _seed_filled(repo, SMTP_PASSWORD="p\u00e4sswort")
+        capsys.readouterr()
+        assert run(repo, "--check") == 1
+        out = capsys.readouterr().out
+        assert "NOT ASCII SMTP_PASSWORD" in out
+        assert "SMTP_USER" not in out
+        assert "\u00e4" not in out
+
+    @pytest.mark.parametrize(
+        ("setting", "value"),
+        [("SMTP_USER", "j\u00f6rg@example.com"), ("SMTP_PASSWORD", "pw\u00a0")],
+        ids=["non_ascii_user", "trailing_non_breaking_space"],
+    )
+    def test_check_names_each_non_ascii_login_setting(
+        self, repo: Path, capsys, setting: str, value: str,
+    ) -> None:
+        _seed_filled(repo, **{setting: value})
+        capsys.readouterr()
+        assert run(repo, "--check") == 1
+        assert f"NOT ASCII {setting}" in capsys.readouterr().out
+
+    def test_check_lists_a_blank_smtp_user_once(self, repo: Path, capsys):
+        _seed_filled(repo, SMTP_USER="")
+        capsys.readouterr()
+        assert run(repo, "--check") == 1
+        assert capsys.readouterr().out.count("BLANK SMTP_USER") == 1
+
+    def test_check_ignores_smtp_settings_on_the_console_backend(self, repo: Path):
+        _seed_filled(repo, EMAIL_BACKEND="console", SMTP_HOST="", SMTP_PASSWORD="p\u00e4sswort")
         assert run(repo, "--check") == 0
 
 
