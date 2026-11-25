@@ -7,6 +7,8 @@ import {
   RECIPES_PARAM,
 } from "@/games/wow-forever/data/goalPlanner/goalPlannerConfig";
 import { readSavedSkill } from "@/games/wow-forever/hooks/useCraftingSkill";
+import { useSelectedCharacter } from "@/games/wow-forever/hooks/useSelectedCharacter";
+import { characterSkillIn } from "@/games/wow-forever/lib/character/characterSkill";
 import {
   NO_GOALS,
   formatGoalsParam,
@@ -16,6 +18,7 @@ import {
   parseStoredGoals,
 } from "@/games/wow-forever/lib/goalPlanner/goalParams";
 import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
+import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { GoalPlannerGoals } from "@/games/wow-forever/types/goalPlanner/goalPlannerGoals";
 import type { PlannerProfession } from "@/games/wow-forever/types/goalPlanner/plannerProfession";
@@ -30,9 +33,10 @@ export interface GoalPlannerGoalsState {
   removeRecipe: (key: string) => void;
 }
 
-/** Your skill on that profession's guide when you've saved one; 0 (not learned) otherwise. */
-function startingSkill(profession: PlannerProfession): number {
-  return (isCraftingProfession(profession) ? readSavedSkill(profession) : null) ?? 0;
+/** Your skill on that profession's guide when you've typed one, else the selected character's; 0 (not learned) otherwise. */
+function startingSkill(profession: PlannerProfession, character: CharacterResponse | undefined): number {
+  const typed = isCraftingProfession(profession) ? readSavedSkill(profession) : null;
+  return typed ?? (character ? characterSkillIn(character, profession) : null) ?? 0;
 }
 
 /**
@@ -41,6 +45,7 @@ function startingSkill(profession: PlannerProfession): number {
  */
 export function useGoalPlannerGoals(): GoalPlannerGoalsState {
   const [params, setParams] = useLiveSearchParams();
+  const { character } = useSelectedCharacter();
   const goalsText = params.get(GOALS_PARAM);
   const recipesText = params.get(RECIPES_PARAM);
 
@@ -69,10 +74,10 @@ export function useGoalPlannerGoals(): GoalPlannerGoalsState {
   const addProfession = useCallback(
     (profession: PlannerProfession) => {
       if (goals.professions.some((g) => g.profession === profession)) return;
-      const goal: ProfessionGoal = { profession, current: startingSkill(profession), target: DEFAULT_GOAL_TARGET };
+      const goal: ProfessionGoal = { profession, current: startingSkill(profession, character), target: DEFAULT_GOAL_TARGET };
       save({ ...goals, professions: [...goals.professions, goal] });
     },
-    [goals, save],
+    [goals, save, character],
   );
 
   const removeProfession = useCallback(

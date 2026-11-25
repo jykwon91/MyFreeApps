@@ -1,3 +1,5 @@
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
@@ -5,7 +7,9 @@ import { MemoryRouter } from "react-router-dom";
 import { useFoodPickerSettings } from "@/games/wow-forever/hooks/useFoodPickerSettings";
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter initialEntries={["/wow-forever/food"]}>{children}</MemoryRouter>;
+  return <Provider store={store}>
+<MemoryRouter initialEntries={["/wow-forever/food"]}>{children}</MemoryRouter>
+</Provider>;
 }
 
 describe("useFoodPickerSettings", () => {

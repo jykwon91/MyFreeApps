@@ -1,3 +1,4 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
 import GearPhaseBanner from "@/games/wow-forever/components/gear/GearPhaseBanner";
 import GearRankingSection from "@/games/wow-forever/components/gear/GearRankingSection";
 import GearSettingsBar from "@/games/wow-forever/components/gear/GearSettingsBar";
@@ -11,7 +12,7 @@ import { useSharedBisListLink } from "@/games/wow-forever/hooks/useSharedBisList
 
 /** /wow-forever/gear — the top items per slot for your class, spec and level (leveling, then pre-raid at 60), and your own lists. */
 export default function WowGearPage() {
-  const [settings, update] = useGearSettings();
+  const [settings, update, characterDefault] = useGearSettings();
   const state = useGearData();
   const shared = useSharedBisListLink();
   // A share link always opens "My lists", whatever view was saved.
@@ -27,6 +28,7 @@ export default function WowGearPage() {
       />
       <GearPhaseBanner />
       {mine ? null : <GearSettingsBar settings={settings} onChange={update} />}
+      {mine ? null : <UseCharacterReset state={characterDefault} />}
       {/* Choosing another view leaves a share link's fragment; "My lists" again keeps the shared list open. */}
       <SegmentedToggle
         label="Which list"

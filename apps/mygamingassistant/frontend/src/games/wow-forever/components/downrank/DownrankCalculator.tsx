@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
 import DownrankFormulaNote from "@/games/wow-forever/components/downrank/DownrankFormulaNote";
 import DownrankInputs from "@/games/wow-forever/components/downrank/DownrankInputs";
 import DownrankRankCards from "@/games/wow-forever/components/downrank/DownrankRankCards";
@@ -16,7 +17,7 @@ interface DownrankCalculatorProps {
 
 /** The loaded calculator: inputs, the suggested ranks, how it's worked out, then every rank. */
 export default function DownrankCalculator({ families }: DownrankCalculatorProps) {
-  const [settings, update] = useDownrankSettings(families);
+  const [settings, update, characterDefault] = useDownrankSettings(families);
   const family = families.find((f) => f.id === settings.familyId) ?? families[0];
   const rows = useMemo(() => downrankRows(family.ranks, settings), [family, settings]);
   const best = useMemo(() => bestRanks(rows), [rows]);
@@ -24,6 +25,7 @@ export default function DownrankCalculator({ families }: DownrankCalculatorProps
   return (
     <div className="space-y-4">
       <DownrankInputs families={families} family={family} settings={settings} onChange={update} />
+      <UseCharacterReset state={characterDefault} />
       <DownrankSuggestions spellName={family.name} amountWord={amountWord} best={best} firstLevel={family.ranks[0].level} />
       <DownrankFormulaNote
         kind={family.kind}
