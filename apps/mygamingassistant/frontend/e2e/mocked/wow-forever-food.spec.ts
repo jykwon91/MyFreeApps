@@ -68,6 +68,32 @@ test("from the Cooking guide: pick Just healing and see the biggest heal", async
   await expect(page.getByText(/Heals the most of what you can eat: 552 health over 24 sec/)).toBeVisible();
 });
 
+test("a level 59 Warlock gets a Food and a Drink section, the Mage's free one first", async ({ page }) => {
+  await page.goto("/wow-forever/food?lvl=59&class=warlock&act=leveling");
+  const food = page.getByTestId("restore-food");
+  const drink = page.getByTestId("restore-drink");
+  await expect(food.getByTestId("restore-mage")).toContainText("Free from a Mage");
+  await expect(drink.getByTestId("restore-mage")).toContainText("Free from a Mage");
+  await expect(drink.getByTestId("restore-mage")).toContainText(/mana over 30 sec/);
+  expect(await drink.getByTestId("restore-option").count()).toBeGreaterThan(0);
+  // The Mage's pick is listed before the other options.
+  expect(await drink.locator("li").first().getAttribute("data-testid")).toBe("restore-mage");
+});
+
+test("a Warrior gets food but no Drink section", async ({ page }) => {
+  await page.goto("/wow-forever/food?lvl=59&class=warrior&act=leveling");
+  await expect(page.getByTestId("restore-food")).toBeVisible();
+  await expect(page.getByTestId("restore-drink")).toHaveCount(0);
+});
+
+test("the Food and Drink sections never scroll sideways on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/wow-forever/food?lvl=59&class=warlock&act=leveling");
+  await expect(page.getByTestId("restore-drink")).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
 test("the phone layout never scrolls sideways", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/wow-forever/food?lvl=60&class=priest&spec=holy&act=raid&skill=200");

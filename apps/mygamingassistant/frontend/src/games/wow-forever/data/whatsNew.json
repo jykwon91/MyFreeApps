@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "What should I eat? now covers food and drink, with the Mage's free ones first",
+    "summary": "The page now has a Food and a Drink section (Warriors and Rogues get food only). Each starts with what a Mage conjures for free at the highest rank you can use, then more options from cheapest to dearest: dropped, bought from a vendor, or cooked, with how much each restores and where to get it.",
+    "to": "/wow-forever/food"
+  },
+  {
+    "date": "2026-11-25",
     "title": "Best gear, food, Downrank and the Goal planner start from your character too",
     "summary": "Best gear, What should I eat, Downrank, Recipes, Rares and the Goal planner now start from the character you picked: class, level, faction and (for food and the planner) Cooking and profession skill. They keep up as Blizzard updates it. Type a different value and it sticks; a small \"Use <name>'s\" button puts the character's back.",
     "to": "/wow-forever/gear"

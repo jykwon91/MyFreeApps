@@ -205,6 +205,8 @@ class TestRecipeSources:
         reagent_ids = {str(r["id"]) for f in foods.values() for r in f["reagents"]}
         for food_id in recipe_sources["recipes"]:
             assert by_id[food_id]["learn"]["source"] == "recipe"
+        consumables = json.loads((FOOD_DATA / "consumables.json").read_text(encoding="utf-8"))["consumables"]
+        reagent_ids |= {str(c["id"]) for c in consumables}
         assert set(recipe_sources["reagents"]) <= reagent_ids
 
     def test_every_vendor_and_zone_is_placed(self, recipe_sources: dict) -> None:
@@ -283,3 +285,34 @@ class TestLootIndex:
 
     def test_compact_drops_empty_sources(self) -> None:
         assert _compact({"vendors": [], "drop": None, "quests": [3]}) == {"quests": [3]}
+
+
+class TestConsumables:
+    """Non-cooked food and drink: only meals we can say how to get, with restores the client gives."""
+
+    def test_eats_only_a_meal_sized_restore(self) -> None:
+        from scripts.wow_food.consumables import _eats
+
+        assert _eats({"amount": 4200, "seconds": 30}) == {"amount": 4200, "seconds": 30}
+        assert _eats({"amount": 4200, "seconds": 3600}) is None  # an elixir, not a meal
+        assert _eats({"amount": 0, "seconds": 30}) is None
+        assert _eats(None) is None
+
+    def test_conjure_picks_the_lowest_mage_level(self) -> None:
+        from scripts.wow_food.consumables import ConsumableTables, conjured_items
+
+        def creates(item: int) -> list[Effect]:
+            return [Effect(index=0, effect=24, aura=0, base_points=0, misc=0, period_ms=0, trigger=0, item_type=item, variance=0)]
+
+        book = SpellBook()
+        book.names = {1: "Conjure Water", 2: "Conjure Water", 3: "Fireball"}
+        book.effects = {1: creates(100), 2: creates(100), 3: creates(200)}
+        tables = ConsumableTables({}, {}, {}, book, {1: 60, 2: 50})
+        assert conjured_items(tables) == {100: {"spell": 2, "level": 50}}
+
+    def test_generated_file_has_a_mage_drink_and_vendor_food(self) -> None:
+        path = Path(__file__).parents[2] / "frontend/src/games/wow-forever/data/food/consumables.json"
+        by_name = {r["name"]: r for r in json.loads(path.read_text(encoding="utf-8"))["consumables"]}
+        assert by_name["Conjured Crystal Water"]["mana"]["amount"] == 4200
+        assert by_name["Conjured Crystal Water"]["conjure"]["level"] == 60
+        assert by_name["Alterac Manna Biscuit"]["buyCopper"] == 7000

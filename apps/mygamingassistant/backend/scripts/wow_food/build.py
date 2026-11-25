@@ -25,6 +25,8 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
+from scripts.wow_food.consumables import CONSUMABLE_TABLES, build_consumables, load_consumable_tables
+from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_tables
 from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
 from scripts.wow_food.foods import COOKING_SKILL_LINE, EFFECT_LEARN_SPELL, Tables, build_foods
 from scripts.wow_food.tooltip import Effect, SpellBook
@@ -245,6 +247,10 @@ def main() -> None:
     }
     reagent_ids = sorted({r["id"] for f in foods for r in f["reagents"]})
     reagent_sources = {str(i): classic.reagent_sources(i) for i in reagent_ids}
+    forever = load_forever_tables(hotfix_cache_path(None), CONSUMABLE_TABLES)
+    consumables, consumable_sources = build_consumables(load_consumable_tables(forever), classic)
+    for item_id, found in consumable_sources.items():
+        reagent_sources.setdefault(item_id, found)
     books = rank_books(items, classic)
     every_source = [*recipe_sources.values(), *reagent_sources.values(), *books.values()]
     quests = quest_details({q for sources_ in every_source for q in sources_.get("quests", [])})
@@ -270,13 +276,18 @@ def main() -> None:
         "reagents": {k: v for k, v in reagent_sources.items() if v},
         "books": books,
     })
+    write_json(DATA_DIR / "consumables.json", {
+        "source": forever.source(),
+        "consumables": consumables,
+    })
     write_json(CLASSIC_DIR / "trainerSkills.json", {
         "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
         "skills": trainer_skills,
     })
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
-    print(f"{len(foods)} foods, {len(trainer_skills)} trainer skills, "
+    print(f"{len(consumables)} non-cooked foods and drinks, "
+          f"{len(foods)} foods, {len(trainer_skills)} trainer skills, "
           f"{sum(1 for v in recipe_sources.values() if v)} recipe sources, "
           f"{sum(1 for v in reagent_sources.values() if v)}/{len(reagent_ids)} reagent sources -> {DATA_DIR}")
 

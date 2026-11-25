@@ -7,6 +7,7 @@ import FoodPickerInputs from "@/games/wow-forever/components/food/FoodPickerInpu
 import SettledStatus from "@/games/wow-forever/components/shared/SettledStatus";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import FoodRunnersUp from "@/games/wow-forever/components/food/FoodRunnersUp";
+import RestoreSections from "@/games/wow-forever/components/food/RestoreSections";
 import FoodTopPick from "@/games/wow-forever/components/food/FoodTopPick";
 import FoodTrainTarget from "@/games/wow-forever/components/food/FoodTrainTarget";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
@@ -42,7 +43,7 @@ export default function WowFoodPickerPage() {
     <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="What should I eat?"
-        subtitle="The best food to cook for your level, class and what you're doing."
+        subtitle="What to eat and drink at your level — a Mage's free ones first — and the best food to cook."
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
@@ -59,6 +60,8 @@ export default function WowFoodPickerPage() {
             {cookingSkill === null ? "" : ` with Cooking ${cookingSkill}`}.
           </p>
           <PriceStatus withoutPrices="showing the food without prices" />
+          <RestoreSections level={level} classId={settings.classId} />
+          <h2 className="text-base font-semibold pt-2">Cooked food for your activity</h2>
           {result.top ? (
             <FoodTopPick pick={result.top} activity={activity} who={who} />
           ) : (

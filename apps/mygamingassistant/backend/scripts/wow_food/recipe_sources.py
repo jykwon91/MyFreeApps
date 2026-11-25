@@ -201,6 +201,10 @@ class ClassicSources(SkinningSources):
                     self._rewarded[_i(q[key])].append(_i(q["entry"]))
         self.zone_names: dict[int, str] = {}
 
+    def buy_price(self, item: int) -> int:
+        """What a vendor asks for the item, in copper (Classic, before any reputation discount)."""
+        return self._buy_price.get(item, 0)
+
     # ---- vendors ---------------------------------------------------------
 
     def vendors(self, item: int) -> list[list[object]]:
