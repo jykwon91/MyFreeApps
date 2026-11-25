@@ -11,4 +11,6 @@ class PlaidApplyCounts:
     removed: int = 0
     matched_existing: int = 0
     transfers_matched: int = 0
+    linked_existing: int = 0
+    copies_merged: int = 0
     attributed_as_rent: int = 0

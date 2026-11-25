@@ -69,7 +69,7 @@ async def _sync_transactions(item_id: uuid.UUID) -> tuple[PlaidSyncResult, bool]
                 "Plaid sync refused for item %s: error_type=%s error_code=%s request_id=%s",
                 item.id, exc.error_type, exc.error_code, exc.request_id,
             )
-            await db.flush()
+            await plaid_item_repo.save(db)
             return PlaidSyncResult(status=item.status), False
 
         accounts = await financial_account_repo.list_by_plaid_item(db, item.id)
@@ -89,11 +89,12 @@ async def _sync_transactions(item_id: uuid.UUID) -> tuple[PlaidSyncResult, bool]
         item.error_type = None
         item.error_code = None
         item.last_synced_at = _dt.datetime.now(_dt.timezone.utc)
-        await db.flush()
+        await plaid_item_repo.save(db)
         logger.info(
-            "Plaid sync for item %s: added=%d modified=%d removed=%d matched=%d transfers=%d rent=%d",
+            "Plaid sync for item %s: added=%d modified=%d removed=%d matched=%d transfers=%d linked=%d folded=%d rent=%d",
             item.id, counts.added, counts.modified, counts.removed,
-            counts.matched_existing, counts.transfers_matched, counts.attributed_as_rent,
+            counts.matched_existing, counts.transfers_matched, counts.linked_existing,
+            counts.copies_merged, counts.attributed_as_rent,
         )
         result = PlaidSyncResult(
             added=counts.added,
