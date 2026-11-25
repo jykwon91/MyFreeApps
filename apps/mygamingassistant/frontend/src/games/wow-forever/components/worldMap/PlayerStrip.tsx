@@ -1,3 +1,5 @@
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import WhereAreYou from "@/games/wow-forever/components/worldMap/WhereAreYou";
 import ZoneSelect from "@/games/wow-forever/components/worldMap/ZoneSelect";
@@ -22,6 +24,7 @@ function parseLevel(raw: string): number | null {
 
 /** "You": where you are (a place or coordinates), then faction -> class -> zone (+ level). */
 export default function PlayerStrip({ data, settings, places, onChange }: PlayerStripProps) {
+  const characterDefault = useCharacterReset();
   function changeFaction(faction: PlayerFaction) {
     const zone = settings.zoneId === null ? undefined : data.zoneById.get(settings.zoneId);
     // Standing in the other faction's capital makes no sense — pick a new zone.
@@ -31,9 +34,12 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
 
   return (
     <section aria-labelledby="wm-you" className="rounded-xl border bg-card p-4 space-y-4">
-      <h2 id="wm-you" className="text-lg font-semibold">
-        You
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="wm-you" className="text-lg font-semibold">
+          You
+        </h2>
+        <UseCharacterReset state={characterDefault} />
+      </div>
       <WhereAreYou
         data={data}
         places={places}

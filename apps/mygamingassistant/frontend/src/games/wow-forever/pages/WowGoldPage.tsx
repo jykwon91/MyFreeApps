@@ -12,6 +12,8 @@ import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { GOLD_DATA_STATUS } from "@/games/wow-forever/data/gold/goldTips";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
+import { useCharacterReset } from "@/games/wow-forever/hooks/useCharacterReset";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 const SECTIONS = [
@@ -26,6 +28,7 @@ const SECTIONS = [
 /** /wow-forever/gold — how to make gold while leveling: a plan, where to farm, and what to keep. */
 export default function WowGoldPage() {
   const [player, updatePlayer] = usePlayerSettings();
+  const characterDefault = useCharacterReset();
   const [showAllClasses, setShowAllClasses] = useState(false);
   return (
     <div className="p-4 sm:p-8 space-y-8 max-w-4xl">
@@ -40,6 +43,7 @@ export default function WowGoldPage() {
         also show your faction's auction-house price, when someone is selling them. The "Sell" tips are advice, not prices.
       </AlertBox>
       <div className="space-y-1">
+        <UseCharacterReset state={characterDefault} />
         <NumberField
           label="Your level"
           value={player.level}

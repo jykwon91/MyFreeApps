@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import CraftRouteSections from "@/games/wow-forever/components/crafting/CraftRouteSections";
 import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
@@ -43,9 +45,11 @@ const FIRST_ROWS = priceList([
 
 function renderSections(profession: CraftingProfession = "enchanting", data: CraftingData = ENCHANTING) {
   return render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[`/wow-forever/professions?p=${profession}`]}>
       <CraftRouteSections profession={profession} faction={FACTION.alliance} zoneId={null} level={null} position={null} data={data} />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

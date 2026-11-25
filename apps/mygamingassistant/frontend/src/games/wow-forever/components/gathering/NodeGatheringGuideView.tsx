@@ -19,13 +19,14 @@ interface NodeGatheringGuideViewProps {
 /** Mining, Herbalism: the nodes worth skill now, the zones they spawn in, then the node table and crafts. */
 export default function NodeGatheringGuideView({ profession, guide, faction, zoneId, level }: NodeGatheringGuideViewProps) {
   const state = useGatheringLoad(guide, loadGatheringData);
-  const [skill, setSkill] = useCraftingSkill(profession);
+  const [skill, setSkill, characterDefault] = useCraftingSkill(profession);
   return (
     <GatheringGuideLayout
       guide={guide}
       state={state}
       skill={skill}
       onSkillChange={setSkill}
+      characterDefault={characterDefault}
       faction={faction}
       zoneId={zoneId}
       renderNow={(data) => <GatheringNowResults guide={guide} data={data} skill={skill} faction={faction} level={level} />}

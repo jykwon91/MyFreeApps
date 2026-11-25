@@ -6,6 +6,8 @@
  */
 import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __resetDiscordLaunchForTests } from "@platform/ui/discord-activity/launchParams";
@@ -65,9 +67,11 @@ function renderAt(url: string): void {
   window.history.replaceState(null, "", url);
   __resetDiscordLaunchForTests();
   render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[url]}>
       <RootLayout />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

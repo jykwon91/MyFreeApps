@@ -35,6 +35,7 @@ import { COMPANION_GAMES, WOW_FOREVER_SLUG, type GameFeature } from "@/games/reg
 import WowFeatureIcon from "@/games/wow-forever/components/shared/WowFeatureIcon";
 import { UPDATE_DOT_LABEL } from "@/games/wow-forever/data/whatsNewSettings";
 import { WOW_HUB_PATH } from "@/games/wow-forever/data/wowPagePaths";
+import { useFollowSelectedCharacter } from "@/games/wow-forever/hooks/useFollowSelectedCharacter";
 import { useRecordWowPageVisit } from "@/games/wow-forever/hooks/useRecordWowPageVisit";
 import { useUpdateDots } from "@/games/wow-forever/hooks/useUpdateDots";
 import type { CurrentUser } from "@platform/ui";
@@ -179,6 +180,8 @@ export default function RootLayout() {
 
   // Update dots ("new since your last visit") on the WoW items; opening a page clears its dot.
   useRecordWowPageVisit(location.pathname);
+  // The selected character's level, class and faction stay current on every WoW page.
+  useFollowSelectedCharacter();
   const wowUpdates = useUpdateDots();
   const wowNavSections = useMemo(() => buildWowNavSections(wowUpdates), [wowUpdates]);
   const wowMobileItems = useMemo(() => buildWowMobileItems(wowUpdates), [wowUpdates]);

@@ -12,11 +12,14 @@ import type { GatheringLoadState } from "@/games/wow-forever/types/gathering/gat
 import type { ZonedData } from "@/games/wow-forever/types/gathering/zonedData";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
+import type { CharacterDefaultState } from "@/games/wow-forever/types/character/characterDefaultState";
+
 interface GatheringNowSectionProps<T extends ZonedData> {
   guide: GatheringGuideBase;
   state: GatheringLoadState<T>;
   skill: number | null;
   onSkillChange: (skill: number | null) => void;
+  characterDefault: CharacterDefaultState | null;
   faction: PlayerFaction;
   zoneId: number | null;
   /** What to gather and where, once the data is in — the guide kind's own "right now". */
@@ -29,6 +32,7 @@ export default function GatheringNowSection<T extends ZonedData>({
   state,
   skill,
   onSkillChange,
+  characterDefault,
   faction,
   zoneId,
   renderResults,
@@ -39,6 +43,7 @@ export default function GatheringNowSection<T extends ZonedData>({
         skill={skill}
         onChange={onSkillChange}
         currentRowId={null}
+        characterDefault={characterDefault}
         status={rankAdvice(guide.ranks, skill, guide.label) ?? GATHERING_SKILL_PROMPT}
       />
       {state.status === "loading" && <GatheringNowSkeleton />}

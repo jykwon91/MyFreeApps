@@ -20,7 +20,7 @@ interface MobGatheringGuideViewProps {
 /** Skinning: the mob levels your skill and level reach, the zones those mobs are in, then leather by mob level. */
 export default function MobGatheringGuideView({ profession, guide, faction, zoneId, level }: MobGatheringGuideViewProps) {
   const state = useGatheringLoad(guide, loadSkinningData);
-  const [skill, setSkill] = useCraftingSkill(profession);
+  const [skill, setSkill, characterDefault] = useCraftingSkill(profession);
   const band = skinBand(skill, level);
   return (
     <GatheringGuideLayout
@@ -28,6 +28,7 @@ export default function MobGatheringGuideView({ profession, guide, faction, zone
       state={state}
       skill={skill}
       onSkillChange={setSkill}
+      characterDefault={characterDefault}
       faction={faction}
       zoneId={zoneId}
       renderNow={(data) => <SkinningNowResults data={data} band={band} faction={faction} />}

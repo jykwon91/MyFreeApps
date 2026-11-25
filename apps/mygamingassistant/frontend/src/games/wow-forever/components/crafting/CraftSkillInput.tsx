@@ -1,5 +1,8 @@
 import { Button } from "@platform/ui";
+import UseCharacterReset from "@/games/wow-forever/components/character/UseCharacterReset";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
+
+import type { CharacterDefaultState } from "@/games/wow-forever/types/character/characterDefaultState";
 
 interface CraftSkillInputProps {
   skill: number | null;
@@ -8,6 +11,8 @@ interface CraftSkillInputProps {
   currentRowId: string | null;
   /** What the route says for this skill, e.g. "Craft Woolen Cape until 95". */
   status: string | null;
+  /** The selected character's skill as the default; null with none. */
+  characterDefault: CharacterDefaultState | null;
 }
 
 function scrollToRow(id: string): void {
@@ -15,10 +20,11 @@ function scrollToRow(id: string): void {
 }
 
 /** "Your skill" — highlights your row in the route and trims the shopping list. */
-export default function CraftSkillInput({ skill, onChange, currentRowId, status }: CraftSkillInputProps) {
+export default function CraftSkillInput({ skill, onChange, currentRowId, status, characterDefault }: CraftSkillInputProps) {
   return (
     <div className="rounded-xl border bg-card p-3 flex flex-wrap items-end gap-3">
       <NumberField label="Your skill" value={skill} onChange={onChange} min={1} className="flex flex-col gap-1 w-28" />
+      <UseCharacterReset state={characterDefault} />
       {currentRowId ? (
         <Button variant="secondary" onClick={() => scrollToRow(currentRowId)}>
           Jump to my step

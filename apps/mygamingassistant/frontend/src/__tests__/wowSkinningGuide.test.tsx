@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import WowProfessionsPage from "@/games/wow-forever/pages/WowProfessionsPage";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
@@ -15,9 +17,11 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
 
 function renderAt(path: string) {
   return render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[path]}>
       <WowProfessionsPage />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

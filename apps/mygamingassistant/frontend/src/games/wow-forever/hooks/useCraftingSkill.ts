@@ -1,7 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { MAX_CRAFT_SKILL, parseSkill } from "@/games/wow-forever/crafting/craftRoute";
 import { isCraftingProfession, isGatheringProfession } from "@/games/wow-forever/lib/guideProfession";
+import { useSelectedCharacter } from "@/games/wow-forever/hooks/useSelectedCharacter";
+import { characterSkillIn } from "@/games/wow-forever/lib/character/characterSkill";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
+import type { CharacterDefaultState } from "@/games/wow-forever/types/character/characterDefaultState";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { GatheringProfession } from "@/games/wow-forever/types/gathering/gatheringProfession";
 import { useLiveSearchParams } from "@platform/ui";
@@ -42,12 +45,19 @@ export function readSavedSkill(profession: SkilledProfession): number | null {
 
 /**
  * Your skill in a crafting or gathering profession. A `?skill=` link wins for
- * that visit without overwriting what you saved; typing a skill saves it per profession.
+ * that visit without overwriting what you saved; typing a skill saves it per profession and wins
+ * over the selected character's own skill until another character is picked or it is reset (clearing the box).
+ * The third value is the reset, null with no character (or one that hasn't learned the profession).
  */
-export function useCraftingSkill(profession: SkilledProfession):[number | null, (skill: number | null) => void] {
+export function useCraftingSkill(
+  profession: SkilledProfession,
+): [number | null, (skill: number | null) => void, CharacterDefaultState | null] {
   const [params, setParams] = useLiveSearchParams();
+  const { name, character } = useSelectedCharacter();
   const fromUrl = parseSkill(params.get(SKILL_PARAM));
-  const skill = fromUrl ?? readSavedSkill(profession);
+  const saved = readSavedSkill(profession);
+  const fromCharacter = character ? characterSkillIn(character, profession) : null;
+  const skill = fromUrl ?? saved ?? fromCharacter;
 
   const update = useCallback(
     (next: number | null) => {
@@ -69,5 +79,11 @@ export function useCraftingSkill(profession: SkilledProfession):[number | null, 
     [profession, setParams],
   );
 
-  return [skill, update];
+  const reset = useMemo((): CharacterDefaultState | null => {
+    if (!name || fromCharacter === null) return null;
+    const typed = fromUrl ?? saved;
+    return { characterName: name, overridden: typed !== null && typed !== fromCharacter, reset: () => update(null) };
+  }, [name, fromCharacter, fromUrl, saved, update]);
+
+  return [skill, update, reset];
 }

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
+import { store } from "@/lib/store";
 import { MemoryRouter } from "react-router-dom";
 import CraftRouteSections from "@/games/wow-forever/components/crafting/CraftRouteSections";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
@@ -44,9 +46,11 @@ function pricedTailoring() {
 
 function renderSections(profession: CraftingProfession, data: CraftingData) {
   return render(
+    <Provider store={store}>
     <MemoryRouter initialEntries={[`/wow-forever/professions?p=${profession}`]}>
       <CraftRouteSections profession={profession} faction={FACTION.alliance} zoneId={null} level={null} position={null} data={data} />
-    </MemoryRouter>,
+    </MemoryRouter>
+</Provider>,
   );
 }
 

@@ -65,6 +65,11 @@ vi.mock("@/lib/auth", () => ({
   signOut: vi.fn(),
 }));
 
+// The follow hook reads the character API, which needs the real @platform/ui store this test stubs out.
+vi.mock("@/games/wow-forever/hooks/useFollowSelectedCharacter", () => ({
+  useFollowSelectedCharacter: () => undefined,
+}));
+
 vi.mock("@/lib/tauri", () => ({
   isTauri: () => false,
 }));

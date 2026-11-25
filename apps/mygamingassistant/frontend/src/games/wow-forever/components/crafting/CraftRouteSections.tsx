@@ -50,7 +50,7 @@ function statusLine(entries: readonly ResolvedRouteEntry[], current: number | nu
 export default function CraftRouteSections({ profession, faction, zoneId, level, position, data }: CraftRouteSectionsProps) {
   const guide = CRAFTING_GUIDES[profession];
   const features = CRAFTING_FEATURES[profession];
-  const [skill, setSkill] = useCraftingSkill(profession);
+  const [skill, setSkill, characterDefault] = useCraftingSkill(profession);
   const specs = CRAFTING_SPECS[profession];
   const [spec, setSpec] = useCraftingSpec(profession);
   const priced = usePricedRoute(profession, data, skill, spec);
@@ -69,6 +69,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
         <CraftSkillInput
           skill={skill}
           onChange={setSkill}
+          characterDefault={characterDefault}
           currentRowId={currentEntry ? `craft-${currentEntry.step.from}` : null}
           status={statusLine(entries, current)}
         />
