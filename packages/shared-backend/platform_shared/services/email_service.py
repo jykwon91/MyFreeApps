@@ -69,6 +69,7 @@ from platform_shared.core.smtp_setting_faults import (
 )
 from platform_shared.services.email_attachment import EmailAttachment
 from platform_shared.services.email_backend import EmailBackend
+from platform_shared.services.email_not_configured_error import EmailNotConfiguredError
 from platform_shared.services.email_send_error import EmailSendError
 from platform_shared.services.smtp_failure import (
     error_from_refused_recipients,
@@ -77,16 +78,6 @@ from platform_shared.services.smtp_failure import (
 from platform_shared.services.smtp_send_stage import SmtpSendStage
 
 logger = logging.getLogger(__name__)
-
-
-class EmailNotConfiguredError(RuntimeError):
-    """Raised when an SMTP setting is empty, or a login setting isn't ASCII.
-
-    Use the platform_shared.core.boot_guards.check_email_configured()
-    boot guard to surface this at lifespan startup so deploys fail
-    loud instead of users seeing "registration succeeded but no email
-    arrived".
-    """
 
 
 def _build_attachment_part(attachment: EmailAttachment) -> MIMEBase:

@@ -15,6 +15,7 @@ import ssl
 from unittest.mock import MagicMock, patch
 
 import pytest
+from platform_shared.core import boot_guards
 from platform_shared.services.email_service import (
     EmailNotConfiguredError,
     EmailSendError,
@@ -208,6 +209,16 @@ class TestSendOrRaise:
     def test_inheritance(self) -> None:
         assert issubclass(EmailNotConfiguredError, RuntimeError)
         assert issubclass(EmailSendError, RuntimeError)
+
+    def test_the_boot_guard_and_a_send_raise_the_same_error(self) -> None:
+        # Imported from either module, it catches what the other raises.
+        with pytest.raises(EmailNotConfiguredError):
+            boot_guards.check_email_configured(
+                email_backend="console", smtp_host="", smtp_user="", smtp_password="",
+                environment="production",
+            )
+        with pytest.raises(boot_guards.EmailNotConfiguredError):
+            EmailService().send_or_raise(["x@example.com"], "subj", "<p>body</p>")
 
 
 class TestSendDelegatesToSendOrRaise:
