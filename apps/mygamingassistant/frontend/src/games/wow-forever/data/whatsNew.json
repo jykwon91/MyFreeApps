@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "MGA PvP Log can track the players who keep killing you",
+    "summary": "Whoever kills you goes on a kill-on-sight list (or add anyone with /mgapvp track <name>). When one shows up near you it prints a warning with the zone and where you were, plays a sound and flashes a banner, and the Tracked tab remembers where you last saw each one, with a Go to last seen button when MGA Waypoints is installed. The game never reveals an enemy's real position, so it is where you were when you saw them.",
+    "to": "/wow-forever/macros"
+  },
+  {
+    "date": "2026-11-25",
     "title": "New MGA PvP Log addon: who keeps killing you",
     "summary": "It logs the enemy-faction players who fight or kill you, and the ones you kill: name, race, class, level and guild when the game has shown them, the zone, when, and the spell. When one kills you it prints one chat line naming them. Open the list from the MGA menu or /mgapvp. Download it from the Macros page.",
     "to": "/wow-forever/macros"

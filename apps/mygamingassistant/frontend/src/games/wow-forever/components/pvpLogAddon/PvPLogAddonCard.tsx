@@ -15,7 +15,10 @@ export default function PvPLogAddonCard() {
           The MGA PvP Log addon keeps a list of the enemy-faction players who fought or killed you, and the ones you killed: their name,
           race, class, level and guild when the game has shown them to it, where it happened, when, and the spell. When one kills you it
           prints a single chat line naming them. Open the list from the MGA menu or with <code>/mgapvp</code>; the last 200 encounters
-          are kept for each character.
+          are kept for each character. It can also keep a kill-on-sight list: whoever kills you is added, and when a tracked player shows
+          up near you (in combat, on a nameplate, as your target or mouseover, or as a groupmate's target) it warns you with a chat line,
+          a sound and a banner, and remembers where you were when you saw them. The game never tells an addon where an enemy player is,
+          so that is where you were, not their exact spot.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>
@@ -24,7 +27,7 @@ export default function PvPLogAddonCard() {
             <code>AddOns\MGAPvPLog</code> folder.
           </li>
           <li>
-            Restart the game completely (a new addon needs it; <code>/reload</code> is not enough).
+            Restart the game completely (a new addon or file needs it; <code>/reload</code> is not enough).
           </li>
           <li>
             Turn the chat line off or on in the MGA settings (right-click the MGA minimap button), or with <code>/mgapvp chat</code>.

@@ -195,6 +195,7 @@ test("the Macros page downloads the MGA PvP Log addon", async ({ page }) => {
     "MGAPvPLog/MGAHub.lua",
     "MGAPvPLog/MGAPvPLog.lua",
     "MGAPvPLog/MGAPvPLog.toc",
+    "MGAPvPLog/Track.lua",
     "MGAPvPLog/Window.lua",
   ]);
   expect(strFromU8(files["MGAPvPLog/MGAPvPLog.lua"])).toContain('SLASH_MGAPVPLOG1 = "/mgapvp"');

@@ -2,12 +2,13 @@
 ## Title: MGA PvP Log
 ## Notes: Logs the enemy players who fight or kill you, and the ones you kill: who they were, their race, class and guild, where, how, and how often.
 ## Author: MyGamingAssistant
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: MGAHubSettings
 ## SavedVariablesPerCharacter: MGAPvPLogDB
 ## IconTexture: Interface\Icons\Ability_DualWield
 
 MGAHub.lua
 Core.lua
+Track.lua
 Window.lua
 MGAPvPLog.lua

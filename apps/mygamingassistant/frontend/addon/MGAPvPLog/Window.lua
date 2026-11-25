@@ -1,13 +1,17 @@
 -- MGA PvP Log, the window: a filter across the top (All / Killed me / I killed), the newest encounters first
 -- (two lines each: who, then where / when / what happened), and a Clear log button that asks again in the
--- window. Drag it to move it; the wheel scrolls.
+-- window. Drag it to move it; the wheel scrolls. Each row has a Track / Untrack button; the Tracked tab lists
+-- the kill-on-sight list with where you last saw each one, and "Go to last seen" when MGA Waypoints is installed.
 
 local M = MGAPvPLog
 local UI = MGAHub.UI
 
-local WIDTH, HEIGHT = 600, 470
+local WIDTH, HEIGHT = 700, 470
+local TEXT_WIDTH = 470
 local ROW_HEIGHT, VISIBLE_ROWS = 34, 10
 local CLEAR_TEXT, CONFIRM_TEXT = "Clear log", "Click again to clear"
+local EMPTY_LOG = "Nothing logged yet. Enemy players who fight or kill you show up here."
+local EMPTY_TRACKED = "Nobody tracked yet. Press Track on a row, or type /mgapvp track <name>."
 
 local frame
 local state = { filter = "all", offset = 0, confirming = false }
@@ -20,11 +24,14 @@ local function drawRows()
     if line then
       row.head:SetText(line.head)
       row.detail:SetText(line.detail)
+      row.track:SetText(line.tracked and "Untrack" or "Track")
+      if line.go then row.go:Show() else row.go:Hide() end
       row:Show()
     else
       row:Hide()
     end
   end
+  frame.empty:SetText(state.filter == "tracked" and EMPTY_TRACKED or EMPTY_LOG)
   if #lines == 0 then frame.empty:Show() else frame.empty:Hide() end
 end
 
@@ -46,9 +53,23 @@ local function buildRow(i)
   row.head = row:CreateFontString("MGAPvPLogRow" .. i .. "Head", "ARTWORK", "GameFontNormal")
   row.head:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
   row.head:SetJustifyH("LEFT")
+  row.head:SetWidth(TEXT_WIDTH)
+  row.head:SetWordWrap(false)
   row.detail = row:CreateFontString("MGAPvPLogRow" .. i .. "Detail", "ARTWORK", "GameFontHighlightSmall")
   row.detail:SetPoint("TOPLEFT", row.head, "BOTTOMLEFT", 0, -2)
   row.detail:SetJustifyH("LEFT")
+  row.detail:SetWidth(TEXT_WIDTH)
+  row.detail:SetWordWrap(false)
+  row.track = UI.Button(row, "MGAPvPLogRow" .. i .. "Track", "Track", 80, function()
+    local line = lines[state.offset + i]
+    if line then M.ToggleTracked(line.name) end
+  end)
+  row.track:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 0)
+  row.go = UI.Button(row, "MGAPvPLogRow" .. i .. "Go", "Go to last seen", 110, function()
+    local line = lines[state.offset + i]
+    if line and line.go and MGAWaypoints and MGAWaypoints.SetTarget then MGAWaypoints.SetTarget(line.go) end
+  end)
+  row.go:SetPoint("TOPRIGHT", row, "TOPRIGHT", -84, 0)
   rows[i] = row
 end
 
@@ -96,7 +117,7 @@ local function build()
 
   frame.empty = frame:CreateFontString("MGAPvPLogEmpty", "ARTWORK", "GameFontDisable")
   frame.empty:SetPoint("TOP", frame, "TOP", 0, -120)
-  frame.empty:SetText("Nothing logged yet. Enemy players who fight or kill you show up here.")
+  frame.empty:SetText(EMPTY_LOG)
 
   frame.clear = UI.Button(frame, "MGAPvPLogClear", CLEAR_TEXT, 160, function()
     if state.confirming then
