@@ -101,8 +101,7 @@ def init_sentry(*, dsn: str, environment: str) -> None:
         if environment == _PROD_ENV:
             raise SentryNotConfiguredError(
                 "SENTRY_DSN is required in production. "
-                "Set the SENTRY_DSN environment variable or set "
-                "ENVIRONMENT to 'development' / 'test' to skip Sentry."
+                "Set SENTRY_DSN in the app's backend/.env.docker."
             )
         # Non-production: Sentry is optional — skip silently.
         return

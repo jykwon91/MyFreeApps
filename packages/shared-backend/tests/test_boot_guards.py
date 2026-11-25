@@ -1,23 +1,28 @@
 """Unit tests for platform_shared.core.boot_guards."""
 
+import re
 import smtplib
+from collections.abc import Callable
 
 import pytest
 
 from platform_shared.core.boot_guards import (
     EmailNotConfiguredError,
-    SmsNotConfiguredError,
     ProductionTestModeError,
+    SmsNotConfiguredError,
     TransparencyNotConfiguredError,
     TurnstileNotConfiguredError,
     check_email_configured,
+    check_extraction_configured,
     check_sms_configured,
     check_test_mode_off,
     check_transparency_configured,
     check_transparency_sync_configured,
     check_turnstile_configured,
 )
+from platform_shared.core.observability import SentryNotConfiguredError, init_sentry
 from platform_shared.core.settings import BaseAppSettings
+from platform_shared.extraction.errors import ExtractionNotConfiguredError
 
 
 class TestCheckTurnstileConfigured:
@@ -537,3 +542,43 @@ class TestCheckTestModeOff:
     def test_environment_from_env_var_is_explicit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("ENVIRONMENT", "test")
         assert _required_settings().environment_is_explicit is True
+
+
+# "ENVIRONMENT=development", "ENVIRONMENT to 'development'" and the like.
+_SWITCH_TO_DEV = re.compile(r"ENVIRONMENT\s*(=|to)\s*['\"]?(development|test)", re.IGNORECASE)
+_SMS_UNSET = {"twilio_account_sid": "", "twilio_auth_token": "", "twilio_from_number": ""}
+
+
+@pytest.mark.parametrize(
+    ("error", "guard"),
+    [
+        (TurnstileNotConfiguredError, lambda: check_turnstile_configured(
+            turnstile_secret_key="", environment="production")),
+        (SmsNotConfiguredError, lambda: check_sms_configured(
+            sms_backend="console", environment="production", **_SMS_UNSET)),
+        (SmsNotConfiguredError, lambda: check_sms_configured(
+            sms_backend="twilio", environment="production", **_SMS_UNSET)),
+        (SmsNotConfiguredError, lambda: check_sms_configured(
+            sms_backend="httpsms", environment="production", **_SMS_UNSET)),
+        (TransparencyNotConfiguredError, lambda: check_transparency_configured(
+            transparency_primary=True, kofi_verification_token="", environment="production")),
+        (TransparencyNotConfiguredError, lambda: check_transparency_sync_configured(
+            transparency_primary=True, minio_endpoint="", minio_access_key="",
+            minio_secret_key="", transparency_shared_bucket="", environment="production")),
+        (ExtractionNotConfiguredError, lambda: check_extraction_configured(
+            anthropic_api_key="", environment="production")),
+        (SentryNotConfiguredError, lambda: init_sentry(dsn="", environment="production")),
+    ],
+    ids=[
+        "turnstile", "sms_console", "sms_twilio", "sms_httpsms", "kofi",
+        "transparency_sync", "extraction", "sentry",
+    ],
+)
+def test_a_production_refusal_never_suggests_switching_to_development(
+    error: type[Exception], guard: Callable[[], None],
+) -> None:
+    """Setting ENVIRONMENT=development on the server would switch every boot
+    guard off, so no refusal may offer it as the fix."""
+    with pytest.raises(error) as raised:
+        guard()
+    assert not _SWITCH_TO_DEV.search(str(raised.value))
