@@ -34,8 +34,9 @@ def test_development_and_test_never_check(environment: str) -> None:
     ],
 )
 def test_a_missing_value_names_the_env_var(field: str, env_name: str) -> None:
-    with pytest.raises(PlaidNotConfiguredError, match=env_name):
+    with pytest.raises(PlaidNotConfiguredError, match=env_name) as raised:
         check_plaid_configured(environment="production", **{**_GOOD, field: ""})
+    assert "ENVIRONMENT=development" not in str(raised.value)
 
 
 def test_a_plain_http_frontend_url_is_refused() -> None:

@@ -52,7 +52,8 @@ def check_test_mode_off(
         raise ProductionTestModeError(
             f"{flag_name} requires ENVIRONMENT to be explicitly set to one of "
             f"{_DEV_ENVIRONMENTS}; ENVIRONMENT is unset so it defaulted to "
-            f"{environment!r}. Set ENVIRONMENT, or remove {flag_name} from the app's env file."
+            f"{environment!r}. Remove {flag_name} from the app's env file; on a "
+            "development or test machine, set ENVIRONMENT in that file explicitly instead."
         )
     raise ProductionTestModeError(
         f"{flag_name} must be off when ENVIRONMENT={environment}. "
@@ -99,7 +100,7 @@ def check_turnstile_configured(
         "TURNSTILE_SECRET_KEY must be set in non-development environments. "
         "Cloudflare Turnstile is the CAPTCHA gate on /auth/register and "
         "/auth/forgot-password — running prod without it is a credential-stuffing "
-        "vulnerability. Set TURNSTILE_SECRET_KEY or set ENVIRONMENT=development."
+        "vulnerability. Set TURNSTILE_SECRET_KEY in the app's backend/.env.docker."
     )
 
 
@@ -256,7 +257,7 @@ def check_sms_configured(
             "environments — ready-text alerts would silently log to stdout "
             "instead of reaching customers. Set SMS_BACKEND=twilio and "
             "configure TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / "
-            "TWILIO_FROM_NUMBER, or set ENVIRONMENT=development."
+            "TWILIO_FROM_NUMBER."
         )
     if sms_backend == "twilio" and not (
         twilio_account_sid and twilio_auth_token and twilio_from_number
@@ -266,7 +267,7 @@ def check_sms_configured(
             "TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER to all be set in "
             "non-development environments. Without them the SmsService "
             "raises on every send and customers never receive ready-texts. "
-            "Set the credentials or set ENVIRONMENT=development."
+            "Set all three."
         )
     if sms_backend == "httpsms" and not (
         httpsms_api_key and httpsms_from_number and httpsms_webhook_signing_key
@@ -275,8 +276,7 @@ def check_sms_configured(
             "SMS_BACKEND='httpsms' requires HTTPSMS_API_KEY, HTTPSMS_FROM_NUMBER, "
             "and HTTPSMS_WEBHOOK_SIGNING_KEY to all be set in non-development "
             "environments. Without the signing key no delivery report can be "
-            "verified, so every text would be reported as failed. Set the "
-            "credentials or set ENVIRONMENT=development."
+            "verified, so every text would be reported as failed. Set all three."
         )
 
 
@@ -328,7 +328,7 @@ def check_transparency_configured(
         "unverified and the /support widget would never count them. Set "
         "KOFI_VERIFICATION_TOKEN (from your Ko-fi webhook settings), or set "
         "TRANSPARENCY_PRIMARY=false on this app (only one app should be the "
-        "writer), or set ENVIRONMENT=development."
+        "writer)."
     )
 
 
@@ -374,8 +374,7 @@ def check_transparency_sync_configured(
         "TRANSPARENCY_PRIMARY=true but the daily cost sync cannot reach the "
         "shared transparency bucket; unset: " + ", ".join(missing) + ". Set "
         "them on the process that runs the sync (the primary app's scheduler "
-        "worker), or set TRANSPARENCY_PRIMARY=false, or set "
-        "ENVIRONMENT=development."
+        "worker), or set TRANSPARENCY_PRIMARY=false."
     )
 
 
@@ -410,5 +409,5 @@ def check_extraction_configured(
         "ANTHROPIC_API_KEY must be set in non-development environments for "
         "an app whose core feature calls Claude — without it every request to "
         "that feature fails. Set ANTHROPIC_API_KEY in the app's "
-        "backend/.env.docker, or set ENVIRONMENT=development."
+        "backend/.env.docker."
     )

@@ -36,7 +36,7 @@ def check_plaid_configured(
         raise PlaidNotConfiguredError(
             "Plaid bank sync is not configured; unset: " + ", ".join(missing)
             + ". Set them in apps/mybookkeeper/backend/.env.docker (PLAID_ENV is "
-            "sandbox or production), or set ENVIRONMENT=development.",
+            "sandbox or production).",
         )
     if not frontend_url.startswith("https://"):
         raise PlaidNotConfiguredError(
