@@ -2,7 +2,7 @@
 
 Fail-loud policy:
 - If ``tavily_api_key`` is empty and we are NOT in development mode (detected
-  by ``MYJOBHUNTER_ENV=development``), raises ``TavilyNotConfiguredError`` at
+  by the app's ``ENVIRONMENT=development``, set explicitly), raises ``TavilyNotConfiguredError`` at
   first use so the problem is immediately visible.
 - If empty and in development mode, returns a stub response with a warning log
   so local dev can exercise the research pipeline without a live API key.
@@ -13,7 +13,6 @@ a list of ``TavilyResult`` dicts suitable for building the research prompt.
 from __future__ import annotations
 
 import logging
-import os
 from typing import TypedDict
 
 import httpx
@@ -44,7 +43,9 @@ class TavilyResult(TypedDict):
 
 
 def _is_dev_environment() -> bool:
-    return os.environ.get("MYJOBHUNTER_ENV", "").lower() == "development"
+    # Explicit only: an env file without ENVIRONMENT falls back to
+    # "development", and that must not turn on fake results in production.
+    return settings.environment_is_explicit and settings.environment == "development"
 
 
 def _classify_source_type(url: str) -> str:
@@ -112,7 +113,7 @@ async def search_company(company_name: str, domain: str | None = None) -> list[T
             return _stub_results(company_name)
         raise TavilyNotConfiguredError(
             "TAVILY_API_KEY is not configured. "
-            "Set it in .env.docker or set MYJOBHUNTER_ENV=development for stub mode."
+            "Set TAVILY_API_KEY in the app's backend/.env.docker."
         )
 
     query = _build_query(company_name, domain)
@@ -183,7 +184,7 @@ async def search_company_overview(
             return _stub_overview_results(company_name)
         raise TavilyNotConfiguredError(
             "TAVILY_API_KEY is not configured. "
-            "Set it in .env.docker or set MYJOBHUNTER_ENV=development for stub mode."
+            "Set TAVILY_API_KEY in the app's backend/.env.docker."
         )
 
     query = _build_overview_query(company_name, domain)
