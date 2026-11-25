@@ -9,6 +9,7 @@ export const APP_PAGES = [
   "/budget",
   "/calendar",
   "/cash-flow",
+  "/monthly-expenses",
   "/documents",
   "/financial-accounts",
   "/inquiries",

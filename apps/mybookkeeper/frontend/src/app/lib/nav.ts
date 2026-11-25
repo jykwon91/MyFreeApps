@@ -44,6 +44,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: "/investments", label: "Investments" },
       { to: "/budget", label: "Budget" },
       { to: "/cash-flow", label: "Cash Flow" },
+      { to: "/monthly-expenses", label: "Monthly Expenses" },
       { to: "/spending-categories", label: "Spending Categories" },
       { to: "/documents", label: "Documents" },
       { to: "/reconciliation", label: "Reconciliation" },
