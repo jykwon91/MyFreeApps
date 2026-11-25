@@ -15,7 +15,9 @@ added and withdrawn in the same batch ends up withdrawn.
   bank row per run); and the second leg of a transfer between two connected
   accounts, which turns the first leg into one transfer row instead of adding
   a second — the ledger keeps one row per transfer, so it is never counted
-  twice.
+  twice. A row an email or document already brought in (a Zelle alert, a
+  bill) is linked to the bank row instead of being stored twice, and pairs
+  stored before that are folded together (``plaid_copy_reconciler``).
 * **Modified** rows update only what the bank owns — date, amount, name. How
   the person filed the row is theirs and is never overwritten.
 * **Removed** rows are soft-deleted, through the same path every delete uses.
@@ -48,7 +50,7 @@ from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
 from app.services.net_worth import net_worth_service
-from app.services.plaid import plaid_rent_attribution
+from app.services.plaid import plaid_copy_reconciler, plaid_rent_attribution
 from app.services.transactions.bank_row_classifier import classify_bank_row
 from app.services.transactions.transfer_rules import transfer_overrides
 
@@ -94,6 +96,9 @@ async def apply_batch(
     counts.removed = await _apply_removed(
         db, organization_id=item.organization_id, transaction_ids=batch.removed,
     )
+    counts.copies_merged = await plaid_copy_reconciler.merge_stored_copies(
+        db, organization_id=item.organization_id,
+    )
     counts.attributed_as_rent = await plaid_rent_attribution.attribute_untriaged_income(
         db, organization_id=item.organization_id,
     )
@@ -137,6 +142,14 @@ async def _apply_added(
     if already_imported is not None:
         claimed.add(already_imported.id)
         counts.matched_existing += 1
+        return
+
+    copy = await plaid_copy_reconciler.link_existing_copy(
+        db, txn, account=account, classification=classification, exclude_ids=claimed,
+    )
+    if copy is not None:
+        claimed.add(copy.id)
+        counts.linked_existing += 1
         return
 
     external_category = plaid_transaction_mapper.external_category_for(txn)

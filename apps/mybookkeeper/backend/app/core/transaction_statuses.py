@@ -3,3 +3,6 @@
 REVIEWABLE_STATUSES = ("pending", "needs_review", "unverified")
 
 COUNTED_STATUS = "approved"
+
+# A copy folded into another row by a duplicate merge: soft-deleted, recoverable.
+DUPLICATE_STATUS = "duplicate"

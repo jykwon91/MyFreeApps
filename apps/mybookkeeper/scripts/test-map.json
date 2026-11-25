@@ -2420,6 +2420,7 @@
         "backend/app/models/integrations/plaid_item.py",
         "backend/app/repositories/plaid/",
         "backend/app/repositories/transactions/plaid_transaction_repo.py",
+        "backend/app/repositories/transactions/plaid_copy_repo.py",
         "backend/app/schemas/plaid/",
         "backend/app/schemas/transactions/bank_row_classification.py",
         "backend/app/services/plaid/",
@@ -2454,7 +2455,9 @@
         "test_bank_csv_account_import.py",
         "test_plaid_holdings_sync_service.py",
         "test_plaid_investments_consent.py",
-        "test_plaid_rent_attribution.py"
+        "test_plaid_rent_attribution.py",
+        "test_plaid_copy_matcher.py",
+        "test_plaid_copy_reconciler.py"
       ],
       "frontend_tests": [
         "ConnectedBanksSection.test.tsx",
