@@ -2825,7 +2825,20 @@
         "api-client/src/types/cash-flow/",
         "api-client/src/constants/budget.ts",
         "api-client/src/utils/monthText.ts",
-        "api-client/src/utils/cashFlowChartRows.ts"
+        "api-client/src/utils/cashFlowChartRows.ts",
+        "backend/app/core/monthly_expense_constants.py",
+        "backend/app/repositories/monthly_expenses/",
+        "backend/app/services/monthly_expenses/",
+        "backend/app/schemas/monthly_expenses/",
+        "backend/app/mappers/monthly_expense_mapper.py",
+        "backend/app/api/monthly_expenses.py",
+        "frontend/src/app/pages/MonthlyExpenses.tsx",
+        "frontend/src/app/features/monthly-expenses/",
+        "frontend/src/shared/lib/monthly-expenses-messages.ts",
+        "frontend/src/shared/lib/monthly-expenses-pages.ts",
+        "api-client/src/types/monthly-expenses/",
+        "api-client/src/constants/monthlyExpenses.ts",
+        "api-client/src/utils/expenseAccountLabel.ts"
       ],
       "backend_tests": [
         "test_month_text.py",
@@ -2833,17 +2846,24 @@
         "test_cash_flow_months.py",
         "test_budget_service.py",
         "test_budgets_api.py",
-        "test_summary_from_transactions.py"
+        "test_summary_from_transactions.py",
+        "test_monthly_expense_rules.py",
+        "test_monthly_expense_service.py",
+        "test_monthly_expenses_api.py"
       ],
       "frontend_tests": [
         "BudgetBody.test.tsx",
         "BudgetAmountEditor.test.tsx",
         "CashFlowBody.test.tsx",
         "CashFlowControls.test.tsx",
-        "cashFlowSearchParams.test.ts"
+        "cashFlowSearchParams.test.ts",
+        "MonthlyExpensesBody.test.tsx",
+        "MonthlyExpenseCategoryRow.test.tsx",
+        "monthlyExpensesSearchParams.test.ts"
       ],
       "e2e_specs": [
-        "mocked/budget-cash-flow-mock.spec.ts"
+        "mocked/budget-cash-flow-mock.spec.ts",
+        "mocked/monthly-expenses-mock.spec.ts"
       ]
     },
     "investments": {

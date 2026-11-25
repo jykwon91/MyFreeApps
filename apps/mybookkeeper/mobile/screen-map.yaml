@@ -29,6 +29,8 @@ routes:
     not_on_mobile: New in this release, the holdings of the web-only investment accounts; the phone screen follows with the accounts screen.
   /cash-flow:
     not_on_mobile: New in this release, a month-by-month chart built on the web-only accounts; the phone screen follows with the accounts screen.
+  /monthly-expenses:
+    not_on_mobile: New in this release, a spending breakdown built on the web-only accounts; the phone screen follows with the accounts screen.
   /plaid-oauth:
     not_on_mobile: The return page of the website's bank-connect flow; bank linking is web-only for now.
   /spending-categories:

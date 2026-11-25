@@ -33,7 +33,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, budgets, calendar, cash_flow, classification_rules, costs, db_admin, demo, documents, exports, financial_accounts, frontend_errors, health_dashboard, holdings, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, net_worth, organizations, plaid, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, spending_categories, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
+from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, budgets, calendar, cash_flow, classification_rules, costs, db_admin, demo, documents, exports, financial_accounts, frontend_errors, health_dashboard, holdings, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, monthly_expenses, mortgage_market, mortgages, net_worth, organizations, plaid, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, spending_categories, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
 from app.services.system.admin_service import shared_admin_user_service
 from app.services.user import account_deletion_service
 
@@ -209,6 +209,7 @@ app.include_router(net_worth.router)
 app.include_router(budgets.router)
 app.include_router(holdings.router)
 app.include_router(cash_flow.router)
+app.include_router(monthly_expenses.router)
 app.include_router(plaid.router)
 app.include_router(spending_categories.router)
 app.include_router(mortgage_market.router)
