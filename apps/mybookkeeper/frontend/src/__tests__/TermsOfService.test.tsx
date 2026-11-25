@@ -43,6 +43,20 @@ describe("TermsOfService — rendering", () => {
     expect(screen.getByRole("heading", { name: /acceptable use/i })).toBeInTheDocument();
   });
 
+  it("renders the Text messages section with opt-out, help, frequency and rates", () => {
+    renderTermsOfService();
+    const heading = screen.getByRole("heading", { name: /^text messages$/i });
+    const section = heading.closest("section");
+    expect(section).not.toBeNull();
+    const text = section?.textContent ?? "";
+    expect(text).toMatch(/reply STOP/);
+    expect(text).toMatch(/reply HELP/i);
+    expect(text).toMatch(/START/);
+    expect(text).toMatch(/message frequency varies/i);
+    expect(text).toMatch(/message and data rates may apply/i);
+    expect(text).toMatch(/never shared/i);
+  });
+
   it("renders the Intellectual property section", () => {
     renderTermsOfService();
     expect(screen.getByRole("heading", { name: /intellectual property/i })).toBeInTheDocument();

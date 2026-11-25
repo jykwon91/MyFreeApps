@@ -68,6 +68,15 @@ describe("PrivacyPolicy — rendering", () => {
     expect(screen.getByRole("heading", { name: /how long/i })).toBeInTheDocument();
   });
 
+  it("names Twilio for text messages and links to the Terms opt-out section", () => {
+    renderPrivacyPolicy();
+    const heading = screen.getByRole("heading", { name: /twilio \(text messages\)/i });
+    const block = heading.parentElement;
+    expect(block?.textContent ?? "").toMatch(/never sold, rented or shared/i);
+    const link = screen.getByRole("link", { name: /^text messages$/i });
+    expect(link).toHaveAttribute("href", "/terms#text-messages");
+  });
+
   it("renders the Who we share your data with section", () => {
     renderPrivacyPolicy();
     expect(screen.getByRole("heading", { name: /who we share/i })).toBeInTheDocument();

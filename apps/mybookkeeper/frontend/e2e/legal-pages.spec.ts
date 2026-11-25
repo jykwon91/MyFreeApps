@@ -112,3 +112,16 @@ test.describe("Register — terms acceptance checkbox", () => {
     await expect(privacyLink).toHaveAttribute("href", "/privacy");
   });
 });
+
+test.describe("Legal pages — text-message disclosures", () => {
+  test("Terms of Service explains text opt-in and STOP/HELP", async ({ page }) => {
+    await page.goto("/terms");
+    const section = page.locator("section#text-messages");
+    await expect(section.getByRole("heading", { name: /^text messages$/i })).toBeVisible();
+    await expect(section).toContainText("reply STOP");
+    await expect(section).toContainText("Message and data rates may apply", { ignoreCase: true });
+    await section.getByRole("link", { name: /privacy policy/i }).click();
+    await expect(page).toHaveURL(/\/privacy$/);
+    await expect(page.getByRole("heading", { name: /twilio \(text messages\)/i })).toBeVisible();
+  });
+});

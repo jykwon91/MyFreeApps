@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export const TERMS_LAST_UPDATED = "2026-04-25";
+export const TERMS_LAST_UPDATED = "2026-11-25";
 
 export default function TermsOfService() {
   return (
@@ -79,6 +79,51 @@ export default function TermsOfService() {
               <li>Resell, white-label, or redistribute the service</li>
               <li>Use it for any unlawful purpose</li>
             </ul>
+          </section>
+
+          <section id="text-messages">
+            <h2 className="text-xl font-semibold mb-3">Text messages</h2>
+            <p className="mb-3">
+              Landlords who use MyBookkeeper can send their own tenants rent reminders by text
+              message, from a MyBookkeeper toll-free number.
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-2">
+              <li>
+                <strong>Who gets them</strong> — only tenants who gave their landlord a mobile number
+                and agreed to receive rent reminders by text, usually when signing the lease. The
+                landlord turns texts on for each tenant.
+              </li>
+              <li>
+                <strong>What they say</strong> — rent due dates and amounts due
+                for the tenant's own lease. No marketing.
+              </li>
+              <li>
+                <strong>How often</strong> — message frequency varies, usually a few messages a
+                month around the rent due date.
+              </li>
+              <li>
+                <strong>Cost</strong> — message and data rates may apply.
+              </li>
+              <li>
+                <strong>Opting out</strong> — reply <strong>STOP</strong> to any text to stop all
+                texts from that number. Reply <strong>START</strong> to receive them again.
+              </li>
+              <li>
+                <strong>Help</strong> — reply <strong>HELP</strong> for help, or contact your
+                landlord.
+              </li>
+              <li>
+                Carriers are not liable for delayed or undelivered messages.
+              </li>
+            </ul>
+            <p className="mt-2">
+              Mobile numbers and text-message consent are never shared with anyone for their
+              marketing. See the{" "}
+              <Link to="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </section>
 
           <section id="intellectual-property">

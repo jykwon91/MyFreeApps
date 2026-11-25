@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export const PRIVACY_LAST_UPDATED = "2026-11-04";
+export const PRIVACY_LAST_UPDATED = "2026-11-25";
 
 export default function PrivacyPolicy() {
   return (
@@ -268,6 +268,28 @@ export default function PrivacyPolicy() {
                     privacy policy
                   </a>{" "}
                   applies.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-1">Twilio (text messages)</h3>
+                <p>
+                  When a landlord turns on text reminders for a tenant, the tenant's mobile number
+                  and the message text are sent to Twilio, which delivers the text. Twilio's{" "}
+                  <a
+                    href="https://www.twilio.com/legal/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    privacy policy
+                  </a>{" "}
+                  applies. Mobile numbers and text-message consent are never sold, rented or shared
+                  with anyone for their marketing. See{" "}
+                  <Link to="/terms#text-messages" className="text-primary hover:underline">
+                    Text messages
+                  </Link>{" "}
+                  in the Terms of Service for how to opt in and out.
                 </p>
               </div>
 
