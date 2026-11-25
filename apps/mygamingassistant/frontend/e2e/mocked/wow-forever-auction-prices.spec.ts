@@ -12,7 +12,9 @@
  *     worked out from its materials ("From its materials") or says it isn't sold yet
  *   - route lines show what one of each material costs ("50c each")
  *   - your own price overrides one, and "Use auction price" puts it back
- *   - a guide without a cheapest route (Alchemy) still shows costs, with no prices panel
+ *   - Most profit: a Cheapest / Most profit / Default choice; its rows show materials, sells for and net
+ *     (profit in green), the summary says "+Xg profit", and Enchanting has no Most profit
+ *   - every crafting guide (Alchemy too) gets the cheapest route and the prices panel
  *   - the Cooking route prices its materials
  *   - a food page: buy or cook, ingredient prices, the recipe's price
  *   - the food picker sums up each pick
@@ -59,6 +61,15 @@ function reagentsOf(file: string): Reagent[] {
 }
 
 type Row = [number, number, string];
+
+/** Every item a profession's recipes make, at 5g each: far above the 50c materials, so crafting pays. */
+function productRows(file: string): Row[] {
+  const url = new URL(`../../src/games/wow-forever/data/professions/crafting/${file}.json`, import.meta.url);
+  const data = JSON.parse(readFileSync(url, "utf-8")) as { recipes: { creates?: { id: number; name: string } }[] };
+  const seen = new Map<number, string>();
+  for (const r of data.recipes) if (r.creates) seen.set(r.creates.id, r.creates.name);
+  return [...seen].map(([id, name]) => [id, 50_000, name]);
+}
 
 /** Golden Rod = 1 Gold Bar + 2 Coarse Grinding Stone, at 50c each = 1s 50c. */
 const ROD_MATERIALS: Row[] = [
@@ -176,14 +187,34 @@ test("Enchanting fills in every price it can, works out what nobody sells yet, a
   await expect(route.getByText(/you set yourself/)).toHaveCount(0);
 });
 
-test("Alchemy shows costs on its hand-picked route, without a prices panel or a cheapest claim", async ({ page }) => {
+test("Alchemy gets the cheapest route and the prices panel too", async ({ page }) => {
   await stubPrices(page, craftingRows());
   await page.goto("/wow-forever/professions?p=alchemy");
   const route = page.locator("#route");
   await expect(route.getByTestId("price-credit")).toBeVisible();
   await expect(route.getByText(/^Estimated cost to (reach skill )?\d+: ~/)).toBeVisible();
-  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
-  await expect(route.getByText(/cheapest/i)).toHaveCount(0);
+  await expect(route.getByText("Cheapest at auction prices")).toBeVisible();
+});
+
+test("Tailoring's Most profit route shows what each craft sells for and nets, and Enchanting has none", async ({ page }) => {
+  await stubPrices(page, [...craftingRows(), ...productRows("tailoring")]);
+  await page.goto("/wow-forever/professions?p=tailoring");
+  const route = page.locator("#route");
+  const choice = route.getByRole("radiogroup", { name: "Route" });
+  await expect(choice.getByRole("radio")).toHaveText(["Cheapest", "Most profit", "Default"]);
+  await choice.getByRole("radio", { name: "Most profit" }).click();
+  await expect(route.getByText("Most profit at auction prices")).toBeVisible();
+  await expect(route.getByText(/^Estimated net to (reach skill )?\d+: \+.* profit/)).toBeVisible();
+  const first = route.getByTestId("craft-row-profit").first();
+  await expect(first.getByText("Sells for")).toBeVisible();
+  await expect(first.getByTestId("craft-row-net")).toHaveText(/^\+.* profit$/);
+  await choice.getByRole("radio", { name: "Default" }).click();
+  await expect(route.getByText("Default route")).toBeVisible();
+  await expect(route.getByTestId("craft-row-profit")).toHaveCount(0);
+  await expectNoSidewaysScroll(page);
+
+  await page.goto("/wow-forever/professions?p=enchanting");
+  await expect(page.locator("#route").getByRole("radio", { name: "Most profit" })).toHaveCount(0);
 });
 
 test("prices that don't load leave the route usable, with a retry", async ({ page }) => {

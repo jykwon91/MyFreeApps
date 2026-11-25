@@ -185,7 +185,7 @@ test("every crafting radio fits inside the viewport and its group at 375px", asy
   }
 });
 
-test("Alchemy shows a hand-picked herb route with no prices, and where each herb grows", async ({ page }) => {
+test("Alchemy shows its herb route with no prices, and where each herb grows", async ({ page }) => {
   await page.goto("/wow-forever/professions");
   await page.getByRole("radio", { name: "Alchemy" }).click();
   await expect(page).toHaveURL(/\?p=alchemy$/);
@@ -198,16 +198,15 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
   await expect(page).toHaveURL(/skill=150/);
   await expect(route.getByText("Craft Lesser Mana Potion until 165.")).toBeVisible();
   await expect(route.locator('[aria-current="step"]').getByText("Lesser Mana Potion")).toBeVisible();
-  // No auction prices (stubbed empty): no prices panel, no "cheapest" claim, no gold anywhere.
-  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
-  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  // No auction prices (stubbed empty): no route choice, no "cheapest" claim, no gold anywhere.
+  await expect(route.getByRole("radiogroup", { name: "Route" })).toHaveCount(0);
+  await expect(route.getByText("Cheapest at auction prices")).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   await expect(route.getByRole("heading", { name: "Transmutes" })).toBeVisible();
   await expect(route.getByTestId("transmutes").getByText("Transmute: Legionite")).toBeVisible();
 
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
-  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
   const kelp = shopping.locator('details[data-mat="3820"]');
   await expect(kelp.locator("summary")).toContainText(/Herbalism \(skill \d+\): Stranglekelp, /);
   await kelp.locator("summary").click();
@@ -215,7 +214,7 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
   await expect(kelp.getByRole("link", { name: /^Directions to Stranglekelp/ }).first()).toHaveAttribute("href", /\/wow-forever\/map\?to=/);
 });
 
-test("the loading skeleton keeps room for prices only where there are prices", async ({ page }) => {
+test("the loading skeleton keeps room for the prices panel on every crafting guide", async ({ page }) => {
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
   await page.route(/crafting\/(alchemy|blacksmithing|engineering|leatherworking|tailoring)\.json/, async (route) => {
@@ -225,16 +224,16 @@ test("the loading skeleton keeps room for prices only where there are prices", a
   await page.goto("/wow-forever/professions?p=alchemy");
   const skeleton = page.getByTestId("craft-route-skeleton");
   await expect(skeleton).toBeVisible();
-  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
   await page.getByRole("radio", { name: "Blacksmithing" }).click();
   await expect(skeleton).toBeVisible();
-  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
   await page.getByRole("radio", { name: "Leatherworking" }).click();
   await expect(skeleton).toBeVisible();
-  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
   await page.getByRole("radio", { name: "Engineering" }).click();
   await expect(skeleton).toBeVisible();
-  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
   await page.getByRole("radio", { name: "Tailoring" }).click();
   await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
   release();
@@ -295,7 +294,6 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
-  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
   await shopping.getByRole("radio", { name: "Whole route" }).click();
   await expect(shopping.getByText("Smelt with Mining", { exact: true })).toBeVisible();
   await expect(shopping.getByText(/\d+ Copper Bar \(Mining 1\)/)).toBeVisible();
@@ -345,7 +343,6 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
-  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
   await shopping.getByRole("radio", { name: "Whole route" }).click();
   const leather = shopping.locator('details[data-mat="2318"]').first();
   await expect(leather.locator("summary")).toContainText(/Skin beasts level \d+–\d+/);
@@ -416,7 +413,6 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
-  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
   await shopping.getByRole("radio", { name: "Whole route" }).click();
   await expect(shopping.getByText("Smelt with Mining", { exact: true })).toBeVisible();
   await expect(shopping.getByText(/\d+ Copper Bar \(Mining 1\)/)).toBeVisible();

@@ -5,8 +5,8 @@ import {
   MAX_RECIPE_PROFESSIONS,
   MIN_CRAFT_MARGIN,
   MIN_CRAFT_PROFIT_COPPER,
-  MIN_PRODUCT_LISTINGS,
 } from "@/games/wow-forever/data/auctionHouse/reagentDemandRules";
+import { listedProduct, saleAfterCut } from "@/games/wow-forever/lib/auctionHouse/productSale";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
 import type { CraftPays } from "@/games/wow-forever/types/auctionHouse/craftPays";
@@ -136,16 +136,16 @@ function unitCost(id: number, data: CraftingData, byId: ReadonlyMap<number, Auct
 
 /** Copper one craft makes on this house after its cut, or null when it doesn't clearly pay. */
 function craftProfit(recipe: CraftRecipe, data: CraftingData, byId: ReadonlyMap<number, AuctionPrice>, cut: number): number | null {
-  if (!recipe.creates || recipe.enchant || !widelyKnown(recipe, data)) return null;
-  const product = byId.get(recipe.creates.id);
-  if (!product || product.listings < MIN_PRODUCT_LISTINGS) return null;
+  if (!recipe.creates || !widelyKnown(recipe, data)) return null;
+  const product = listedProduct(recipe, byId);
+  if (!product) return null;
   let cost = 0;
   for (const reagent of recipe.reagents) {
     const each = unitCost(reagent.id, data, byId);
     if (each === null) return null;
     cost += each * reagent.count;
   }
-  const profit = Math.floor(product.marketValue * recipe.creates.count * (1 - cut)) - cost;
+  const profit = saleAfterCut(product, recipe.creates.count, cut) - cost;
   return profit >= MIN_CRAFT_PROFIT_COPPER && profit >= cost * MIN_CRAFT_MARGIN ? profit : null;
 }
 
@@ -176,8 +176,8 @@ export function mostWantedFor(crafting: CraftingByProfession, byId: ReadonlyMap<
   const best = new Map<number, ReagentWant>();
   for (const data of crafting.values()) {
     for (const recipe of data.file.recipes) {
-      const product = recipe.creates && !recipe.enchant ? byId.get(recipe.creates.id) : undefined;
-      if (!recipe.creates || !product || product.listings < MIN_PRODUCT_LISTINGS) continue;
+      const product = listedProduct(recipe, byId);
+      if (!recipe.creates || !product) continue;
       const sells = product.marketValue * recipe.creates.count;
       for (const reagent of recipe.reagents) {
         if (soldByVendors(data, reagent.id)) continue;

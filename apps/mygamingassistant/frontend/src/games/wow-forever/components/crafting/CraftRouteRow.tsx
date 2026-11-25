@@ -6,6 +6,7 @@ import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffect
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
+import CraftRowProfit from "@/games/wow-forever/components/crafting/CraftRowProfit";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
@@ -73,7 +74,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
         </div>
       </div>
       {/* Done rows are history — what they cost no longer matters. */}
-      {state === "done" ? null : <CraftRowCost entry={entry} />}
+      {state === "done" ? null : entry.sale ? <CraftRowProfit entry={entry} sale={entry.sale} /> : <CraftRowCost entry={entry} />}
       {recipe.tool || makesTool || step.note ? (
         <div className="space-y-1 text-xs text-muted-foreground">
           {makesTool ? <p className="font-medium text-foreground">Tool — make one, keep it in your bags.</p> : null}

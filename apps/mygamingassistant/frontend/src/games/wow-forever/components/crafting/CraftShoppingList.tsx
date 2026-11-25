@@ -16,7 +16,6 @@ type Scope = (typeof SCOPE)[keyof typeof SCOPE];
 const SUMMARY_ITEMS = 3;
 
 /** For a profession with no prices: what it makes isn't worth selling until Forever's market settles. */
-const KEEP_CRAFTS_NOTE = "Don't sell your crafts yet — what they're worth in Forever isn't known. Keep them, use them, or give them to friends.";
 
 interface CraftShoppingListProps {
   entries: readonly ResolvedRouteEntry[];
@@ -27,11 +26,10 @@ interface CraftShoppingListProps {
   /** Today's prices, once any are known. Each line then shows what it costs. */
   priceBook?: PriceBook | null;
   /** Add the "don't sell your crafts yet" line (professions without prices). */
-  keepCrafts?: boolean;
 }
 
 /** Everything the route still needs, as one list to shop or farm from — collapsed under its top items. */
-export default function CraftShoppingList({ entries, skill, place, professionLabel, note, priceBook, keepCrafts = false }: CraftShoppingListProps) {
+export default function CraftShoppingList({ entries, skill, place, professionLabel, note, priceBook }: CraftShoppingListProps) {
   const [scope, setScope] = useState<Scope>(SCOPE.mine);
   const fromSkill = scope === SCOPE.mine ? skill : null;
   const list = shoppingList(entries, fromSkill, place.file, professionLabel, (id) => isGathered(place.sources.reagent(id)), priceBook?.buyInstead);
@@ -90,7 +88,6 @@ export default function CraftShoppingList({ entries, skill, place, professionLab
             <CraftMakeLines title="Smelt with Mining" lines={list.smelt} />
           </>
         )}
-        {keepCrafts ? <p className="text-sm">{KEEP_CRAFTS_NOTE}</p> : null}
         <p className="text-xs text-muted-foreground">
           Counts are averages for the route{fromSkill !== null ? ` from skill ${fromSkill}` : ""} — bring a few spare.
           {note ? ` ${note}` : ""}

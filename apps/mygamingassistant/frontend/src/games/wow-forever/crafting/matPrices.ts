@@ -76,8 +76,19 @@ export function formatPrice(copper: number): string {
  * it's rounded to the silver; below, to the copper.
  */
 export function formatCost(copper: number): string {
-  if (copper >= COPPER_PER_GOLD) return `~${formatPrice(Math.round(copper / COPPER_PER_SILVER) * COPPER_PER_SILVER)}`;
-  return `~${formatPrice(copper)}`;
+  return `~${roundedPrice(copper)}`;
+}
+
+/** An amount at the precision `formatCost` uses, without the "~". */
+function roundedPrice(copper: number): string {
+  if (copper >= COPPER_PER_GOLD) return formatPrice(Math.round(copper / COPPER_PER_SILVER) * COPPER_PER_SILVER);
+  return formatPrice(copper);
+}
+
+/** A net amount (materials less what the products sell for): "+1g 20s profit" when negative, else "~1g 20s cost". */
+export function formatNet(net: number): string {
+  if (Math.round(net) < 0) return `+${roundedPrice(-net)} profit`;
+  return `${formatCost(net)} cost`;
 }
 
 /**
