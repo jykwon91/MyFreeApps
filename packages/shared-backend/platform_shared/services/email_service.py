@@ -57,6 +57,7 @@ from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from typing import get_args
 
 from platform_shared.core.email_constants import SMTP_TIMEOUT_SECONDS
@@ -223,7 +224,9 @@ class EmailService:
             msg = MIMEMultipart("alternative")
             msg.attach(MIMEText(body_html, "html"))
 
-        msg["From"] = f"{strip_line_breaks(self.from_name)} <{sender}>"
+        # formataddr quotes a name with a comma or quote in it and encodes a
+        # non-ASCII one, either of which a hand-built "name <addr>" breaks.
+        msg["From"] = formataddr((strip_line_breaks(self.from_name), sender))
         msg["To"] = ", ".join(to)
         msg["Subject"] = subject
         if reply_to:
