@@ -36,6 +36,7 @@ import {
   type WorldZone,
   type ZoneKind,
 } from "@/games/wow-forever/types/worldMap";
+import { flightMasterPois } from "@/games/wow-forever/worldMap/flightMasterPois";
 import { decodeInteriors, type InteriorsFile } from "@/games/wow-forever/worldMap/interiors";
 
 type Row = readonly unknown[];
@@ -388,7 +389,9 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
   const continentNames = new Map<number, string>(
     Object.entries(continents).map(([id, name]) => [Number(id), str(name, "continent name")]),
   );
-  const pois = decodeServices(files.services);
+  const travel = decodeTravel(files.travel);
+  const services = decodeServices(files.services);
+  const pois = [...services, ...flightMasterPois(travel.flightNodes, services, new Map(zones.map((z) => [z.id, z.name])))];
   const questGivers = decodeQuestGivers(files.quests);
   const instances = withBosses(decodeInstances(files.dungeons), files.interiors);
   return {
@@ -402,7 +405,7 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
     questGivers,
     instances,
     poiById: new Map([...pois, ...questGivers, ...instances].map((p) => [p.id, p])),
-    ...decodeTravel(files.travel),
+    ...travel,
     areas: decodeAreas(files.areas),
   };
 }

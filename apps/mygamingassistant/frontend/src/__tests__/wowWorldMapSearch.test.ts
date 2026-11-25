@@ -21,7 +21,7 @@ import { planDirections } from "@/games/wow-forever/worldMap/directions";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { buildPlaces, findPlaces, nearestTown, placeLabel, PLACE_KIND } from "@/games/wow-forever/worldMap/places";
 import { commonMapOf, defaultResultCount, fitResults, searchMarkers, viewMapSearch } from "@/games/wow-forever/worldMap/mapSearch";
-import { findLinkedPoi, MAX_NPC_RESULTS, searchAllNpcs, searchMap, searchNpcs } from "@/games/wow-forever/worldMap/search";
+import { findLinkedPoi, MAX_NPC_RESULTS, searchAllNpcs, searchMap, searchNpcs, type SearchContext } from "@/games/wow-forever/worldMap/search";
 import { ENDPOINT_KIND, resolveEndpoint } from "@/games/wow-forever/worldMap/trip";
 import { relatedMaps, resolveWhere, WHERE_RESULT } from "@/games/wow-forever/worldMap/where";
 
@@ -192,6 +192,65 @@ describe("Show all on the map", () => {
     expect(commonMapOf(data, [STORMWIND])).toBe(STORMWIND);
     expect(commonMapOf(data, [STORMWIND, ELWYNN])).toBe(EASTERN_KINGDOMS);
     expect(commonMapOf(data, [STORMWIND, ORGRIMMAR])).toBe(data.worldMapId);
+  });
+});
+
+describe("a kind of NPC in a zone", () => {
+  const alliance = { faction: FACTION.alliance, player: null };
+  const horde = { faction: FACTION.horde, player: null };
+  const HYJAL = 2482;
+  const names = (query: string, context: SearchContext = alliance) => searchAllNpcs(query, data, context).map((h) => h.poi.name);
+
+  it.each([
+    "flight master mount hyjal",
+    "flight master in mount hyjal",
+    "mount hyjal flight master",
+    "hyjal flight path",
+    "flight path in hyjal",
+    "hyjal fp",
+    "flight masters near mount hyjal",
+  ])('"%s" finds both Mount Hyjal flight masters', (query) => {
+    const hits = searchAllNpcs(query, data, alliance);
+    expect(hits.map((h) => h.poi.name).sort()).toEqual(["Summit of Eternity", "Tainted Foothills"]);
+    expect(hits.every((h) => h.zone.id === HYJAL && h.poi.subkind === "flight_master")).toBe(true);
+    expect(hits.map((h) => h.poi.subzone).sort()).toEqual(["Dae'gun", "Felblood Scar"]);
+  });
+
+  it("a flight point the NPC table lacks sits where the flight map puts it, and is neutral", () => {
+    const summit = searchAllNpcs("flight master hyjal", data, alliance).find((h) => h.poi.subzone === "Dae'gun");
+    expect(summit?.poi).toMatchObject({ x: 68.6, y: 44.1, faction: "N", source: "game_files" });
+    expect(names("flight master hyjal", horde)).toHaveLength(2);
+  });
+
+  it("one flight master in a zone is the only hit; a partial zone name works", () => {
+    expect(names("flight master tainted foothills")).toEqual(["Tainted Foothills"]);
+    expect(names("flightmaster hyjal")).toHaveLength(2);
+  });
+
+  it("a Classic zone works the same way, with the NPC table's own people", () => {
+    expect(names("innkeeper feralas").sort()).toEqual(["Innkeeper Greul", "Innkeeper Shyria"]);
+    expect(names("innkeeper in feralas").sort()).toEqual(names("feralas innkeeper").sort());
+    expect(names("warlock trainer stormwind")).toEqual(expect.arrayContaining(["Demisette Cloyce", "Sandahl", "Ursula Deline"]));
+  });
+
+  it("a Horde-only flight master is not the Alliance's first answer, but still found when it is the only one", () => {
+    const tarren = searchAllNpcs("flight master tarren mill", data, alliance);
+    expect(tarren).toHaveLength(1);
+    expect(tarren[0].poi.faction).toBe("H");
+    expect(searchAllNpcs("flight master", data, alliance)[0].poi.faction).not.toBe("H");
+  });
+
+  it("never reuses a Classic flight master: each flight point is one NPC", () => {
+    const stormwind = searchAllNpcs("flight master elwynn", data, alliance);
+    expect(stormwind.every((h) => h.poi.source === "classic")).toBe(true);
+    expect(searchAllNpcs("flight master", data, alliance)).toHaveLength(data.pois.filter((p) => p.subkind === "flight_master").length);
+  });
+
+  it("the search box suggests them and offers all on the map", () => {
+    const results = searchMap("flight master mount hyjal", data, places, alliance);
+    expect(results.npcs).toHaveLength(2);
+    expect(results.allNpcs).toHaveLength(2);
+    expect(results.didYouMean).toBeUndefined();
   });
 });
 
