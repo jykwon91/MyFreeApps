@@ -17,6 +17,7 @@ from platform_shared.core.smtp_setting_faults import (
     unset_smtp_settings,
 )
 from platform_shared.services.email_backend import EmailBackend
+from platform_shared.services.email_not_configured_error import EmailNotConfiguredError
 from platform_shared.services.sms_not_configured_error import SmsNotConfiguredError
 
 _DEV_ENVIRONMENTS = ("development", "test")
@@ -100,10 +101,6 @@ def check_turnstile_configured(
         "/auth/forgot-password — running prod without it is a credential-stuffing "
         "vulnerability. Set TURNSTILE_SECRET_KEY or set ENVIRONMENT=development."
     )
-
-
-class EmailNotConfiguredError(RuntimeError):
-    """Raised at boot when email can't be sent in a non-dev environment."""
 
 
 def check_email_configured(
