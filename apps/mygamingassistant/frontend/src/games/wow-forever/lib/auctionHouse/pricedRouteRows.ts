@@ -1,5 +1,4 @@
 import { pricedRoute } from "@/games/wow-forever/crafting/pricedRoute";
-import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { stepOf } from "@/games/wow-forever/lib/professionsAddon/buildCraftingProfession";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
@@ -39,7 +38,6 @@ export function pricedRouteRows(
 ): ReadonlyMap<CraftingProfession, readonly PricedRouteRow[]> {
   const out = new Map<CraftingProfession, readonly PricedRouteRow[]>();
   for (const [profession, data] of crafting) {
-    if (!CRAFTING_FEATURES[profession].priced) continue;
     const result = pricedRoute({
       profession,
       data,
@@ -48,9 +46,10 @@ export function pricedRouteRows(
       overrides: {},
       knownFormulas: new Set(),
       excludedSlots: new Set(),
-      useDefault: false,
+      mode: "cheapest",
+      spec: null,
     });
-    if (!result.cheapest) continue;
+    if (result.shown !== "cheapest") continue;
     out.set(profession, result.entries.map((entry) => rowOf(entry, CRAFTING_GUIDES[profession].label)));
   }
   return out;

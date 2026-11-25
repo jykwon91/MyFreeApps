@@ -49,7 +49,7 @@ export default function CraftingGuideView({ profession, faction, zoneId, level, 
         </GuideSection>
       ) : null}
 
-      {state.status === "loading" ? <CraftRouteSkeleton priced={features.priced} /> : null}
+      {state.status === "loading" ? <CraftRouteSkeleton /> : null}
       {state.status === "error" ? (
         <AlertBox variant="error">
           <p>The {guide.label} leveling route didn't load.</p>

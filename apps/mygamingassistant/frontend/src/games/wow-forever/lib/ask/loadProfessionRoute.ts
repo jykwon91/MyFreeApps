@@ -11,15 +11,14 @@ import type { AskProfessionRoute } from "@/games/wow-forever/types/ask/askProfes
 
 export async function loadProfessionRoute(profession: GuideProfession): Promise<AskProfessionRoute> {
   if (isCraftingProfession(profession)) {
-    const [{ CRAFTING_ROUTES }, { CRAFTING_FEATURES }, data] = await Promise.all([
+    const [{ CRAFTING_ROUTES }, data] = await Promise.all([
       import("@/games/wow-forever/data/professions/crafting/craftingRoutes"),
-      import("@/games/wow-forever/data/professions/crafting/craftingFeatures"),
       loadCraftingData(profession),
     ]);
     return {
       kind: "crafting",
       entries: resolveRoute(CRAFTING_ROUTES[profession], data.recipes, data.trainerSkills),
-      priced: CRAFTING_FEATURES[profession].priced,
+      priced: true,
     };
   }
   const { GUIDE_ROUTES } = await import("@/games/wow-forever/data/professions/guideRoutes");

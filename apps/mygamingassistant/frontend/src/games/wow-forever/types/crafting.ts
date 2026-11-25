@@ -1,3 +1,4 @@
+import type { RowSale } from "@/games/wow-forever/types/auctionHouse/rowSale";
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
 import type { MakerRecipe } from "@/games/wow-forever/types/makerRecipe";
 import type { RecipeClassicSource } from "@/games/wow-forever/types/recipeClassicSource";
@@ -8,8 +9,8 @@ export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFT
 
 /** What a crafting guide shows besides the route — differs per profession. */
 export interface CraftingFeatures {
-  /** The cheapest route at auction prices, and a panel to override them. Off = the hand-picked route (still with costs). */
-  priced: boolean;
+  /** The "Most profit" route: needs recipes that make items to sell (Enchanting makes none). */
+  profit: boolean;
   /** Enchanting's "skip enchants for these slots" list. */
   enchantSlots: boolean;
   /** List the Transmute recipes under the route. */
@@ -141,6 +142,8 @@ export interface ResolvedCraftStep {
   source?: RouteRowSource;
   /** Expected copper for the row from your skill on; absent when a material has no price. */
   cost?: number;
+  /** Most profit routes only: the row's materials and what its products sell for (cost = materials less sells). */
+  sale?: RowSale;
   /** The materials that still need a price before this row has a cost. */
   missing?: readonly { id: number; name: string }[];
 }

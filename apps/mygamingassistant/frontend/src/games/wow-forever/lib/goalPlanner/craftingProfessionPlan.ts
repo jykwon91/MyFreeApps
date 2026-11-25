@@ -106,7 +106,8 @@ export function craftingProfessionPlan(input: CraftingPlanInput): ProfessionPlan
     overrides: input.overrides,
     knownFormulas: input.knownFormulas,
     excludedSlots: input.excludedSlots,
-    useDefault: false,
+    mode: "cheapest",
+    spec: null,
   });
   const book = priced.priceBook;
   const entries = clipRoute(priced.entries, from, target);

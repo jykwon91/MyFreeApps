@@ -51,9 +51,9 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
   const guide = CRAFTING_GUIDES[profession];
   const features = CRAFTING_FEATURES[profession];
   const [skill, setSkill] = useCraftingSkill(profession);
-  const priced = usePricedRoute(profession, data, skill);
   const specs = CRAFTING_SPECS[profession];
   const [spec, setSpec] = useCraftingSpec(profession);
+  const priced = usePricedRoute(profession, data, skill, spec);
   const entries = useMemo(() => routeForSpec(priced.entries, specs, spec), [priced.entries, specs, spec]);
   const specNames = new Map((data.file.specs ?? []).map((s) => [s.spell, s.name]));
   const current = currentEntryIndex(entries, skill);
@@ -73,8 +73,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           status={statusLine(entries, current)}
         />
         <PriceStatus withoutPrices="showing routes without prices" />
-        {features.priced ? (
-          <CraftPricesPanel
+        <CraftPricesPanel
             items={priced.items}
             overrides={priced.overrides.prices}
             auction={priced.auction}
@@ -89,13 +88,12 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
             slots={slots}
             place={place}
           />
-        ) : null}
         <CraftRouteHeader
-          priced={features.priced}
-          cheapest={priced.cheapest}
+          shown={priced.shown}
+          mode={priced.mode}
+          onMode={priced.setMode}
+          canProfit={priced.canProfit}
           hasCosts={priced.hasCosts}
-          useDefault={priced.useDefault}
-          onUseDefault={priced.setUseDefault}
           autoPriced={priced.autoPriced}
           materials={priced.materials}
           overridden={priced.overridden}
@@ -142,7 +140,6 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           professionLabel={guide.label}
           note={guide.shoppingNote}
           priceBook={priced.priceBook}
-          keepCrafts={!features.priced}
         />
       </GuideSection>
       <CampObjectsSection recipes={data.file.recipes} place={place} professionLabel={guide.label} />

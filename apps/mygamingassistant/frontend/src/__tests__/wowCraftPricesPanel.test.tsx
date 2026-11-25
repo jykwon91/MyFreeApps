@@ -75,7 +75,7 @@ describe("auction prices on a crafting guide", () => {
     expect(credit).toHaveTextContent(/Prices from Blizzard \(PvP · Alliance AH, US\) · updated/);
     expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Use default route" }));
+    await userEvent.click(within(routeSection().getByRole("radiogroup", { name: "Route" })).getByRole("radio", { name: "Default" }));
     expect(routeSection().getByText("Default route")).toBeInTheDocument();
   });
 
@@ -181,7 +181,7 @@ describe("auction prices on a crafting guide", () => {
     expect(failed.refetch).toHaveBeenCalled();
   });
 
-  it("prices a guide without a cheapest route too: costs on the hand-picked route, no override panel", () => {
+  it("gives Alchemy the cheapest route and the override panel too", () => {
     // Peacebloom + Silverleaf + Empty Vial: Minor Healing Potion, Alchemy's first rows.
     usePricesQuery.mockReturnValue(
       pricesReady(priceList([
@@ -192,7 +192,7 @@ describe("auction prices on a crafting guide", () => {
     );
     renderSections("alchemy", ALCHEMY);
     expect(routeSection().getByText(/^Estimated cost to/)).toBeInTheDocument();
-    expect(routeSection().queryByText(/cheapest/i)).toBeNull();
-    expect(screen.queryByRole("region", { name: "Prices" })).toBeNull();
+    expect(routeSection().getByText("Cheapest at auction prices")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Prices" })).toBeInTheDocument();
   });
 });

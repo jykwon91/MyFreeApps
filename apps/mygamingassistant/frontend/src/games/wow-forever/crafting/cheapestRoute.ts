@@ -10,8 +10,9 @@
  * back to the hand-written row, flagged so the page can say what to price.
  */
 import { expectedCrafts, learnAt, learnSkill, MAX_CRAFT_SKILL, mustAcquire, resolveRoute, skillColors } from "@/games/wow-forever/crafting/craftRoute";
-import { essencePartner, type PriceBook } from "@/games/wow-forever/crafting/matPrices";
-import { makerOf, shoppingList } from "@/games/wow-forever/crafting/shoppingList";
+import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
+import type { RecipeSale } from "@/games/wow-forever/types/auctionHouse/recipeSale";
+import type { RowSale } from "@/games/wow-forever/types/auctionHouse/rowSale";
 import type {
   CraftingFile,
   CraftRecipe,
@@ -33,12 +34,6 @@ export type EnchantSlot = (typeof ENCHANT_SLOTS)[number];
  */
 export const SWITCH_PENALTY_POINTS = 0.5;
 
-/** Formula checklist: formulas you can learn within this many points of your skill (plus any you've ticked). */
-export const FORMULA_WINDOW = 50;
-
-/** Price list: recipes you can use within this many points of your skill put their materials on the main list. */
-export const SOON_WINDOW = 30;
-
 /** Rows from here on weren't reachable in the beta and aren't checked in the live game yet — the hand route's own rule. */
 export const UNCONFIRMED_FROM = 200;
 
@@ -52,7 +47,12 @@ export function enchantSlot(name: string): EnchantSlot | null {
 export interface RouteChoices {
   knownFormulas: ReadonlySet<number>;
   excludedSlots: ReadonlySet<EnchantSlot>;
+  /** Spells of the specializations you chose (with the ones they need): a recipe for another one is left out. None chosen = none allowed. */
+  allowedSpecs?: ReadonlySet<number>;
 }
+
+/** What each recipe's products sell for, by spell; null = the route is about materials only. */
+export type RouteSales = ReadonlyMap<number, RecipeSale> | null;
 
 /**
  * Patterns the hand-written route itself tells you to get (its craft rows).
@@ -87,7 +87,7 @@ export interface CraftContext {
 export interface PricedRoute {
   entries: ResolvedRouteEntry[];
   /**
-   * Expected copper from your skill up to `reach`. Rows past the first one
+   * Expected net copper (materials less what the products sell for; negative = profit) from your skill up to `reach`. Rows past the first one
    * without a cost aren't added: totals over different sets of rows made the
    * default route look cheaper than the cheapest one.
    */
@@ -122,6 +122,7 @@ export function costBetween(recipe: CraftRecipe, book: PriceBook, from: number, 
 /** You can use it: a start / trainer recipe, or a formula / quest / NPC recipe you've learned — and the slot is one you can enchant. */
 export function usable(recipe: CraftRecipe, choices: RouteChoices): boolean {
   if (mustAcquire(recipe) && !choices.knownFormulas.has(recipe.spell)) return false;
+  if (recipe.spec !== undefined && !choices.allowedSpecs?.has(recipe.spec)) return false;
   const slot = enchantSlot(recipe.name);
   return !(slot && choices.excludedSlots.has(slot));
 }
@@ -137,18 +138,22 @@ function isFixed(entry: ResolvedRouteEntry, tools: ReadonlySet<number>): boolean
 }
 
 /** Cost (or what still needs a price) for a craft row from `start` on. */
-function withCost(entry: ResolvedCraftStep, book: PriceBook, start: number, source: RouteRowSource): ResolvedCraftStep {
+function withCost(entry: ResolvedCraftStep, book: PriceBook, start: number, source: RouteRowSource, sales: RouteSales): ResolvedCraftStep {
   const from = Math.max(entry.step.from, start);
   const unit = book.recipe(entry.recipe);
   if (unit.price === undefined) return { ...entry, source, missing: unit.missing };
-  return { ...entry, source, cost: unit.price * exactCrafts(entry.recipe, from, entry.step.to), missing: [] };
+  const crafts = exactCrafts(entry.recipe, from, entry.step.to);
+  const sale = sales?.get(entry.recipe.spell);
+  if (!sale) return { ...entry, source, cost: unit.price * crafts, missing: [] };
+  const rowSale: RowSale = { materials: unit.price * crafts, sells: sale.sells * crafts, gap: sale.gap, onSale: sale.onSale };
+  return { ...entry, source, cost: rowSale.materials - rowSale.sells, sale: rowSale, missing: [] };
 }
 
 /** Add costs to the rows still ahead of `start`; earlier rows are history and stay as they are. */
-export function annotateRoute(entries: readonly ResolvedRouteEntry[], book: PriceBook, start: number): ResolvedRouteEntry[] {
+export function annotateRoute(entries: readonly ResolvedRouteEntry[], book: PriceBook, start: number, sales: RouteSales = null): ResolvedRouteEntry[] {
   return entries.map((entry) => {
     if (entry.kind !== "craft" || entry.step.to <= start || entry.source) return entry;
-    return { kind: "craft", ...withCost(entry, book, start, "default") };
+    return { kind: "craft", ...withCost(entry, book, start, "default", sales) };
   });
 }
 
@@ -197,6 +202,7 @@ function rowEntry(
 
 interface Candidate {
   recipe: CraftRecipe;
+  /** Copper one craft costs: materials, less what its products sell for on a profit route (negative = a profit). */
   unit: number;
   learnSkill: number;
   /**
@@ -252,7 +258,8 @@ function planPoints(
           bestPrevTotal = total;
         }
       }
-      const penalty = SWITCH_PENALTY_POINTS * point.cheapest;
+      // |cheapest|: on a profit route a point can pay (negative cost); switching must still cost something.
+      const penalty = SWITCH_PENALTY_POINTS * Math.abs(point.cheapest);
       const next = new Map<number, number>();
       const pointBack = new Map<number, number>();
       for (const option of point.options) {
@@ -329,6 +336,7 @@ function picksToRows(
   defaults: readonly ResolvedRouteEntry[],
   book: PriceBook,
   start: number,
+  sales: RouteSales,
 ): ResolvedRouteEntry[] {
   const rows: ResolvedRouteEntry[] = [];
   let i = 0;
@@ -347,17 +355,17 @@ function picksToRows(
       const row = rowEntry(ctx, recipe, cuts[k], cuts[k + 1], defaults);
       if (first.spell === null && fallback) {
         // The hand-written row, sliced to this stretch — keep its note and confidence.
-        rows.push({ kind: "craft", ...withCost({ ...row, step: { ...fallback.step, from: cuts[k], to: cuts[k + 1] } }, book, start, "default") });
+        rows.push({ kind: "craft", ...withCost({ ...row, step: { ...fallback.step, from: cuts[k], to: cuts[k + 1] } }, book, start, "default", sales) });
         continue;
       }
-      rows.push({ kind: "craft", ...withCost(row, book, start, "priced") });
+      rows.push({ kind: "craft", ...withCost(row, book, start, "priced", sales) });
     }
   }
   return rows;
 }
 
 /** The cheapest route from `startSkill` for these prices and choices. */
-export function cheapestRoute(ctx: CraftContext, startSkill: number, book: PriceBook, choices: RouteChoices): PricedRoute {
+export function cheapestRoute(ctx: CraftContext, startSkill: number, book: PriceBook, choices: RouteChoices, sales: RouteSales = null): PricedRoute {
   const defaults = resolveRoute(ctx.route, ctx.recipes, ctx.trainerSkills);
   const tools = toolIds(ctx.file.recipes);
   const toolReady = new Map<number, number>();
@@ -382,8 +390,9 @@ export function cheapestRoute(ctx: CraftContext, startSkill: number, book: Price
     // Rods are fixed rows, made once — never a skill-up to repeat. Disenchant (no
     // reagents) is in the recipe list but isn't something you craft for points.
     if (!usable(recipe, choices) || !recipe.reagents.length || (recipe.creates && tools.has(recipe.creates.id))) continue;
-    const unit = book.recipe(recipe).price;
-    if (unit === undefined) continue;
+    const materials = book.recipe(recipe).price;
+    if (materials === undefined) continue;
+    const unit = materials - (sales?.get(recipe.spell)?.sells ?? 0);
     candidates.push({ recipe, unit, learnSkill: learnSkill(learnAt(recipe, ctx.trainerSkills)), green: skillColors(recipe).green });
   }
 
@@ -392,102 +401,15 @@ export function cheapestRoute(ctx: CraftContext, startSkill: number, book: Price
   while (skill < MAX_CRAFT_SKILL) {
     const fixed = fixedRows.find((e) => e.step.from <= skill && skill < e.step.to);
     if (fixed) {
-      out.push(...annotateRoute([fixed], book, startSkill));
+      out.push(...annotateRoute([fixed], book, startSkill, sales));
       skill = fixed.step.to;
       continue;
     }
     const next = fixedRows.find((e) => e.step.from > skill)?.step.from ?? MAX_CRAFT_SKILL;
     const picks = planPoints(skill, next, candidates, toolReady, defaults);
-    out.push(...picksToRows(ctx, picks, defaults, book, startSkill));
+    out.push(...picksToRows(ctx, picks, defaults, book, startSkill, sales));
     skill = next;
   }
 
   return { entries: out, ...routeTotal(out, startSkill) };
-}
-
-/** One material on the price list. */
-export interface PriceItem {
-  id: number;
-  name: string;
-  /** How many the default route still needs from your skill (0 = only other recipes use it). */
-  need: number;
-}
-
-const UNNAMED_ITEM = /^Item \d+$/;
-
-/** Recipes that could still give you points from `start` on. */
-function candidatesFrom(ctx: CraftContext, start: number, choices: RouteChoices): CraftRecipe[] {
-  return ctx.file.recipes.filter((r) => usable(r, choices) && r.grey > start + 1);
-}
-
-/**
- * The raw materials worth pricing from `start` on. `main` = what the default
- * route needs, in the order it first needs them (what you buy next comes
- * first, not the 300-skill dusts); `more` = what only other recipes use (and the
- * other half of an essence pair). The order depends only on the route and
- * your skill, never on prices — so the list doesn't jump while you type.
- */
-export function priceItems(ctx: CraftContext, start: number, choices: RouteChoices): { main: PriceItem[]; more: PriceItem[] } {
-  const defaults = resolveRoute(ctx.route, ctx.recipes, ctx.trainerSkills);
-  const buy = shoppingList(defaults, start, ctx.file, ctx.professionLabel).buy;
-  const main = buy.map((l) => ({ id: l.id, name: l.name, need: l.count }));
-  const seen = new Set(main.map((m) => m.id));
-  const more = new Map<number, PriceItem>();
-
-  const ownMade = (id: number) => ctx.file.madeBy[String(id)] === ctx.professionLabel;
-  function addRaw(into: Map<number, PriceItem>, id: number, name: string, depth: number): void {
-    if (ownMade(id) && depth < 3) {
-      const maker = makerOf(id, ctx.file.recipes);
-      if (maker) {
-        for (const r of maker.reagents) addRaw(into, r.id, r.name, depth + 1);
-        return;
-      }
-    }
-    // "Item 234003": a Forever item the data has no name for — nobody can look that up on the auction house.
-    if (UNNAMED_ITEM.test(name) || seen.has(id) || soon.has(id) || more.has(id)) return;
-    into.set(id, { id, name, need: 0 });
-  }
-  // What the next stretch's other recipes use goes on the main list too: the
-  // choice you're making right now (Lesser Magic vs Lesser Astral Essence at
-  // 117) needs both prices, not just the default route's.
-  const soon = new Map<number, PriceItem>();
-  const candidates = candidatesFrom(ctx, start, choices);
-  const isSoon = (r: CraftRecipe) => learnSkill(learnAt(r, ctx.trainerSkills)) < start + SOON_WINDOW && skillColors(r).green > start;
-  // Near recipes first, so an item both a near and a later recipe use lands on the main list.
-  for (const recipe of candidates.filter(isSoon)) for (const r of recipe.reagents) addRaw(soon, r.id, r.name, 0);
-  for (const recipe of candidates) for (const r of recipe.reagents) addRaw(more, r.id, r.name, 0);
-  main.push(...soon.values());
-  for (const id of soon.keys()) seen.add(id);
-
-  // 3 Lesser = 1 Greater, so a price for either half helps.
-  for (const item of [...main, ...more.values()]) {
-    const partner = essencePartner(item.id);
-    if (!partner || seen.has(partner.id) || more.has(partner.id)) continue;
-    const name = nameOf(ctx.file.recipes, partner.id);
-    if (name) more.set(partner.id, { id: partner.id, name, need: 0 });
-  }
-  return { main, more: [...more.values()].sort((a, b) => a.name.localeCompare(b.name)) };
-}
-
-function nameOf(recipes: readonly CraftRecipe[], itemId: number): string | null {
-  for (const recipe of recipes) {
-    const reagent = recipe.reagents.find((r) => r.id === itemId);
-    if (reagent) return reagent.name;
-  }
-  return null;
-}
-
-/**
- * Formulas worth asking about: learnable within FORMULA_WINDOW points of
- * your skill and still giving points, plus any you've already ticked. The
- * whole catalogue (hundreds of patterns) would bury the useful few.
- */
-export function formulaChoices(ctx: CraftContext, start: number, choices: RouteChoices): CraftRecipe[] {
-  return ctx.file.recipes
-    .filter(mustAcquire)
-    .map((r) => ({ recipe: r, skill: learnSkill(learnAt(r, ctx.trainerSkills)) }))
-    .filter(({ recipe: r, skill }) => r.grey > start + 1 && (skill < start + FORMULA_WINDOW || choices.knownFormulas.has(r.spell)))
-    .filter(({ recipe: r }) => usable(r, { ...choices, knownFormulas: new Set([r.spell]) }))
-    .sort((a, b) => a.skill - b.skill || a.recipe.name.localeCompare(b.recipe.name))
-    .map(({ recipe }) => recipe);
 }

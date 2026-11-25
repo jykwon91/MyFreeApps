@@ -26,8 +26,9 @@ describe("profession picker", () => {
     expect(SECONDARY_GROUP.options.filter((o) => isCraftingProfession(o.id)).map((o) => o.id)).toEqual([CRAFTING_PROFESSION.firstaid]);
   });
 
-  it("only Tailoring and Enchanting take typed prices", () => {
-    const priced = Object.entries(CRAFTING_FEATURES).filter(([, f]) => f.priced).map(([p]) => p);
-    expect(priced.sort()).toEqual(["enchanting", "tailoring"]);
+  it("every crafting profession but Enchanting can run the Most profit route", () => {
+    const profit = Object.entries(CRAFTING_FEATURES).filter(([, f]) => f.profit).map(([p]) => p);
+    expect(profit.sort()).toEqual(["alchemy", "blacksmithing", "engineering", "firstaid", "leatherworking", "tailoring"]);
+    expect(Object.keys(CRAFTING_FEATURES).sort()).toEqual([...profit, "enchanting"].sort());
   });
 });

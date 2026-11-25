@@ -1,17 +1,22 @@
-import type { EnchantSlot, PriceItem } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { PriceItem } from "@/games/wow-forever/crafting/priceItems";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { AutoPrice } from "@/games/wow-forever/types/autoPrice";
+import type { CraftRouteMode } from "@/games/wow-forever/types/craftRouteMode";
 import type { CraftRecipe, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
 
 /** One profession's route at today's prices — what `pricedRoute` works out, with no React state. */
 export interface PricedRouteResult {
-  /** The route to show: the cheapest at today's prices, or the default. */
+  /** The route to show. */
   entries: ResolvedRouteEntry[];
-  cheapest: boolean;
+  /** Which route `entries` is: the cheapest, the one with the most profit, or the hand-written one (also when prices didn't give a better one). */
+  shown: CraftRouteMode;
   /** Something on this guide's list has a price, so rows, the total and the shopping list show costs. */
   hasCosts: boolean;
   /** A priced profession with costs: the cheapest route is worked out and the default is one tick away. */
   canCompare: boolean;
+  /** The Most profit route can be worked out: auction prices are in and the profession makes items to sell. */
+  canProfit: boolean;
   total: number;
   /** Skill `total` gets you to. */
   reach: number;

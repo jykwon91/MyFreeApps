@@ -134,9 +134,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the Triage quest (`kind: "quest"`), both with a per-faction boat-trip note
   and Directions (`data/professions/crafting/firstAidTrainers.ts`). Forever
   moved the healing potions from Alchemy to First Aid. What each guide shows is
-  `crafting/craftingFeatures.ts`: only `priced` professions (Tailoring,
-  Enchanting) get the prices panel (overrides) / cheapest route; the rest show
-  the hand-picked route, costed at auction prices, never called "cheapest".
+  `crafting/craftingFeatures.ts`: every crafting profession gets the prices
+  panel (overrides) and the cheapest route, and a three-way route choice
+  (`CraftRouteMode`: Cheapest / Most profit / Default, `hooks/usePricedRoute.ts`).
+  **Most profit** (`profit` feature; every profession but Enchanting, which makes
+  no items): the same DP as the cheapest route over NET cost per craft =
+  materials − what the made items sell for after the house's cut
+  (`lib/auctionHouse/productSale.ts`, the one notion of a product's auction value,
+  shared with the reagent-demand tooltip; `AUCTION_CUT`). Net can be negative (a
+  profit); the switch penalty uses its size. A product counts only with at least
+  `MIN_PRODUCT_LISTINGS` (5) listings, else it sells for 0 and the row says
+  "none" / "thin"; bind-on-pickup items with no auction price sell for 0 (no
+  vendor price in the data). Product sale prices ignore typed overrides. A row
+  says when you'd make more than the units on sale. Tests: `wowCraftProfit.test.ts`,
+  `wowCraftModeToggle.test.tsx`.
   Recipes Forever added and no Classic source teaches get a "Source unknown"
   chip and never a Classic trainer (`sourceUnknown`, `learnAt.newInForever`).
   **Recipe vendors** (every guide but gathering; `components/recipeVendors/`,
