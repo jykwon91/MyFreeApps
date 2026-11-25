@@ -54,10 +54,12 @@ local function buildRow(i)
   row.head:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
   row.head:SetJustifyH("LEFT")
   row.head:SetWidth(TEXT_WIDTH)
+  row.head:SetWordWrap(false)
   row.detail = row:CreateFontString("MGAPvPLogRow" .. i .. "Detail", "ARTWORK", "GameFontHighlightSmall")
   row.detail:SetPoint("TOPLEFT", row.head, "BOTTOMLEFT", 0, -2)
   row.detail:SetJustifyH("LEFT")
   row.detail:SetWidth(TEXT_WIDTH)
+  row.detail:SetWordWrap(false)
   row.track = UI.Button(row, "MGAPvPLogRow" .. i .. "Track", "Track", 80, function()
     local line = lines[state.offset + i]
     if line then M.ToggleTracked(line.name) end

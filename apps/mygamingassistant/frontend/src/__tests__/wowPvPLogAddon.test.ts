@@ -267,6 +267,12 @@ describe("MGA PvP Log tracking", () => {
     }
   });
 
+  it("keys tracked players on their name and realm, so a same-named player elsewhere is not them", () => {
+    const lines = run(`MGAPvPLog.SetTracked("Gorak-Elsewhere", true)
+      ${say("MGAPvPLog.IsTracked('Gorak-Elsewhere')")} ${say("MGAPvPLog.IsTracked('Gorak')")}`);
+    expect(values(lines)).toEqual(["true", "false"]);
+  });
+
   it("ignores untracked players, non-player units and players you stop tracking", () => {
     const lines = run(`${GORAK}
       units["target"] = { name = "Gorak" }; fire("PLAYER_TARGET_CHANGED")

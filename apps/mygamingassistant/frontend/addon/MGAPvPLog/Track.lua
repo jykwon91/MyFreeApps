@@ -26,9 +26,9 @@ local function tracked()
   return d.tracked
 end
 
+-- "Name", or "Name-Realm" for another realm (your own realm is dropped, as the log does).
 local function plain(name)
-  local base = (name or ""):match("^(.-)%-.+$")
-  return base or name
+  return M.CleanName(name)
 end
 
 -- The logged enemy with this name (for race, class, level and how often they killed you).
@@ -37,6 +37,14 @@ local function enemyNamed(name)
     if key(enemy.name) == key(name) then return enemy end
   end
   return nil
+end
+
+-- What we knew of the player when last logged, kept on the list so it outlives the log's 200 entries.
+local function remember(entry)
+  local enemy = enemyNamed(entry.name)
+  if enemy then
+    entry.info = { race = enemy.race, class = enemy.class, classFile = enemy.classFile, level = enemy.level, killedYou = enemy.killedYou }
+  end
 end
 
 function M.IsTracked(name)
@@ -49,6 +57,7 @@ function M.SetTracked(name, on, auto)
   local list = tracked()
   if on and not list[k] then
     list[k] = { name = plain(name), auto = auto and true or nil }
+    remember(list[k])
   elseif not on then
     list[k] = nil
   end
@@ -82,7 +91,7 @@ local function placeText(at)
 end
 
 local function describe(entry)
-  local enemy = enemyNamed(entry.name)
+  local enemy = enemyNamed(entry.name) or entry.info
   local facts = {}
   if enemy then
     local who = M.Who(enemy)
@@ -129,8 +138,10 @@ end
 function M.Sighted(name, now)
   local entry = name and tracked()[key(plain(name))]
   if not entry then return end
-  local at = whereIAm()
   local before = entry.seen
+  if before and before.time == now and entry.alerted and now - entry.alerted < M.ALERT_EVERY then return end -- once a second is plenty
+  remember(entry)
+  local at = whereIAm()
   entry.seen = { time = now, zone = at.zone, subzone = at.subzone, map = at.map, x = at.x, y = at.y }
   local returned = before == nil or now - before.time >= M.LEFT_AFTER
   if returned or entry.alerted == nil or now - entry.alerted >= M.ALERT_EVERY then
@@ -151,7 +162,8 @@ end
 -- A unit token: nameplate, target, mouseover, or a group member's target.
 function M.TrackUnit(unit)
   if next(tracked()) == nil or not UnitExists(unit) or not UnitIsPlayer(unit) then return end
-  M.Sighted(UnitName(unit), time())
+  local name, realm = UnitName(unit)
+  M.Sighted((realm and realm ~= "") and (name .. "-" .. realm) or name, time())
 end
 
 -- The targets of everyone in your group, looked at every few seconds while anyone is tracked.
@@ -159,7 +171,7 @@ function M.ScanGroup()
   if next(tracked()) == nil then return end
   local raid = IsInRaid and IsInRaid()
   local count = GetNumGroupMembers and GetNumGroupMembers() or 0
-  for i = 1, math.min(count, M.SCAN_UNITS) do
+  for i = 1, math.min(raid and count or count - 1, M.SCAN_UNITS) do
     M.TrackUnit((raid and "raid" or "party") .. i .. "target")
   end
 end
@@ -185,7 +197,7 @@ end
 function M.TrackedRows()
   local now, rows = time(), {}
   for _, entry in pairs(tracked()) do
-    local enemy = enemyNamed(entry.name)
+    local enemy = enemyNamed(entry.name) or entry.info
     local head = M.ClassColor(enemy and enemy.classFile) .. entry.name .. "|r"
     local who = enemy and M.Who(enemy) or ""
     if who ~= "" then head = head .. "  " .. who end

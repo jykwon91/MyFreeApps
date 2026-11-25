@@ -54,6 +54,8 @@ local function cleanName(name)
   return name or "Unknown"
 end
 
+M.CleanName = cleanName
+
 local function currentZone()
   local zone, sub = GetRealZoneText() or "", GetSubZoneText() or ""
   if zone == "" then return sub ~= "" and sub or nil end
