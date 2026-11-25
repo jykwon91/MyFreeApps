@@ -10,6 +10,8 @@ Covers:
 - The SMTP timeout, the typed EmailSendError (kind / smtp_code / refused
   recipients), and the *_async methods that keep the send off the event loop.
 """
+import email
+import email.policy
 import smtplib
 import ssl
 from unittest.mock import MagicMock, patch
@@ -38,6 +40,27 @@ def _configured_service() -> EmailService:
         smtp_password="s3cr3t",
         from_name="TestApp",
     )
+
+
+class TestFromHeader:
+    """The From header carries the app's name, whatever characters it has."""
+
+    @pytest.mark.parametrize(
+        "from_name",
+        ["TestApp", 'Smith, Jones & "Co"', "Café Bookkeeper", ""],
+        ids=["plain", "comma_and_quotes", "non_ascii", "empty"],
+    )
+    def test_the_name_and_address_read_back(self, from_name: str) -> None:
+        service = _configured_service()
+        service.from_name = from_name
+        mock_server = _accepting_server()
+
+        with patch("smtplib.SMTP", return_value=mock_server):
+            service.send_or_raise(["recipient@example.com"], "Subject", "<p>Body</p>")
+
+        raw = mock_server.sendmail.call_args.args[2]
+        [address] = email.message_from_string(raw, policy=email.policy.default)["From"].addresses
+        assert (address.display_name, address.addr_spec) == (from_name, "user@example.com")
 
 
 class TestStarttlsContext:
