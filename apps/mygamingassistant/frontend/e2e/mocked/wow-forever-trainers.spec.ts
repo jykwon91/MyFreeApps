@@ -162,6 +162,9 @@ test("your character marks each recipe Known, Can learn or Needs, and counts wha
 test("the other faction's character marks only what it knows", async ({ page }) => {
   await saveCharacter(page, tailor("horde"));
   await page.goto(`${TRAINERS}/tailoring`);
+  // The faction follows the character (Horde); the player picks Alliance over it.
+  await expect(page.getByRole("radio", { name: "Horde" })).toBeChecked();
+  await page.getByRole("radio", { name: "Alliance" }).click();
   await expect(page.getByTestId("my-profession")).toContainText("Jason Kwon is Horde, so only recipes they know are marked");
   const journeyman = page.getByTestId("trainers-rank").nth(1);
   await journeyman.getByRole("button", { name: /^What Journeyman teaches · \d+ recipes$/ }).click();
