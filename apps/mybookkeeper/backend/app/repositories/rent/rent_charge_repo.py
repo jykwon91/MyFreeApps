@@ -15,6 +15,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.transaction_statuses import NOT_MONEY_STATUSES
 from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_charge import RentCharge
 from app.models.transactions.transaction import Transaction
@@ -25,9 +26,6 @@ from app.models.transactions.transaction import Transaction
 # owes back. ``cleaning_fee_revenue`` is likewise not rent.
 RENT_PAYMENT_CATEGORIES: tuple[str, ...] = ("rental_revenue",)
 
-# Statuses whose rows must not settle anything. ``duplicate`` rows are the
-# same money counted twice.
-_EXCLUDED_TXN_STATUSES: tuple[str, ...] = ("duplicate",)
 
 
 async def create(
@@ -140,7 +138,7 @@ async def list_payments_for_applicant(
             Transaction.applicant_id == applicant_id,
             Transaction.transaction_type == "income",
             Transaction.category.in_(RENT_PAYMENT_CATEGORIES),
-            Transaction.status.not_in(_EXCLUDED_TXN_STATUSES),
+            Transaction.status.not_in(NOT_MONEY_STATUSES),
             Transaction.deleted_at.is_(None),
         )
         .order_by(

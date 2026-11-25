@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.transactions.transaction import Transaction
 from app.repositories import extraction_repo, tax_return_repo, transaction_repo
 from app.services.extraction.dedup_service import DedupDecision
+from app.services.transactions.personal_transfer_status import carry_personal_transfer, set_status
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 def handle_amount_conflict(existing: Transaction, new_amount: Decimal | None) -> None:
     """Flag an existing transaction for review when a new source reports a different amount."""
     if new_amount is not None and existing.amount != abs(new_amount):
-        existing.status = "needs_review"
+        set_status(existing, "needs_review")
         review_fields = list(existing.review_fields or [])
         if "amount" not in review_fields:
             review_fields.append("amount")
@@ -129,6 +130,7 @@ def _copy_user_edits(old: Transaction, new: Transaction) -> None:
     no log line. Any column added to Transaction that a user can set, or that a
     better source can supply, has to be carried here.
     """
+    carry_personal_transfer(old, new)
     if old.property_id and not new.property_id:
         new.property_id = old.property_id
     if old.category != "uncategorized" and new.category == "uncategorized":

@@ -1,3 +1,4 @@
+import { PERSONAL_TRANSFER_LABELS } from "@mybookkeeper/api-client/constants/personalTransferLabels";
 import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -20,6 +21,7 @@ const STATUS_LABELS: Record<TransactionStatus, string> = {
   unverified: "Unverified",
   duplicate: POSSIBLE_DUPLICATE_LABEL,
   approved: "Approved",
+  personal_transfer: PERSONAL_TRANSFER_LABELS.markOnCard,
 };
 
 export function statusLabel(status: TransactionStatus): string {

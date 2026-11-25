@@ -8,7 +8,7 @@ export interface AttributionReviewItem {
   proposed_applicant_id: string | null;
   proposed_property_id: string | null;
   confidence: "fuzzy" | "unmatched";
-  status: "pending" | "confirmed" | "rejected";
+  status: "pending" | "confirmed" | "rejected" | "personal" | "dismissed";
   created_at: string;
   resolved_at: string | null;
   transaction: AttributionTransactionSummary | null;

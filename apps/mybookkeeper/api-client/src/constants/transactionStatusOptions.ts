@@ -7,4 +7,5 @@ export const TRANSACTION_STATUS_OPTIONS: readonly TransactionStatusOption[] = [
   { value: "needs_review", label: "Needs Review" },
   { value: "duplicate", label: "Duplicate" },
   { value: "unverified", label: "Unverified" },
+  { value: "personal_transfer", label: "Personal Transfer" },
 ];

@@ -1,5 +1,6 @@
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AttributionReviewPanel from "@/app/features/attribution/AttributionReviewPanel";
+import PersonalTransferSenders from "@/app/features/personal-transfer/PersonalTransferSenders";
 
 export default function AttributionReview() {
   return (
@@ -9,6 +10,7 @@ export default function AttributionReview() {
         subtitle="Review unmatched or fuzzy-matched rent payments and link them to your tenants."
       />
       <AttributionReviewPanel />
+      <PersonalTransferSenders />
     </div>
   );
 }

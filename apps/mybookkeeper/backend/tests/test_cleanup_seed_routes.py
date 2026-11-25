@@ -21,6 +21,11 @@ from app.models.organization.organization_member import OrgRole
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
+from app.test_helpers.attribution_seed import (
+    _SeedAttributionReviewRequest,
+    hard_delete_attribution_review,
+    seed_attribution_review,
+)
 from app.test_helpers.rent_seed import (
     _SeedTenantPaymentsRequest,
     delete_tenant_payment,
@@ -28,13 +33,10 @@ from app.test_helpers.rent_seed import (
 )
 from app.test_helpers.seed import (
     _SeedApplicantRequest,
-    _SeedAttributionReviewRequest,
     _SeedReviewQueueRequest,
     delete_screening_result,
-    hard_delete_attribution_review,
     hard_delete_review_queue_item,
     seed_applicant,
-    seed_attribution_review,
     seed_review_queue_item,
 )
 
@@ -49,6 +51,7 @@ def _patch_session(db: AsyncSession) -> Iterator[None]:
 
     with (
         patch("app.test_helpers.seed.unit_of_work", _fake_uow),
+        patch("app.test_helpers.attribution_seed.unit_of_work", _fake_uow),
         patch("app.test_helpers.rent_seed.unit_of_work", _fake_uow),
     ):
         yield
@@ -228,6 +231,17 @@ async def _attribution_review(ctx: RequestContext) -> tuple[uuid.UUID, uuid.UUID
 
 async def _delete_attribution_review(row_id: uuid.UUID, ctx: RequestContext) -> None:
     await hard_delete_attribution_review(review_id=row_id, ctx=ctx)
+
+
+class TestSeedAttributionReview:
+    @pytest.mark.asyncio
+    async def test_a_rent_row_keeps_the_sender_it_was_given(self, db: AsyncSession, ctx: RequestContext) -> None:
+        created = await seed_attribution_review(
+            payload=_SeedAttributionReviewRequest(channel=None, payer_name="Dao Nguyen"), ctx=ctx,
+        )
+
+        payer = await db.scalar(select(Transaction.payer_name).where(Transaction.id == created.transaction_id))
+        assert payer == "Dao Nguyen"
 
 
 class TestDeleteAttributionReview:

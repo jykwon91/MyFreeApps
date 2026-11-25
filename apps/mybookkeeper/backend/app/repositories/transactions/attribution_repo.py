@@ -11,7 +11,20 @@ from sqlalchemy import delete, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
+from app.core.attribution_review_statuses import REVIEW_DISMISSED, REVIEW_PENDING, REVIEW_PERSONAL
+from app.core.transaction_statuses import PERSONAL_TRANSFER_STATUS
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue
+from app.models.transactions.transaction import Transaction
+
+# A card is only worth showing while its payment is live and still might be
+# rent. Deleting resolves the card, and so does marking a personal transfer,
+# but a card is never shown for either even if some other path left it open.
+_OPEN_CARD = (
+    RentAttributionReviewQueue.status == REVIEW_PENDING,
+    RentAttributionReviewQueue.deleted_at.is_(None),
+    Transaction.deleted_at.is_(None),
+    Transaction.status != PERSONAL_TRANSFER_STATUS,
+)
 
 
 async def create(
@@ -89,11 +102,8 @@ async def list_pending(
             selectinload(RentAttributionReviewQueue.proposed_applicant),
             selectinload(RentAttributionReviewQueue.proposed_property),
         )
-        .where(
-            RentAttributionReviewQueue.organization_id == organization_id,
-            RentAttributionReviewQueue.status == "pending",
-            RentAttributionReviewQueue.deleted_at.is_(None),
-        )
+        .join(Transaction, Transaction.id == RentAttributionReviewQueue.transaction_id)
+        .where(RentAttributionReviewQueue.organization_id == organization_id, *_OPEN_CARD)
         .order_by(RentAttributionReviewQueue.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -108,11 +118,8 @@ async def count_pending(
     result = await db.execute(
         select(func.count())
         .select_from(RentAttributionReviewQueue)
-        .where(
-            RentAttributionReviewQueue.organization_id == organization_id,
-            RentAttributionReviewQueue.status == "pending",
-            RentAttributionReviewQueue.deleted_at.is_(None),
-        )
+        .join(Transaction, Transaction.id == RentAttributionReviewQueue.transaction_id)
+        .where(RentAttributionReviewQueue.organization_id == organization_id, *_OPEN_CARD)
     )
     return result.scalar_one()
 
@@ -190,3 +197,59 @@ async def resolve_pending_for_transaction(
         RentAttributionReviewQueue.deleted_at.is_(None),
         values={"status": status, "resolved_at": datetime.now(timezone.utc)},
     )
+
+
+async def list_open_with_payer(
+    db: AsyncSession, organization_id: uuid.UUID,
+) -> Sequence[RentAttributionReviewQueue]:
+    """Open cards whose payment names a payer, with the transaction loaded."""
+    result = await db.execute(
+        select(RentAttributionReviewQueue)
+        .options(selectinload(RentAttributionReviewQueue.transaction))
+        .join(Transaction, Transaction.id == RentAttributionReviewQueue.transaction_id)
+        .where(
+            RentAttributionReviewQueue.organization_id == organization_id,
+            Transaction.payer_name.isnot(None),
+            *_OPEN_CARD,
+        )
+        .order_by(RentAttributionReviewQueue.created_at)
+    )
+    return result.scalars().all()
+
+
+async def dismiss_pending_for_transactions(
+    db: AsyncSession,
+    *,
+    transaction_ids: list[uuid.UUID],
+    organization_id: uuid.UUID,
+    dismissed_at: datetime,
+) -> int:
+    """``pending`` → ``dismissed`` for the cards of the given (just deleted) transactions."""
+    if not transaction_ids:
+        return 0
+    changed = await update_rows(
+        db,
+        RentAttributionReviewQueue,
+        RentAttributionReviewQueue.transaction_id.in_(transaction_ids),
+        RentAttributionReviewQueue.organization_id == organization_id,
+        RentAttributionReviewQueue.status == REVIEW_PENDING,
+        RentAttributionReviewQueue.deleted_at.is_(None),
+        values={"status": REVIEW_DISMISSED, "resolved_at": dismissed_at},
+    )
+    return len(changed)
+
+
+async def reopen_personal_for_transaction(
+    db: AsyncSession, *, transaction_id: uuid.UUID, organization_id: uuid.UUID,
+) -> bool:
+    """``personal`` → ``pending`` for the card of a transaction no longer a personal transfer."""
+    changed = await update_rows(
+        db,
+        RentAttributionReviewQueue,
+        RentAttributionReviewQueue.transaction_id == transaction_id,
+        RentAttributionReviewQueue.organization_id == organization_id,
+        RentAttributionReviewQueue.status == REVIEW_PERSONAL,
+        RentAttributionReviewQueue.deleted_at.is_(None),
+        values={"status": REVIEW_PENDING, "resolved_at": None},
+    )
+    return bool(changed)

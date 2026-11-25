@@ -2912,6 +2912,49 @@
       "e2e_specs": [
         "mocked/holdings-mock.spec.ts"
       ]
+    },
+    "personal_transfers": {
+      "source_paths": [
+        "backend/alembic/versions/perstransfer261125_add_personal_transfers.py",
+        "backend/app/api/personal_transfers.py",
+        "backend/app/core/attribution_review_statuses.py",
+        "backend/app/core/personal_sender_keys.py",
+        "backend/app/core/transaction_statuses.py",
+        "backend/app/models/transactions/personal_transfer_sender.py",
+        "backend/app/repositories/transactions/personal_transfer_sender_repo.py",
+        "backend/app/schemas/transactions/personal_transfer_mark_result.py",
+        "backend/app/schemas/transactions/personal_transfer_sender_read.py",
+        "backend/app/schemas/transactions/personal_transfer_unmark_request.py",
+        "backend/app/schemas/transactions/personal_transfer_unmark_result.py",
+        "backend/app/services/transactions/personal_sender_matcher.py",
+        "backend/app/services/transactions/personal_transfer_service.py",
+        "backend/app/services/transactions/personal_transfer_status.py",
+        "backend/app/test_helpers/attribution_seed.py",
+        "api-client/src/store/personalTransferApi.ts",
+        "api-client/src/types/personal-transfer/",
+        "api-client/src/constants/personalTransferLabels.ts",
+        "api-client/src/utils/personalTransferMessages.ts",
+        "frontend/src/app/features/personal-transfer/",
+        "mobile/src/features/paymentReview/"
+      ],
+      "backend_tests": [
+        "test_personal_sender_matcher.py",
+        "test_personal_transfer_status.py",
+        "test_personal_transfer_service.py",
+        "test_personal_transfer_routes.py",
+        "test_personal_transfer_not_counted.py",
+        "test_dedup_personal_transfer.py",
+        "test_cleanup_seed_routes.py"
+      ],
+      "frontend_tests": [
+        "PersonalTransferButton.test.tsx",
+        "PersonalTransferSenders.test.tsx",
+        "TransactionPersonalTransferSection.test.tsx",
+        "AttributionReviewItem.test.tsx"
+      ],
+      "e2e_specs": [
+        "personal-transfers.spec.ts"
+      ]
     }
   },
   "shared_paths": [

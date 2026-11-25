@@ -128,7 +128,7 @@ test.describe("Transactions table paging", () => {
     await expect(page.getByText(`1–25 of ${TOTAL}`)).toBeVisible();
     const status = page.getByRole("combobox", { name: "Filter by status" });
 
-    await expect(status.getByRole("option")).toHaveText(["All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified"]);
+    await expect(status.getByRole("option")).toHaveText(["All Statuses", "Pending", "Approved", "Needs Review", "Duplicate", "Unverified", "Personal Transfer"]);
     await status.selectOption("pending");
 
     await expect(page.getByText(`1–${PENDING_TOTAL} of ${PENDING_TOTAL}`)).toBeVisible();

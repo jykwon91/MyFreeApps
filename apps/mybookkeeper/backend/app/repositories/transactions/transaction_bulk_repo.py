@@ -11,6 +11,7 @@ from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
 from app.repositories.leases import pending_rent_receipt_repo
 from app.repositories.tax import tax_return_repo
+from app.repositories.transactions import attribution_repo
 
 
 def _live_org_transactions_for_update_stmt(
@@ -82,7 +83,7 @@ async def soft_delete_transactions(db: AsyncSession, transactions: list[Transact
 
     Every delete path (single, bulk, keep/merge duplicates, document delete) ends here, so this is
     where a deleted payment's pending rent receipt is dismissed — it must not stay listed or sendable,
-    and where a return the deleted rows counted towards is marked out of date.
+    where its Payment Review card is dismissed, and where a return the deleted rows counted towards is marked out of date.
     """
     await tax_return_repo.flag_unfiled_where_counted(db, transactions)
     now = datetime.now(timezone.utc)
@@ -91,6 +92,12 @@ async def soft_delete_transactions(db: AsyncSession, transactions: list[Transact
     await db.flush()
     for organization_id in {txn.organization_id for txn in transactions}:
         await pending_rent_receipt_repo.dismiss_pending_for_transactions(
+            db,
+            transaction_ids=[t.id for t in transactions if t.organization_id == organization_id],
+            organization_id=organization_id,
+            dismissed_at=now,
+        )
+        await attribution_repo.dismiss_pending_for_transactions(
             db,
             transaction_ids=[t.id for t in transactions if t.organization_id == organization_id],
             organization_id=organization_id,

@@ -5,6 +5,7 @@ import type { FieldErrors } from "react-hook-form";
 import { X, Trash2 } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
@@ -17,6 +18,7 @@ import { useTaxYearQuestion } from "@/app/features/transactions/useTaxYearQuesti
 import { TRANSACTION_DISCARD_COPY, TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
+import TransactionPersonalTransferSection from "@/app/features/personal-transfer/TransactionPersonalTransferSection";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 
@@ -76,6 +78,8 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   const closeInFlight = useRef(false);
   const [isSavingAndClosing, setIsSavingAndClosing] = useState(false);
   const taxYearQuestion = useTaxYearQuestion(transaction);
+  // `transaction` is the row as it was opened; marking a personal transfer changes the status in place.
+  const [status, setStatus] = useState<TransactionStatus>(transaction.status);
 
   const dupOther = duplicatePair
     ? duplicatePair.transaction_a.id === transaction.id
@@ -201,7 +205,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
     }
   }
 
-  const isPending = transaction.status === "pending" || transaction.status === "needs_review";
+  const isPending = status === "pending" || status === "needs_review";
 
   const content = (
     <>
@@ -219,7 +223,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <TransactionStatusBadge status={transaction.status} />
+            <TransactionStatusBadge status={status} />
             <TransactionTypeBadge type={transaction.transaction_type} />
             {transaction.is_manual && <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">Manual</span>}
             {isDirty && <span className="text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 rounded px-1.5 py-0.5">Unsaved changes</span>}
@@ -241,7 +245,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         onDismissDuplicate={onDismissDuplicate}
       />
 
-      {transaction.transaction_type === "income" && (
+      {transaction.transaction_type === "income" && status !== "personal_transfer" && (
         <div className="px-5 py-4 border-t space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             Attribute to tenant
@@ -253,6 +257,8 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
           />
         </div>
       )}
+
+      <TransactionPersonalTransferSection transaction={{ ...transaction, status }} onStatusChange={setStatus} />
 
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
         <div className="flex items-center gap-2">

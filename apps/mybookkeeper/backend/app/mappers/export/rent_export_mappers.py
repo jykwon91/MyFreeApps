@@ -7,6 +7,7 @@ from app.models.rent.rent_reminder_plan import RentReminderPlan
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
 from app.models.transactions.payer_alias import PayerAlias
+from app.models.transactions.personal_transfer_sender import PersonalTransferSender
 from app.models.transactions.rent_attribution_review_queue import (
     RentAttributionReviewQueue,
 )
@@ -115,6 +116,19 @@ PAYER_ALIAS_EXPORT: Final = TableExportMapper(
     ),
 )
 
+PERSONAL_TRANSFER_SENDERS_EXPORT: Final = TableExportMapper(
+    PersonalTransferSender,
+    (
+        "id",
+        "organization_id",
+        "created_by_user_id",
+        "display_name",
+        "normalized_payer_name",
+        "payer_handle",
+        "created_at",
+    ),
+)
+
 RENT_ATTRIBUTION_REVIEW_QUEUE_EXPORT: Final = TableExportMapper(
     RentAttributionReviewQueue,
     (
@@ -138,5 +152,6 @@ RENT_EXPORT_MAPPERS: Final[tuple[TableExportMapper, ...]] = (
     RENT_REMINDER_PLANS_EXPORT,
     RENT_REMINDER_SENDS_EXPORT,
     PAYER_ALIAS_EXPORT,
+    PERSONAL_TRANSFER_SENDERS_EXPORT,
     RENT_ATTRIBUTION_REVIEW_QUEUE_EXPORT,
 )

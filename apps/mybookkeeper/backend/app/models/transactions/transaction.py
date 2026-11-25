@@ -119,6 +119,11 @@ class Transaction(Base):
     payment_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     status: Mapped[str] = mapped_column(String(20), default="pending")
+    # What ``status`` was when the row was marked a personal transfer, so
+    # un-marking puts it back exactly (an auto-approved Zelle goes back to
+    # counting, an unverified one back to review). Set whenever status is
+    # ``personal_transfer``; cleared on un-marking.
+    status_before_personal_transfer: Mapped[str | None] = mapped_column(String(20), nullable=True)
     review_fields: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     review_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -148,8 +153,20 @@ class Transaction(Base):
             name="chk_txn_type",
         ),
         CheckConstraint(
-            "status IN ('pending', 'approved', 'needs_review', 'duplicate', 'unverified')",
+            "status IN ('pending', 'approved', 'needs_review', 'duplicate', 'unverified', "
+            "'personal_transfer')",
             name="chk_txn_status",
+        ),
+        # One-directional: a deleted personal transfer becomes 'duplicate' like
+        # every deleted row, and keeps the record of what it was before.
+        CheckConstraint(
+            "status <> 'personal_transfer' OR status_before_personal_transfer IS NOT NULL",
+            name="chk_txn_personal_transfer_prior_set",
+        ),
+        CheckConstraint(
+            "status_before_personal_transfer IS NULL OR status_before_personal_transfer IN "
+            "('pending', 'needs_review', 'unverified', 'approved')",
+            name="chk_txn_personal_transfer_prior",
         ),
         CheckConstraint(
             "category IN ("
