@@ -7,7 +7,7 @@ import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDunge
 import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { parseTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
-import { FACTION } from "@/games/wow-forever/types/worldMap";
+import { FACTION, POI_SOURCE } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { poiRouteEnd } from "@/games/wow-forever/worldMap/describeRank";
 import { FLIGHT_MODE, planDirections, STEP_KIND, type TravelOptions } from "@/games/wow-forever/worldMap/directions";
@@ -64,8 +64,8 @@ describe("world map data", () => {
     for (const poi of data.pois) {
       const zone = data.zoneById.get(poi.zone);
       expect(zone, poi.name).toBeDefined();
-      // Classic NPCs never sit on a Forever-only zone's map.
-      expect(zone?.foreverOnly, poi.name).toBeUndefined();
+      // Classic NPCs never sit on a Forever-only zone's map; the flight masters the flight map adds can.
+      if (poi.source === POI_SOURCE.classic) expect(zone?.foreverOnly, poi.name).toBeUndefined();
     }
   });
 

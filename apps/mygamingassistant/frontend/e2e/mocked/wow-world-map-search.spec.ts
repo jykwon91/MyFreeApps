@@ -197,3 +197,29 @@ test('"Where are you?" fixes a misspelt place too, keeping the coordinates', asy
   await page.getByRole("button", { name: "Set", exact: true }).click();
   await expect(page.getByText(/Goldshire, Elwynn Forest/).first()).toBeVisible();
 });
+
+test('"flight master mount hyjal" finds both Mount Hyjal flight masters, in either word order', async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  for (const typed of ["flight master mount hyjal", "hyjal flight path", "flight master in mount hyjal"]) {
+    await search.fill(typed);
+    await expect(page.getByRole("option", { name: /Summit of Eternity/ })).toContainText("Dae'gun, Mount Hyjal");
+    await expect(page.getByRole("option", { name: /Tainted Foothills/ })).toContainText("Felblood Scar, Mount Hyjal");
+    await expect(page.getByRole("option", { name: /Show all 2 on the map/ })).toBeVisible();
+  }
+  await expect(page.getByText(/I don't know/)).toHaveCount(0);
+
+  // One of them opens its card on the Mount Hyjal map, with directions.
+  await page.getByRole("option", { name: /Summit of Eternity/ }).click();
+  const card = page.getByRole("article", { name: "Summit of Eternity" });
+  await expect(card).toContainText("68.6, 44.1");
+  await expect(page.getByRole("img", { name: "Mount Hyjal map" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Directions" })).toBeVisible();
+});
+
+test("Enter on a kind and a zone shows every match on the map", async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("flight master mount hyjal");
+  await search.press("Enter");
+  await expect(page.getByRole("region", { name: /“flight master mount hyjal” on the map/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Mount Hyjal map" })).toBeVisible();
+});

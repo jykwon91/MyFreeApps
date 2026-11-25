@@ -89,7 +89,7 @@ export type InstanceKind = (typeof INSTANCE_KIND)[keyof typeof INSTANCE_KIND];
 
 export type PoiSubkind = ServiceKind | QuestGiverKind | InstanceKind;
 
-export const POI_SOURCE = { classic: "classic", captured: "captured" } as const;
+export const POI_SOURCE = { classic: "classic", captured: "captured", gameFiles: "game_files" } as const;
 export type PoiSource = (typeof POI_SOURCE)[keyof typeof POI_SOURCE];
 
 export interface QuestInfo {

@@ -20,6 +20,7 @@ import { yardsBetween, zoneToWorld } from "@/games/wow-forever/worldMap/geometry
 import { usableBy, type PlayerLocation } from "@/games/wow-forever/worldMap/nearest";
 import { findPlaces, type Place } from "@/games/wow-forever/worldMap/places";
 import { matchesAll, nameScore, normalizeText, queryTokens } from "@/games/wow-forever/worldMap/searchText";
+import { normalizeNpcQuery } from "@/games/wow-forever/worldMap/serviceQuery";
 import { correctSpelling, vocabularyFor } from "@/games/wow-forever/worldMap/spelling";
 
 export const MAX_NPC_RESULTS = 6;
@@ -96,7 +97,8 @@ function distance(poi: MapPoi, zone: WorldZone, player: PlayerLocation | null): 
 }
 
 /** Every matching NPC, best first, each once. */
-export function searchAllNpcs(query: string, data: WorldMapData, context: SearchContext): NpcHit[] {
+export function searchAllNpcs(typed: string, data: WorldMapData, context: SearchContext): NpcHit[] {
+  const query = normalizeNpcQuery(typed);
   const tokens = queryTokens(query);
   if (!tokens.length) return [];
   const phrase = normalizeText(query);

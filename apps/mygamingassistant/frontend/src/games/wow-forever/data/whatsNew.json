@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-25",
+    "title": "World Map: \"flight master mount hyjal\" works",
+    "summary": "Search a kind of NPC and a zone in either order (\"innkeeper feralas\", \"hyjal flight path\", \"flight master in mount hyjal\"). Flight masters the old NPC list lacked, like both in Mount Hyjal and Riverglades, are now searchable and marked on the map.",
+    "to": "/wow-forever/map"
+  },
+  {
+    "date": "2026-11-25",
     "title": "MGA PvP Log can track the players who keep killing you",
     "summary": "Whoever kills you goes on a kill-on-sight list (or add anyone with /mgapvp track <name>). When one shows up near you it prints a warning with the zone and where you were, plays a sound and flashes a banner, and the Tracked tab remembers where you last saw each one, with a Go to last seen button when MGA Waypoints is installed. The game never reveals an enemy's real position, so it is where you were when you saw them.",
     "to": "/wow-forever/macros"
