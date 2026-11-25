@@ -36,7 +36,7 @@ MyFreeApps/
 - Shared packages are installed locally (Python: `pip install -e`, npm: workspaces)
 - Each app has its own CLAUDE.md with app-specific instructions
 - Changes to `packages/` trigger deploys for all consuming apps
-- Pull-request CI has ONE entry point, `.github/workflows/ci.yml`: its `changes` job runs `.github/scripts/ci_changes.py` once and calls each area's workflow (`workflow_call`) only when affected. The only required check is `ci-gate`. A new CI workflow must be called from `ci.yml` and given a rule in `ci_changes.py` (`test_ci_changes.py` fails otherwise). Pushes to main keep each workflow's own `push` trigger, which `deploy-*.yml` chain off.
+- Pull-request CI has ONE entry point, `.github/workflows/ci.yml`: its `changes` job runs `.github/scripts/ci_changes.py` once and calls each area's workflow (`workflow_call`) only when affected. The only required check is `ci-gate`, which waits for every job in `ci.yml`. A new CI workflow must be called from `ci.yml`, listed in `ci-gate`'s `needs:`, and given a rule in `ci_changes.py` (`test_ci_changes.py` fails otherwise). Pushes to main keep each workflow's own `push` trigger, which `deploy-*.yml` chain off.
 
 ## Commands
 

@@ -26,9 +26,9 @@ name: CI
 #
 # REQUIRED CHECK: `ci-gate`, and only it. A job inside a called workflow reports as
 # "<caller job> / <called job>" and, when the call is skipped, reports nothing at all,
-# so per-job required contexts cannot survive this layout. `ci-gate` is skipped when
-# none of mybookkeeper, myjobhunter or shared-backend is relevant, and otherwise fails
-# unless each relevant one succeeded - the same set the old per-job contexts covered.
+# so per-job required contexts cannot survive this layout. `ci-gate` waits for every
+# job in this workflow and fails unless each one passed or was skipped as unaffected.
+# Keep its `needs:` list complete: test_ci_gate_needs_every_job enforces that.
 #
 # Pushes to main do NOT go through here. Each area's workflow keeps its own `push`
 # trigger (with its path filter) because deploy-*.yml chain off those runs by workflow
@@ -249,37 +249,50 @@ jobs:
   # the three areas it covers is relevant; otherwise each relevant one must have passed.
   ci-gate:
     name: ci-gate
-    needs: [changes, mybookkeeper, myjobhunter, shared-backend]
-    if: >-
-      ${{ always() && (needs.changes.outputs.mybookkeeper != 'false'
-      || needs.changes.outputs.myjobhunter != 'false'
-      || needs.changes.outputs.shared_backend != 'false') }}
+    # Waits for every job above and fails if any of them failed or was cancelled.
+    # A job is skipped only when `changes` said its area is untouched (each `if:` is
+    # `!cancelled() && ... != 'false'`, so a broken `changes` job runs everything), so
+    # a skip is a pass. `changes` itself must succeed.
+    needs:
+      - changes
+      - repo-checks
+      - dependency-review
+      - codeql
+      - shared-backend
+      - shared-frontend
+      - python-lint
+      - mybookkeeper
+      - myjobhunter
+      - myjobhunter-integration
+      - mygamingassistant
+      - mylanguagetutor
+      - mypizzatracker
+      - myrecipes
+      - landing
+      - mobile-foundation
+      - mobile-mybookkeeper
+      - mobile-myjobhunter
+      - mobile-mylanguagetutor
+      - mobile-myrecipes
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Every relevant required area passed
+      - name: Every job passed or was skipped as unaffected
         env:
-          MBK_RELEVANT: ${{ needs.changes.outputs.mybookkeeper }}
-          MBK_RESULT: ${{ needs.mybookkeeper.result }}
-          MJH_RELEVANT: ${{ needs.changes.outputs.myjobhunter }}
-          MJH_RESULT: ${{ needs.myjobhunter.result }}
-          SHARED_BACKEND_RELEVANT: ${{ needs.changes.outputs.shared_backend }}
-          SHARED_BACKEND_RESULT: ${{ needs.shared-backend.result }}
+          NEEDS: ${{ toJSON(needs) }}
         run: |
-          set -u
-          failed=0
-          check() {
-            # $1 area, $2 relevant flag, $3 job result. Only an explicit `false` excuses a skip, so a cancelled run fails.
-            if [ "$2" = "false" ]; then
-              echo "$1: not affected by this PR"
-            elif [ "$3" = "success" ]; then
-              echo "$1: passed"
-            else
-              echo "::error::$1 is relevant to this PR but its result is '$3'"
-              failed=1
-            fi
-          }
-          check mybookkeeper "$MBK_RELEVANT" "$MBK_RESULT"
-          check myjobhunter "$MJH_RELEVANT" "$MJH_RESULT"
-          check shared-backend "$SHARED_BACKEND_RELEVANT" "$SHARED_BACKEND_RESULT"
-          exit "$failed"
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS"])
+          bad = []
+          for job, info in sorted(needs.items()):
+              result = info["result"]
+              ok = result == "success" or (result == "skipped" and job != "changes")
+              print(f"{job}: {result}")
+              if not ok:
+                  bad.append(f"{job} ({result})")
+          if bad:
+              print("::error::not passed: " + ", ".join(bad))
+              sys.exit(1)
+          PY

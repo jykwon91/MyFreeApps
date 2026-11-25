@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -211,7 +212,31 @@ class TestCiYmlWiring:
         assert f"mobile_{app}" in _ci.PATH_RULES, f"Add mobile_{app} to PATH_RULES in .github/scripts/ci_changes.py."
         assert f"mobile-{app}" in self._CI["jobs"], f"Call {workflow} from ci.yml."
 
-    def test_the_gate_covers_the_formerly_required_areas(self) -> None:
-        gate = self._CI["jobs"]["ci-gate"]
-        assert {"mybookkeeper", "myjobhunter", "shared-backend"} <= set(gate["needs"])
-        assert gate["if"].startswith("${{ always()")
+    def test_ci_gate_needs_every_job(self) -> None:
+        """`ci-gate` is the only required check, so a job it doesn't wait for can fail and still merge."""
+        jobs = self._CI["jobs"]
+        gate = jobs["ci-gate"]
+        assert set(gate["needs"]) == set(jobs) - {"ci-gate"}
+        assert gate["if"] == "${{ always() }}"
+
+    @pytest.mark.parametrize(
+        ("results", "passes"),
+        [
+            ({"changes": "success", "mygamingassistant": "success", "mybookkeeper": "skipped"}, True),
+            ({"changes": "success", "mygamingassistant": "failure"}, False),
+            ({"changes": "success", "codeql": "cancelled"}, False),
+            ({"changes": "skipped", "mygamingassistant": "skipped"}, False),
+            ({"changes": "failure", "mygamingassistant": "success"}, False),
+        ],
+    )
+    def test_ci_gate_verdict(self, results: dict[str, str], passes: bool) -> None:
+        step = self._CI["jobs"]["ci-gate"]["steps"][0]
+        script = step["run"].split("<<'PY'\n", 1)[1].rsplit("PY", 1)[0]
+        needs = {job: {"result": result} for job, result in results.items()}
+        out = subprocess.run(
+            [sys.executable, "-c", script],
+            env={**os.environ, "NEEDS": json.dumps(needs)},
+            capture_output=True,
+            text=True,
+        )
+        assert (out.returncode == 0) is passes, out.stdout + out.stderr
