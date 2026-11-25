@@ -22,6 +22,20 @@ function UnitGUID(unit)
   if unit == "player" then return me end
   return units[unit] and units[unit].guid or nil
 end
+function UnitExists(unit) return units[unit] ~= nil end
+function UnitName(unit) return units[unit] and units[unit].name or nil end
+function UnitIsPlayer(unit) return units[unit] ~= nil and units[unit].player ~= false end
+groupSize, inRaid = 0, false
+function GetNumGroupMembers() return groupSize end
+function IsInRaid() return inRaid end
+sounds = 0
+function PlaySound() sounds = sounds + 1 end
+-- Where you stand: set mapId = nil for a client with no map position; mapX / mapY are 0-1.
+mapId, mapX, mapY = 1434, 0.41, 0.62
+C_Map = {
+  GetBestMapForUnit = function() return mapId end,
+  GetPlayerMapPosition = function() return { GetXY = function() return mapX, mapY end } end,
+}
 function UnitLevel(unit) return units[unit] and units[unit].level or 60 end
 function GetGuildInfo(unit) return units[unit] and units[unit].guild or nil end
 function GetPlayerInfoByGUID(guid)
@@ -55,6 +69,10 @@ function youHit(guid, name, flags, spell, amount)
 end
 function youKill(guid, name, flags)
   feed(clock, "PARTY_KILL", false, me, "Me", FRIENDLY_PLAYER, 0, guid, name, flags, 0)
+end
+-- Another player shows up (the combat log sees them hit a third party).
+function seenFighting(guid, name, flags)
+  feed(clock, "SPELL_DAMAGE", false, guid, name, flags or HOSTILE_PLAYER, 0, "Creature-1", "Boar", HOSTILE_NPC, 0, 133, "Shot", 1, 10)
 end
 function rows(filter)
   local list = {}

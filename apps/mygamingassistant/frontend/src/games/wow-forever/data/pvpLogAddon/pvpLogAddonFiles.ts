@@ -3,6 +3,7 @@ import addonCore from "../../../../../addon/MGAPvPLog/Core.lua?raw";
 import addonHub from "../../../../../addon/MGAPvPLog/MGAHub.lua?raw";
 import addonLua from "../../../../../addon/MGAPvPLog/MGAPvPLog.lua?raw";
 import addonToc from "../../../../../addon/MGAPvPLog/MGAPvPLog.toc?raw";
+import addonTrack from "../../../../../addon/MGAPvPLog/Track.lua?raw";
 import addonWindow from "../../../../../addon/MGAPvPLog/Window.lua?raw";
 
 /** The MGA PvP Log addon's folder in the download: `Interface\AddOns\MGAPvPLog`. */
@@ -16,6 +17,7 @@ export const PVPLOG_ADDON_FILES: Readonly<Record<string, string>> = {
   "MGAHub.lua": addonHub,
   "Bindings.xml": addonBindings,
   "Core.lua": addonCore,
+  "Track.lua": addonTrack,
   "Window.lua": addonWindow,
   "MGAPvPLog.lua": addonLua,
 };

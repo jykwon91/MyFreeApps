@@ -204,6 +204,7 @@ function M.Died(now)
   local spell = pending[killer].spell
   for _, p in pairs(pending) do p.lastHitMe = nil end -- a second death event must not blame anyone again
   local entry, enemy = commit(killer, "killedMe", spell)
+  if M.AutoTrack then M.AutoTrack(enemy) end
   if M.DB().settings.chat then DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. deathLine(enemy, entry)) end
 end
 
@@ -235,6 +236,7 @@ M.FILTERS = {
   { id = "all", label = "All" },
   { id = "killedMe", label = "Killed me" },
   { id = "iKilled", label = "I killed" },
+  { id = "tracked", label = "Tracked" },
 }
 
 function M.Ago(seconds)
@@ -252,8 +254,10 @@ end
 
 local WHAT = { killedMe = "Killed you", iKilled = "You killed them", fought = "Fought" }
 
--- Newest first: { head = "Name  Orc Warrior 60  <Guild>", detail = "Zone · 5 min ago · Killed you with X · killed you ×2" }.
+-- Newest first: { head = "Name  Orc Warrior 60  <Guild>", detail = "Zone · 5 min ago · Killed you with X · killed you ×2", name, tracked }.
+-- The "tracked" filter lists the kill-on-sight list instead (Track.lua).
 function M.Rows(filter)
+  if filter == "tracked" then return M.TrackedRows() end
   local d, now = M.DB(), time()
   local entries = {}
   for i, entry in ipairs(d.log) do
@@ -280,7 +284,7 @@ function M.Rows(filter)
     if entry.taken > 0 or entry.dealt > 0 then table.insert(parts, "you took " .. entry.taken .. ", dealt " .. entry.dealt) end
     if enemy.killedYou > 0 then table.insert(parts, "killed you ×" .. enemy.killedYou) end
     if enemy.youKilled > 0 then table.insert(parts, "you killed ×" .. enemy.youKilled) end
-    table.insert(rows, { head = head, detail = table.concat(parts, " · ") })
+    table.insert(rows, { head = head, detail = table.concat(parts, " · "), name = enemy.name, tracked = M.IsTracked(enemy.name) })
   end
   return rows
 end
