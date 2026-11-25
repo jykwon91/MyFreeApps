@@ -59,6 +59,15 @@ describe("FinancialAccountsBody", () => {
     expect(screen.getByTestId("financial-accounts-total-net")).toHaveTextContent("$2,000.00");
   });
 
+  it("labels the totals as accounts-only and links to the real net worth", () => {
+    renderBody();
+    expect(screen.getByTestId("financial-accounts-total-assets")).toHaveTextContent("What you have in these accounts");
+    expect(screen.getByTestId("financial-accounts-total-liabilities")).toHaveTextContent("What you owe in these accounts");
+    expect(screen.getByTestId("financial-accounts-total-net")).toHaveTextContent("Accounts balance");
+    expect(screen.getByTestId("financial-accounts-totals")).not.toHaveTextContent("Net worth");
+    expect(screen.getByRole("link", { name: "See your net worth" })).toHaveAttribute("href", "/net-worth");
+  });
+
   it("links each account to its transactions", () => {
     renderBody();
     const row = screen.getByTestId(`financial-account-row-${CARD.id}`);
