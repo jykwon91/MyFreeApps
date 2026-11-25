@@ -86,6 +86,13 @@ describe("MGA PvP Log deaths", () => {
     expect(chat(lines)).toEqual(["Killed by Gorak (Orc Warrior) with Mortal Strike in Stranglethorn Vale - Booty Bay"]);
   });
 
+  it("blames the last of two hitters landing in the same second", () => {
+    const lines = run(`${GORAK}
+      enemyHits("G1", "Gorak", HOSTILE_PLAYER, "Mortal Strike")
+      enemyHits("G2", "Vex", HOSTILE_PLAYER, "Shadow Bolt"); fire("PLAYER_DEAD")`);
+    expect(chat(lines)).toEqual(["Killed by Vex with Shadow Bolt in Stranglethorn Vale - Booty Bay"]);
+  });
+
   it("ignores friendly, neutral and NPC sources, and your hits on them", () => {
     const lines = run(`
       enemyHits("F1", "Friend", FRIENDLY_PLAYER, "Smite"); enemyHits("N1", "Neutral", NEUTRAL_PLAYER, "Smite")

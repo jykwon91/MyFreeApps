@@ -20,6 +20,7 @@ local DAMAGE_SPELL_EVENTS = {
   SPELL_DAMAGE = true, RANGE_DAMAGE = true, SPELL_PERIODIC_DAMAGE = true, DAMAGE_SHIELD = true, DAMAGE_SPLIT = true,
 }
 
+local hitCount = 0
 local pending = {} -- guid -> the fight in progress: first, last, taken, dealt, zone, spell, lastSpellDealt, lastHitMe
 
 local function hasFlag(flags, bit)
@@ -152,7 +153,8 @@ function M.TookHit(guid, name, spell, amount, now)
   local p, enemy = fightWith(guid, name, now)
   p.taken = p.taken + (amount or 0)
   enemy.taken = enemy.taken + (amount or 0)
-  p.spell, p.lastHitMe = spell, now
+  hitCount = hitCount + 1
+  p.spell, p.lastHitMe, p.hitSeq = spell, now, hitCount
 end
 
 function M.DealtHit(guid, name, spell, amount, now)
@@ -191,7 +193,10 @@ function M.Died(now)
   M.Flush(now)
   local killer
   for guid, p in pairs(pending) do
-    if p.lastHitMe and now - p.lastHitMe <= M.KILL_WINDOW and (not killer or p.lastHitMe > pending[killer].lastHitMe) then
+    -- time() is whole seconds, so hits in the same second are ordered by arrival (hitSeq)
+    if p.lastHitMe and now - p.lastHitMe <= M.KILL_WINDOW and (not killer
+        or p.lastHitMe > pending[killer].lastHitMe
+        or (p.lastHitMe == pending[killer].lastHitMe and p.hitSeq > pending[killer].hitSeq)) then
       killer = guid
     end
   end
