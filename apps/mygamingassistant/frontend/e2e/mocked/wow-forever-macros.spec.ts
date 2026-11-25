@@ -180,6 +180,27 @@ test("the Macros page downloads the MGA Buffs addon and lists what it reminds yo
   await expect(page.getByText("MGA Buffs is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });
 
+test("the Macros page downloads the MGA PvP Log addon", async ({ page }) => {
+  await page.goto("/wow-forever/macros");
+  const card = page.getByTestId("pvplog-addon");
+  await card.getByText("PvP log addon: who killed you, and who you killed").click();
+  await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
+  const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("pvplog-addon-download").click()]);
+  expect(download.suggestedFilename()).toBe("MGAPvPLog.zip");
+  const files = unzipSync(readFileSync(await download.path()));
+  expect(Object.keys(files).sort()).toEqual([
+    "MGAPvPLog/",
+    "MGAPvPLog/Bindings.xml",
+    "MGAPvPLog/Core.lua",
+    "MGAPvPLog/MGAHub.lua",
+    "MGAPvPLog/MGAPvPLog.lua",
+    "MGAPvPLog/MGAPvPLog.toc",
+    "MGAPvPLog/Window.lua",
+  ]);
+  expect(strFromU8(files["MGAPvPLog/MGAPvPLog.lua"])).toContain('SLASH_MGAPVPLOG1 = "/mgapvp"');
+  await expect(page.getByText("MGA PvP Log is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
+});
+
 test("on a phone the MGA Buffs card stacks its checks and keeps the download a full touch target", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/wow-forever/macros");
