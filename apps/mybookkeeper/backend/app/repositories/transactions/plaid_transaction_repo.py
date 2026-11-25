@@ -11,7 +11,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.plaid_constants import PLAID_EXTERNAL_SOURCE
-from app.core.tags import TRANSACTION_TYPE_TRANSFER
+from app.core.tags import TRANSACTION_TYPE_INCOME, TRANSACTION_TYPE_TRANSFER, UNCATEGORIZED_CATEGORY
 from app.models.transactions.transaction import Transaction
 
 
@@ -117,6 +117,28 @@ async def list_transfer_counterparts(
             Transaction.transaction_date.between(date_from, date_to),
             Transaction.external_source == PLAID_EXTERNAL_SOURCE,
             Transaction.external_category.in_(list(external_categories)),
+            Transaction.deleted_at.is_(None),
+        )
+        .order_by(Transaction.transaction_date, Transaction.created_at),
+    )
+    return list(result.scalars().all())
+
+
+async def list_untriaged_income(
+    db: AsyncSession, *, organization_id: uuid.UUID,
+) -> list[Transaction]:
+    """Synced income no one has filed yet and attribution hasn't read: still
+    ``uncategorized``, no tenant, no payer name. Attribution stores the payer
+    name it read, so a row it has read is not listed again."""
+    result = await db.execute(
+        select(Transaction)
+        .where(
+            Transaction.organization_id == organization_id,
+            Transaction.external_source == PLAID_EXTERNAL_SOURCE,
+            Transaction.transaction_type == TRANSACTION_TYPE_INCOME,
+            Transaction.category == UNCATEGORIZED_CATEGORY,
+            Transaction.applicant_id.is_(None),
+            Transaction.payer_name.is_(None),
             Transaction.deleted_at.is_(None),
         )
         .order_by(Transaction.transaction_date, Transaction.created_at),

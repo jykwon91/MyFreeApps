@@ -19,6 +19,9 @@ added and withdrawn in the same batch ends up withdrawn.
 * **Modified** rows update only what the bank owns — date, amount, name. How
   the person filed the row is theirs and is never overwritten.
 * **Removed** rows are soft-deleted, through the same path every delete uses.
+* **Income from a tenant** is then filed as their rent, or queued for rent
+  review (``plaid_rent_attribution``) — every synced income row not yet read,
+  not only this batch's.
 """
 from __future__ import annotations
 
@@ -45,6 +48,7 @@ from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
 from app.services.net_worth import net_worth_service
+from app.services.plaid import plaid_rent_attribution
 from app.services.transactions.bank_row_classifier import classify_bank_row
 from app.services.transactions.transfer_rules import transfer_overrides
 
@@ -89,6 +93,9 @@ async def apply_batch(
             counts.modified += 1
     counts.removed = await _apply_removed(
         db, organization_id=item.organization_id, transaction_ids=batch.removed,
+    )
+    counts.attributed_as_rent = await plaid_rent_attribution.attribute_untriaged_income(
+        db, organization_id=item.organization_id,
     )
     await _apply_balances(db, batch=batch, accounts_by_plaid_id=accounts_by_plaid_id, today=today)
     await net_worth_service.record_today(

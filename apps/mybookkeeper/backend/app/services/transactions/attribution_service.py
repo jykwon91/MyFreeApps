@@ -32,6 +32,7 @@ from app.services.transactions.attribution_helpers import (
     _get_property_id_for_applicant,
 )
 from app.services.transactions.attribution_matcher import find_best_match, resolve_alias
+from app.services.transactions.rent_payment_rules import file_as_rent
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +143,7 @@ async def _attribute_payment(
             property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_alias"
-            txn.category = "rental_revenue"
+            file_as_rent(txn)
             # Auto-attributing a payment verifies it — promote out of the
             # unverified state so it counts in the dashboard, exactly as the
             # manual confirm/link paths do.
@@ -187,7 +188,7 @@ async def _attribute_payment(
         property_id = await _get_property_id_for_applicant(db, best, organization_id)
         txn.applicant_id = best.id
         txn.attribution_source = "auto_exact"
-        txn.category = "rental_revenue"
+        file_as_rent(txn)
         # Auto-attributing a payment verifies it (see auto_alias branch above).
         txn.status = "approved"
         if property_id and txn.property_id is None:
@@ -293,7 +294,7 @@ async def confirm_review(
 
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_fuzzy_confirmed"
-            txn.category = "rental_revenue"
+            file_as_rent(txn)
             # Confirming an attribution verifies the payment — promote it out of
             # the pending / unverified review state so it counts in the dashboard.
             txn.status = "approved"
@@ -400,7 +401,7 @@ async def attribute_manually(
 
         txn.applicant_id = applicant.id
         txn.attribution_source = "manual"
-        txn.category = "rental_revenue"
+        file_as_rent(txn)
         # Manually linking a tenant verifies the payment — promote it to
         # approved so it counts in the dashboard.
         txn.status = "approved"
