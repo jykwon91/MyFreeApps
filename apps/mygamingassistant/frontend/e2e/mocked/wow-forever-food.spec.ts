@@ -54,7 +54,7 @@ test("Cooking skill splits what you can cook from what's worth training for", as
   await page.goto("/wow-forever/food?lvl=60&class=priest&spec=holy&act=raid&skill=200");
   await expect(page.locator("#food-top-pick")).toHaveText("Sunny Tea");
   await expect(page.getByRole("heading", { name: "Worth training for" })).toBeVisible();
-  await expect(page.getByText(/Sunrise Omelette/)).toBeVisible();
+  await expect(page.getByTestId("cooked-food").getByText(/Sunrise Omelette/)).toBeVisible();
 });
 
 test("from the Cooking guide: pick Just healing and see the biggest heal", async ({ page }) => {
@@ -131,7 +131,7 @@ test("the food detail page never scrolls sideways on a phone", async ({ page }) 
 
 test("the other faction's vendors are labelled as ones you can't buy from", async ({ page }) => {
   await page.goto("/wow-forever/food?lvl=20&class=warlock&act=healing&skill=1");
-  await page.getByRole("link", { name: "Longjaw Mud Snapper" }).click();
+  await page.getByTestId("cooked-food").getByRole("link", { name: "Longjaw Mud Snapper" }).click();
   const recipe = page.locator("section", { has: page.getByRole("heading", { name: "Learn the recipe" }) });
   await recipe.getByRole("button", { name: /Show \d+ Horde vendors/ }).click();
   await expect(recipe.getByText("— you can't buy from these")).toBeVisible();

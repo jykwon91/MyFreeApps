@@ -61,6 +61,7 @@ export default function WowFoodPickerPage() {
           </p>
           <PriceStatus withoutPrices="showing the food without prices" />
           <RestoreSections level={level} classId={settings.classId} />
+          <section data-testid="cooked-food" className="space-y-4">
           <h2 className="text-base font-semibold pt-2">Cooked food for your activity</h2>
           {result.top ? (
             <FoodTopPick pick={result.top} activity={activity} who={who} />
@@ -72,6 +73,7 @@ export default function WowFoodPickerPage() {
           ) : null}
           {result.nextUpgrade ? <FoodNextUpgrade level={result.nextUpgrade.level} pick={result.nextUpgrade.pick} /> : null}
           <FoodRunnersUp key={`${activity}/${level}`} picks={result.runnersUp} activity={activity} />
+          </section>
           <FoodDataNote weightsLabel={result.weights.label} />
         </div>
       )}
