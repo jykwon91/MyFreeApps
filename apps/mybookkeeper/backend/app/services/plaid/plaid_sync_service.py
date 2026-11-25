@@ -91,9 +91,9 @@ async def _sync_transactions(item_id: uuid.UUID) -> tuple[PlaidSyncResult, bool]
         item.last_synced_at = _dt.datetime.now(_dt.timezone.utc)
         await db.flush()
         logger.info(
-            "Plaid sync for item %s: added=%d modified=%d removed=%d matched=%d transfers=%d",
+            "Plaid sync for item %s: added=%d modified=%d removed=%d matched=%d transfers=%d rent=%d",
             item.id, counts.added, counts.modified, counts.removed,
-            counts.matched_existing, counts.transfers_matched,
+            counts.matched_existing, counts.transfers_matched, counts.attributed_as_rent,
         )
         result = PlaidSyncResult(
             added=counts.added,

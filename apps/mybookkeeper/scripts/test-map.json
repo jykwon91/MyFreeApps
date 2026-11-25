@@ -2453,7 +2453,8 @@
         "test_plaid_webhook_verifier.py",
         "test_bank_csv_account_import.py",
         "test_plaid_holdings_sync_service.py",
-        "test_plaid_investments_consent.py"
+        "test_plaid_investments_consent.py",
+        "test_plaid_rent_attribution.py"
       ],
       "frontend_tests": [
         "ConnectedBanksSection.test.tsx",
@@ -2533,10 +2534,16 @@
         "mobile/src/features/paymentReview/",
         "mobile/src/features/tenants/TenantPickerSheet.tsx",
         "mobile/src/constants/tenantPicker.ts",
-        "backend/app/services/transactions/airbnb_payout_attribution.py"
+        "backend/app/services/transactions/airbnb_payout_attribution.py",
+        "backend/app/services/transactions/rent_payment_rules.py",
+        "backend/app/services/transactions/bank_payer_name_parser.py",
+        "backend/app/core/bank_payer_name_constants.py"
       ],
       "backend_tests": [
         "test_attribution_matcher.py",
+        "test_rent_payment_rules.py",
+        "test_bank_payer_name_parser.py",
+        "test_plaid_rent_attribution.py",
         "test_attribution_repo.py",
         "test_attribution_routes.py",
         "test_property_pnl_service.py",

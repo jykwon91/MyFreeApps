@@ -15,6 +15,8 @@ TRANSFER_CATEGORY = "transfer"
 TRANSACTION_TYPE_INCOME = "income"
 TRANSACTION_TYPE_EXPENSE = "expense"
 TRANSACTION_TYPE_TRANSFER = "transfer"
+UNCATEGORIZED_CATEGORY = "uncategorized"
+RENTAL_REVENUE_CATEGORY = "rental_revenue"
 EXPENSE_TAGS = frozenset({
     "channel_fee", "cleaning_expense", "maintenance", "management_fee",
     "mortgage_interest", "mortgage_principal", "insurance", "utilities",
