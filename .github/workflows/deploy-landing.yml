@@ -7,8 +7,10 @@ name: Deploy landing page
 # changed, then verify the page serves over TLS.
 # No images, no containers.
 #
-# Also the path by which an infra/Caddyfile-only change reaches the VPS —
-# before this workflow existed, such a change waited for the next app deploy.
+# The ONLY workflow that moves that checkout's files or syncs the host
+# Caddyfile, so both always come from a commit that passed Landing CI. App
+# deploys and seed-env.yml read their files straight out of git at their own
+# commit and never touch the checkout's files.
 
 on:
   workflow_dispatch:
@@ -93,8 +95,8 @@ jobs:
           script: |
             set -e
 
-            # Same lock as every deploy-<app>.yml — they all fast-forward the one
-            # shared /srv/myfreeapps checkout and would race on its refs.
+            # Same lock as every deploy-<app>.yml — they all fetch into the one
+            # shared /srv/myfreeapps git repo and would race on its refs.
             exec 9>/tmp/myfreeapps-deploy.lock
             if ! flock -w 1500 9; then
               echo "::error::Timed out (25m) waiting for the VPS deploy lock — an earlier deploy is wedged. Investigate before retrying."

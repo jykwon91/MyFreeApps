@@ -4,8 +4,9 @@
 # (plus the myfreeapps.org landing page) so a deploy of one does not wipe
 # another's host-Caddy entry.
 #
-# Run from the /srv/myfreeapps checkout by every deploy workflow — the rendered
-# deploy-<app>.yml files and deploy-landing.yml:
+# Run from the /srv/myfreeapps checkout by deploy-landing.yml only, right after
+# it fast-forwards the checkout to a commit that passed Landing CI (which covers
+# infra/Caddyfile and this script):
 #   sudo bash infra/sync-host-caddyfile.sh
 #
 # Validates the repo copy BEFORE installing it, so a broken Caddyfile never

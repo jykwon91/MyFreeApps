@@ -50,19 +50,28 @@ fills a key only when no override supplies it AND the target file has no real
 value yet (precedence: override > existing > copy > template default), so a
 re-run never clobbers operator input. Only key names are printed, never values.
 The workflow exposes this as the optional ``copy_from`` / ``copy_keys`` inputs.
+
+The workflow runs this module and its templates from a temporary extract of one
+commit (``--repo-root``) and writes the env files into the VPS checkout
+(``--env-root``), so it never has to move that checkout. Both default to the
+monorepo this file lives in.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
-import os
 import re
-import secrets
 import sys
 from pathlib import Path
 
-from platform_shared.infra.env_file import parse_env, raw_env_values, read_env_file
+from platform_shared.infra.env_file import (
+    GENERATORS,
+    is_unset,
+    parse_env,
+    raw_env_values,
+    read_env_file,
+    write_secure,
+)
 from platform_shared.infra.seed_env_smtp_check import smtp_problems
 
 # Values the operator must obtain outside the VPS (dashboards, providers).
@@ -112,10 +121,6 @@ COPYABLE_KEYS: frozenset[str] = frozenset({
 
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
-# Placeholder prefixes in the example templates that count as "not set".
-_PLACEHOLDER_PREFIXES: tuple[str, ...] = ("change-me", "__APP_SLUG__")
-
-
 class SeedEnvError(RuntimeError):
     """Raised for user-recoverable failures (bad slug, missing templates)."""
 
@@ -124,35 +129,6 @@ def _repo_root() -> Path:
     """Return the monorepo root (the dir containing `infra/`, `apps/`, `.github/`)."""
     # platform_shared/infra/seed_env.py -> up 4 = monorepo root
     return Path(__file__).resolve().parents[4]
-
-
-def _is_unset(value: str) -> bool:
-    v = value.strip()
-    if not v:
-        return True
-    return any(v.startswith(p) or p in v for p in _PLACEHOLDER_PREFIXES)
-
-
-def _gen_db_password() -> str:
-    return secrets.token_hex(24)
-
-
-def _gen_secret_key() -> str:
-    return secrets.token_hex(32)
-
-
-def _gen_encryption_key() -> str:
-    # Fernet key format: urlsafe base64 of 32 random bytes. The shared PII
-    # suite HKDF-derives from this string, so the format doubles as valid
-    # direct Fernet key material.
-    return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
-
-
-_GENERATORS = {
-    "DB_PASSWORD": _gen_db_password,
-    "SECRET_KEY": _gen_secret_key,
-    "ENCRYPTION_KEY": _gen_encryption_key,
-}
 
 
 def _stamps(domain: str) -> dict[str, str]:
@@ -180,14 +156,14 @@ def _resolve_value(key: str, example_value: str, existing: dict[str, str],
     if key in overrides:
         return overrides[key]
     existing_value = existing.get(key, "")
-    if not _is_unset(existing_value):
+    if not is_unset(existing_value):
         return existing_value
     if key in copies:
         return copies[key]
-    if not _is_unset(example_value):
+    if not is_unset(example_value):
         return example_value
-    if key in _GENERATORS:
-        return _GENERATORS[key]()
+    if key in GENERATORS:
+        return GENERATORS[key]()
     if key in stamps:
         return stamps[key]
     return ""
@@ -222,7 +198,7 @@ def _reject_non_copyable(keys: tuple[str, ...]) -> None:
             "never be shared.")
 
 
-def load_copy_source(repo_root: Path, source_slug: str, target_slug: str,
+def load_copy_source(env_root: Path, source_slug: str, target_slug: str,
                      keys: tuple[str, ...]) -> dict[str, str]:
     """Read ``keys`` from ``apps/<source_slug>/backend/.env.docker``.
 
@@ -235,12 +211,12 @@ def load_copy_source(repo_root: Path, source_slug: str, target_slug: str,
     if source_slug == target_slug:
         raise SeedEnvError("--copy-from must name a different app than --app.")
     _reject_non_copyable(keys)
-    source_path = repo_root / "apps" / source_slug / "backend" / ".env.docker"
+    source_path = env_root / "apps" / source_slug / "backend" / ".env.docker"
     if not source_path.is_file():
         raise SeedEnvError(
             f"Copy source not found: {source_path} — seed '{source_slug}' first.")
     source = parse_env(source_path.read_text(encoding="utf-8"))
-    blank = [k for k in keys if _is_unset(source.get(k, ""))]
+    blank = [k for k in keys if is_unset(source.get(k, ""))]
     if blank:
         raise SeedEnvError(
             f"Copy source '{source_slug}' has no value for: {', '.join(blank)}")
@@ -277,7 +253,7 @@ def _render_from_example(example_text: str, existing: dict[str, str],
         for key, value in extra.items():
             if key in overrides:
                 value = overrides[key]
-            elif _is_unset(value) and key in copies:
+            elif is_unset(value) and key in copies:
                 value = copies[key]
             out_lines.append(f"{key}={value}")
             final[key] = value
@@ -285,31 +261,23 @@ def _render_from_example(example_text: str, existing: dict[str, str],
     return "\n".join(out_lines) + "\n", final
 
 
-def _write_secure(path: Path, text: str) -> bool:
-    """Write only if content changed; chmod 600 either way. Returns True if written."""
-    changed = True
-    if path.exists():
-        changed = path.read_text(encoding="utf-8") != text
-    if changed:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8", newline="\n")
-    os.chmod(path, 0o600)
-    return changed
-
-
 def _blank_report(final: dict[str, str], enforced_keys: tuple[str, ...]) -> tuple[list[str], list[str]]:
     """Split final blank keys into (required_blanks, other_blanks)."""
-    required = [k for k in enforced_keys if k in final and _is_unset(final[k])]
-    other = [k for k, v in final.items() if _is_unset(v) and k not in required]
+    required = [k for k in enforced_keys if k in final and is_unset(final[k])]
+    other = [k for k, v in final.items() if is_unset(v) and k not in required]
     return required, other
 
 
-def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
+def seed_app(repo_root: Path, slug: str, *, env_root: Path | None = None,
+             domain: str | None = None,
              check_only: bool = False,
              overrides: dict[str, str] | None = None,
              copy_from: str | None = None,
              copies: dict[str, str] | None = None) -> int:
     """Seed (or verify, with ``check_only``) both env files for one app.
+
+    The templates are read from ``repo_root``; the env files are read and
+    written under ``env_root`` (default: ``repo_root``).
 
     ``copies`` (loaded via :func:`load_copy_source` from app ``copy_from``)
     fill backend/.env.docker keys that no override supplies and that the
@@ -329,8 +297,10 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
         if not tmpl.exists():
             raise SeedEnvError(f"Missing template {tmpl} — cannot seed without it.")
 
-    compose_env = app_dir / ".env"
-    docker_env = app_dir / "backend" / ".env.docker"
+    env_root = env_root or repo_root
+    env_dir = env_root / "apps" / slug
+    compose_env = env_dir / ".env"
+    docker_env = env_dir / "backend" / ".env.docker"
     resolved_domain = domain or f"{slug}.myfreeapps.org"
     stamps = _stamps(resolved_domain)
     overrides = overrides or {}
@@ -358,7 +328,7 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
                     # declares (e.g. SENTRY_DSN after a _SENTRY_EXEMPT opt-out)
                     # survives only as a preserved leftover line — never enforce it.
                     continue
-                if _is_unset(current.get(key, "")):
+                if is_unset(current.get(key, "")):
                     problems.append(f"BLANK {key} in {path}")
             if path == docker_env:
                 raw = raw_env_values(path.read_text(encoding="utf-8"))
@@ -367,7 +337,7 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
             print(f"seed_env --check FAILED for '{slug}':")
             for p in problems:
                 print(f"  {p}")
-            print(f"\nFix: cd {repo_root} && PYTHONPATH=packages/shared-backend "
+            print(f"\nFix: cd {env_root} && PYTHONPATH=packages/shared-backend "
                   f"python3 -m platform_shared.infra.seed_env --app {slug}")
             return 1
         print(f"seed_env --check OK for '{slug}': both env files present, all enforced keys set.")
@@ -378,14 +348,14 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
     compose_text, compose_final = _render_from_example(
         compose_example.read_text(encoding="utf-8"), existing_compose, stamps, overrides, {},
     )
-    compose_written = _write_secure(compose_env, compose_text)
+    compose_written = write_secure(compose_env, compose_text)
 
     # --- seed backend/.env.docker ---
     existing_docker = read_env_file(docker_env)
     docker_text, docker_final = _render_from_example(
         docker_example.read_text(encoding="utf-8"), existing_docker, stamps, overrides, copies,
     )
-    docker_written = _write_secure(docker_env, docker_text)
+    docker_written = write_secure(docker_env, docker_text)
 
     print(f"{'Seeded' if compose_written else 'Unchanged'}: {compose_env}")
     print(f"{'Seeded' if docker_written else 'Unchanged'}: {docker_env}")
@@ -406,7 +376,7 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
             print(f"skipped {key} (not declared by '{slug}')")
         elif key in overrides:
             print(f"skipped {key} (override wins)")
-        elif not _is_unset(existing_docker.get(key, "")):
+        elif not is_unset(existing_docker.get(key, "")):
             print(f"skipped {key} (already set in target)")
         else:
             print(f"copied {key} from {source_label}")
@@ -455,7 +425,11 @@ def _cli(argv: list[str] | None = None) -> int:
                         help="App domain (default: <slug>.myfreeapps.org). Used to "
                              "stamp FRONTEND_URL/CORS_ORIGINS when the template left them blank.")
     parser.add_argument("--repo-root", default=None,
-                        help="Monorepo root (default: resolved from this file's location).")
+                        help="Monorepo root the templates are read from "
+                             "(default: resolved from this file's location).")
+    parser.add_argument("--env-root", default=None,
+                        help="Monorepo root the env files are read from and written to "
+                             "(default: --repo-root).")
     parser.add_argument("--overrides", default=None,
                         help="Path to a KEY=VALUE file of explicit values to set. "
                              "Overrides win over existing values (deliberate set/rotate); "
@@ -471,6 +445,7 @@ def _cli(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     repo_root = Path(args.repo_root).resolve() if args.repo_root else _repo_root()
+    env_root = Path(args.env_root).resolve() if args.env_root else repo_root
     try:
         if bool(args.copy_from) != bool(args.copy_keys):
             raise SeedEnvError("--copy-from and --copy-keys must be given together.")
@@ -480,9 +455,9 @@ def _cli(argv: list[str] | None = None) -> int:
                 raise SeedEnvError(
                     "--copy-from cannot be combined with --check (check writes nothing).")
             keys = parse_copy_keys(args.copy_keys)
-            copies = load_copy_source(repo_root, args.copy_from, args.app, keys)
+            copies = load_copy_source(env_root, args.copy_from, args.app, keys)
         overrides = _load_overrides(Path(args.overrides)) if args.overrides else None
-        return seed_app(repo_root, args.app, domain=args.domain,
+        return seed_app(repo_root, args.app, env_root=env_root, domain=args.domain,
                         check_only=args.check, overrides=overrides,
                         copy_from=args.copy_from, copies=copies)
     except SeedEnvError as exc:

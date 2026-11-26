@@ -61,9 +61,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
-{%- if registry_images | default(false) %}
       packages: write
-{%- endif %}
 {%- if auto_deploy %}
       # `gh run list` in the target step below.
       actions: read
@@ -120,7 +118,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
-{%- if registry_images | default(false) %}
 
       # Build images on the GitHub runner (fast, layer-cached via type=gha) and
       # push to GHCR. The VPS step below PULLS these prebuilt images instead of
@@ -174,30 +171,23 @@ jobs:
 {%- endif %}
           cache-from: type=gha,scope={{ app_slug }}-caddy
           cache-to: type=gha,mode=max,scope={{ app_slug }}-caddy
-{%- endif %}
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           # Forwarded into the remote script via `envs:` below. DEPLOY_SHA is
-          # the commit the checkout on the box fast-forwards to.
+          # the commit the box reads this app's compose file from.
           DEPLOY_SHA: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
-{%- if registry_images | default(false) %}
           # IMAGE_TAG pins the exact images the build steps above just pushed;
           # GHCR_* authenticate the VPS to pull the (private) packages.
           IMAGE_TAG: ${{ '{{' }} steps.gate.outputs.sha {{ '}}' }}
           GHCR_USER: ${{ '{{' }} github.repository_owner {{ '}}' }}
           GHCR_TOKEN: ${{ '{{' }} secrets.GHCR_PULL_TOKEN {{ '}}' }}
-{%- endif %}
         with:
           host: ${{ '{{' }} secrets.SSH_HOST {{ '}}' }}
           username: ${{ '{{' }} secrets.SSH_USER {{ '}}' }}
           key: ${{ '{{' }} secrets.SSH_PRIVATE_KEY {{ '}}' }}
-{%- if registry_images | default(false) %}
           envs: DEPLOY_SHA,IMAGE_TAG,GHCR_USER,GHCR_TOKEN
-{%- else %}
-          envs: DEPLOY_SHA
-{%- endif %}
           # Generous: deploys are serialized via the flock below, so a
           # later app can wait through several earlier app deploys before
           # its own runs. 10m was too tight once deploys serialize.
@@ -206,12 +196,11 @@ jobs:
             set -e
 
             # Serialize deploys across ALL apps on this shared VPS.
-            # Every app's deploy SSHes here and fast-forwards the SAME
-            # /srv/myfreeapps checkout; a `packages/**` change fans out
+            # Every deploy SSHes here and fetches into the SAME
+            # /srv/myfreeapps git repo; a `packages/**` change fans out
             # to every app's deploy workflow at once. Without this lock
-            # they race on the shared git refs — observed failures:
+            # they race on the shared git refs — observed failure:
             #   error: cannot lock ref 'refs/remotes/origin/main'
-            #   fatal: Cannot fast-forward to multiple branches
             # flock gives mutual exclusion WITHOUT dropping any app's
             # deploy. A shared GitHub `concurrency` group can't be used
             # here: it cancels intermediate *pending* runs, silently
@@ -227,13 +216,25 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Fast-forward the checkout to the deploy commit ---"
-            # Never `git pull`: main's head may not have passed CI yet. The
-            # compose file and host Caddyfile used below come from this
-            # checkout. A no-op when it is already past DEPLOY_SHA (another
-            # deploy shipped a newer passed commit), so it never moves back.
+            echo "--- Read the compose file from the deploy commit ---"
+            # Never move the checkout: deploy-landing.yml owns its files (host
+            # Caddy serves the landing page and the host Caddyfile from them),
+            # and they may be from a commit this app's CI never tested. Fetch
+            # only git objects and read this app's compose file from DEPLOY_SHA,
+            # the commit this app's CI passed. The images are prebuilt, so the
+            # compose file is the only file of the commit the box needs.
             git fetch origin main
-            git merge --ff-only "$DEPLOY_SHA"
+            DEPLOY_DIR="$(mktemp -d)"
+            trap 'rm -rf "$DEPLOY_DIR"' EXIT
+            git show "$DEPLOY_SHA:apps/{{ app_slug }}/docker-compose.yml" > "$DEPLOY_DIR/docker-compose.yml"
+            # --project-directory keeps everything the compose file resolves
+            # against the app's directory in the checkout: the project name
+            # ({{ app_slug }}, which prefixes its volumes and network), the
+            # compose-level .env and env_file backend/.env.docker. Both env
+            # files are gitignored and live only in the checkout.
+            app_compose() {
+              docker compose --project-directory /srv/myfreeapps/apps/{{ app_slug }} -f "$DEPLOY_DIR/docker-compose.yml" "$@"
+            }
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/{{ app_slug }}/.env || {
@@ -245,7 +246,6 @@ jobs:
               exit 1
             }
             echo "Env files present — proceeding"
-{%- if registry_images | default(false) %}
 
             echo "--- Authenticate to GHCR and pull prebuilt images ---"
             # Images were built + pushed by the build steps on the runner.
@@ -254,20 +254,8 @@ jobs:
             # `pull`, `up`, and any later `create`.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export IMAGE_TAG
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml pull
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml up -d --remove-orphans
-{%- else %}
-
-            echo "--- Build and deploy with Docker ---"
-            # --env-file exposes backend/.env.docker variables to docker compose's
-            # build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY from the
-            # shell). Without --env-file the bundle gets baked with an empty
-            # site key and TurnstileWidget renders null in production.
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml \
-              --env-file apps/{{ app_slug }}/backend/.env.docker \
-              build
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml up -d --remove-orphans
-{%- endif %}
+            app_compose pull
+            app_compose up -d --remove-orphans
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
             # The frontend_dist volume was used by the pre-baked-caddy layout.
@@ -275,7 +263,7 @@ jobs:
             docker volume rm {{ app_slug }}_frontend_dist 2>/dev/null || true
 
             echo "--- Run database migrations ---"
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api alembic upgrade head
+            app_compose exec -T api alembic upgrade head
 {%- if post_deploy_commands %}
 
             echo "--- Run post-deploy commands (app-specific, idempotent) ---"
@@ -286,19 +274,19 @@ jobs:
             # library (load-fixtures + import-lineups) so a merged pack update
             # goes live with no manual VPS step.
 {%- for cmd in post_deploy_commands %}
-            docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api {{ cmd }}
+            app_compose exec -T api {{ cmd }}
 {%- endfor %}
 {%- endif %}
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do
-              if docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{ api_port }}/health')" 2>/dev/null; then
+              if app_compose exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{ api_port }}/health')" 2>/dev/null; then
                 echo "API is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "API health check failed after 30 attempts"
-                docker compose -f apps/{{ app_slug }}/docker-compose.yml logs api --tail=50
+                app_compose logs api --tail=50
                 exit 1
               fi
               sleep 2
@@ -307,24 +295,19 @@ jobs:
 
             echo "--- Wait for {{ w.name }} worker health check ---"
             for i in $(seq 1 30); do
-              STATUS=$(docker inspect --format '{{ '{{' }}.State.Health.Status{{ '}}' }}' "$(docker compose -f apps/{{ app_slug }}/docker-compose.yml ps -q {{ w.name }})" 2>/dev/null || echo missing)
+              STATUS=$(docker inspect --format '{{ '{{' }}.State.Health.Status{{ '}}' }}' "$(app_compose ps -q {{ w.name }})" 2>/dev/null || echo missing)
               if [ "$STATUS" = "healthy" ]; then
                 echo "{{ w.name }} is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "::error::{{ w.name }} worker not healthy after 30 attempts (status: $STATUS)"
-                docker compose -f apps/{{ app_slug }}/docker-compose.yml logs {{ w.name }} --tail=50
+                app_compose logs {{ w.name }} --tail=50
                 exit 1
               fi
               sleep 5
             done
 {%- endfor %}
-
-            echo "--- Update host Caddyfile ---"
-            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
-            # Shared with deploy-landing.yml — see infra/sync-host-caddyfile.sh.
-            sudo bash infra/sync-host-caddyfile.sh
 {%- if include_bundle_tripwire %}
 
             echo "--- Bundle freshness tripwire ---"
@@ -335,7 +318,7 @@ jobs:
             DEPLOYED_JS=$(curl -sS http://127.0.0.1:{{ caddy_host_port }}/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
               echo "::warning::Could not extract script src from live index.html — skipping freshness check"
-            elif ! docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
+            elif ! app_compose exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
               echo "::error::Bundle freshness tripwire: $DEPLOYED_JS referenced by live index.html but missing from caddy container"
               exit 1
             else
@@ -349,7 +332,6 @@ jobs:
 {{ check.script | indent(width=12, first=True) }}
 {%- endfor %}
 {%- endif %}
-{%- if registry_images | default(false) %}
 
             echo "--- Reclaim disk: prune images + build cache superseded by this deploy ---"
             # Registry-pull deploys (registry_images) fetch a fresh SHA-tagged
@@ -367,4 +349,3 @@ jobs:
 
             echo "--- Clean up GHCR credentials ---"
             docker logout ghcr.io || true
-{%- endif %}

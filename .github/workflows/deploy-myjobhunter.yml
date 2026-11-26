@@ -160,7 +160,7 @@ jobs:
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           # Forwarded into the remote script via `envs:` below. DEPLOY_SHA is
-          # the commit the checkout on the box fast-forwards to.
+          # the commit the box reads this app's compose file from.
           DEPLOY_SHA: ${{ steps.gate.outputs.sha }}
           # IMAGE_TAG pins the exact images the build steps above just pushed;
           # GHCR_* authenticate the VPS to pull the (private) packages.
@@ -180,12 +180,11 @@ jobs:
             set -e
 
             # Serialize deploys across ALL apps on this shared VPS.
-            # Every app's deploy SSHes here and fast-forwards the SAME
-            # /srv/myfreeapps checkout; a `packages/**` change fans out
+            # Every deploy SSHes here and fetches into the SAME
+            # /srv/myfreeapps git repo; a `packages/**` change fans out
             # to every app's deploy workflow at once. Without this lock
-            # they race on the shared git refs — observed failures:
+            # they race on the shared git refs — observed failure:
             #   error: cannot lock ref 'refs/remotes/origin/main'
-            #   fatal: Cannot fast-forward to multiple branches
             # flock gives mutual exclusion WITHOUT dropping any app's
             # deploy. A shared GitHub `concurrency` group can't be used
             # here: it cancels intermediate *pending* runs, silently
@@ -201,13 +200,25 @@ jobs:
 
             cd /srv/myfreeapps
 
-            echo "--- Fast-forward the checkout to the deploy commit ---"
-            # Never `git pull`: main's head may not have passed CI yet. The
-            # compose file and host Caddyfile used below come from this
-            # checkout. A no-op when it is already past DEPLOY_SHA (another
-            # deploy shipped a newer passed commit), so it never moves back.
+            echo "--- Read the compose file from the deploy commit ---"
+            # Never move the checkout: deploy-landing.yml owns its files (host
+            # Caddy serves the landing page and the host Caddyfile from them),
+            # and they may be from a commit this app's CI never tested. Fetch
+            # only git objects and read this app's compose file from DEPLOY_SHA,
+            # the commit this app's CI passed. The images are prebuilt, so the
+            # compose file is the only file of the commit the box needs.
             git fetch origin main
-            git merge --ff-only "$DEPLOY_SHA"
+            DEPLOY_DIR="$(mktemp -d)"
+            trap 'rm -rf "$DEPLOY_DIR"' EXIT
+            git show "$DEPLOY_SHA:apps/myjobhunter/docker-compose.yml" > "$DEPLOY_DIR/docker-compose.yml"
+            # --project-directory keeps everything the compose file resolves
+            # against the app's directory in the checkout: the project name
+            # (myjobhunter, which prefixes its volumes and network), the
+            # compose-level .env and env_file backend/.env.docker. Both env
+            # files are gitignored and live only in the checkout.
+            app_compose() {
+              docker compose --project-directory /srv/myfreeapps/apps/myjobhunter -f "$DEPLOY_DIR/docker-compose.yml" "$@"
+            }
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/myjobhunter/.env || {
@@ -227,8 +238,8 @@ jobs:
             # `pull`, `up`, and any later `create`.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export IMAGE_TAG
-            docker compose -f apps/myjobhunter/docker-compose.yml pull
-            docker compose -f apps/myjobhunter/docker-compose.yml up -d --remove-orphans
+            app_compose pull
+            app_compose up -d --remove-orphans
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
             # The frontend_dist volume was used by the pre-baked-caddy layout.
@@ -236,17 +247,17 @@ jobs:
             docker volume rm myjobhunter_frontend_dist 2>/dev/null || true
 
             echo "--- Run database migrations ---"
-            docker compose -f apps/myjobhunter/docker-compose.yml exec -T api alembic upgrade head
+            app_compose exec -T api alembic upgrade head
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do
-              if docker compose -f apps/myjobhunter/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')" 2>/dev/null; then
+              if app_compose exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')" 2>/dev/null; then
                 echo "API is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "API health check failed after 30 attempts"
-                docker compose -f apps/myjobhunter/docker-compose.yml logs api --tail=50
+                app_compose logs api --tail=50
                 exit 1
               fi
               sleep 2
@@ -254,14 +265,14 @@ jobs:
 
             echo "--- Wait for resume-parser worker health check ---"
             for i in $(seq 1 30); do
-              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose -f apps/myjobhunter/docker-compose.yml ps -q resume-parser)" 2>/dev/null || echo missing)
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(app_compose ps -q resume-parser)" 2>/dev/null || echo missing)
               if [ "$STATUS" = "healthy" ]; then
                 echo "resume-parser is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "::error::resume-parser worker not healthy after 30 attempts (status: $STATUS)"
-                docker compose -f apps/myjobhunter/docker-compose.yml logs resume-parser --tail=50
+                app_compose logs resume-parser --tail=50
                 exit 1
               fi
               sleep 5
@@ -269,23 +280,18 @@ jobs:
 
             echo "--- Wait for scheduler worker health check ---"
             for i in $(seq 1 30); do
-              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose -f apps/myjobhunter/docker-compose.yml ps -q scheduler)" 2>/dev/null || echo missing)
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(app_compose ps -q scheduler)" 2>/dev/null || echo missing)
               if [ "$STATUS" = "healthy" ]; then
                 echo "scheduler is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "::error::scheduler worker not healthy after 30 attempts (status: $STATUS)"
-                docker compose -f apps/myjobhunter/docker-compose.yml logs scheduler --tail=50
+                app_compose logs scheduler --tail=50
                 exit 1
               fi
               sleep 5
             done
-
-            echo "--- Update host Caddyfile ---"
-            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
-            # Shared with deploy-landing.yml — see infra/sync-host-caddyfile.sh.
-            sudo bash infra/sync-host-caddyfile.sh
 
             echo "--- Bundle freshness tripwire ---"
             # Extract the script src from the live index.html and confirm
@@ -295,7 +301,7 @@ jobs:
             DEPLOYED_JS=$(curl -sS http://127.0.0.1:8092/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
               echo "::warning::Could not extract script src from live index.html — skipping freshness check"
-            elif ! docker compose -f apps/myjobhunter/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
+            elif ! app_compose exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
               echo "::error::Bundle freshness tripwire: $DEPLOYED_JS referenced by live index.html but missing from caddy container"
               exit 1
             else
