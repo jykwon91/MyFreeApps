@@ -232,7 +232,7 @@ jobs:
   # already validates the workspace lockfile resolves cleanly.
 
   frontend-layout-e2e:
-    name: frontend-layout-e2e / mybookkeeper (${{ matrix.shard }}/2)
+    name: frontend-layout-e2e / mybookkeeper (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Layout tests fully mock their API surface via page.route() and read
@@ -240,11 +240,12 @@ jobs:
     # required. Catches the class of bug that 2026-05-01 surfaced manually:
     # local Button missing justify-center, Caddyfile XFO/CSP scoping wrong,
     # iframe rendering regressions.
-    # Split in two: one runner took 8-9.5 minutes and was hitting the 10-minute limit.
+    # Split in three: one runner took 8-9.5 minutes, and later each of two took up to 9m54s,
+    # both hitting the 10-minute limit.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -274,7 +275,7 @@ jobs:
       - name: Run mocked E2E tests (no backend)
         working-directory: apps/mybookkeeper/frontend
         # Runs everything in e2e/mocked/.
-        run: npx playwright test --config=playwright.layout.config.ts --shard=${{ matrix.shard }}/2
+        run: npx playwright test --config=playwright.layout.config.ts --shard=${{ matrix.shard }}/3
 
       - name: Upload Playwright report on failure
         if: failure()
