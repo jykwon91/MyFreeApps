@@ -146,6 +146,6 @@ export function applyCaptures(data: WorldMapData, captures: readonly MapCapture[
     pois,
     questGivers,
     instances,
-    poiById: new Map([...pois, ...questGivers, ...instances].map((p) => [p.id, p])),
+    poiById: new Map([...pois, ...questGivers, ...instances, ...data.creatures].map((p) => [p.id, p])),
   };
 }

@@ -10,6 +10,7 @@
 import { PROFESSION_LABEL, SERVICE_KIND, SERVICE_LABEL, isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import { INSTANCE_ALIASES, ZONE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import {
+  CREATURE_SUBKIND,
   POI_KIND,
   type MapPoi,
   type PlayerFaction,
@@ -55,6 +56,7 @@ export interface SearchContext {
 function kindWords(poi: MapPoi): string {
   if (poi.kind === POI_KIND.questGiver) return "quest giver quests";
   if (poi.kind === POI_KIND.instance) return `${poi.subkind} instance`;
+  if (poi.subkind === CREATURE_SUBKIND) return "creature npc";
   const words = [isServiceKind(poi.subkind) ? SERVICE_LABEL[poi.subkind] : "", "npc"];
   const profession = PROFESSION_LABEL[poi.tag];
   if (profession) words.push(`${profession} trainer`);
@@ -67,6 +69,11 @@ function kindWords(poi: MapPoi): string {
 /** What it's called: its name, then what players call it (dungeons: "The Stockade", "VC"). */
 function namesOf(poi: MapPoi): string[] {
   return [poi.name, ...(poi.kind === POI_KIND.instance ? (INSTANCE_ALIASES[poi.name] ?? []) : [])];
+}
+
+/** Everything the search looks through. */
+function searchable(data: WorldMapData): MapPoi[] {
+  return [...data.pois, ...data.questGivers, ...data.instances, ...data.creatures];
 }
 
 const haystacks = new WeakMap<MapPoi, string>();
@@ -103,7 +110,7 @@ export function searchAllNpcs(typed: string, data: WorldMapData, context: Search
   if (!tokens.length) return [];
   const phrase = normalizeText(query);
   let scored: Scored[] = [];
-  for (const poi of [...data.pois, ...data.questGivers, ...data.instances]) {
+  for (const poi of searchable(data)) {
     const zone = data.zoneById.get(poi.zone);
     if (!zone || !matchesAll(tokens, haystackFor(poi, zone))) continue;
     const names = namesOf(poi).filter((n) => matchesAll(tokens, normalizeText(n)));
@@ -152,7 +159,7 @@ function resultsFor(query: string, data: WorldMapData, places: readonly Place[],
 
 /** Every word an NPC, dungeon or boss is called by, for the spelling suggestions. */
 function* npcTexts(data: WorldMapData): Generator<string> {
-  for (const poi of [...data.pois, ...data.questGivers, ...data.instances]) {
+  for (const poi of searchable(data)) {
     yield* namesOf(poi);
     yield* poi.bosses ?? [];
     yield poi.title;
@@ -202,7 +209,7 @@ export function correctPlaceName(
 export function findLinkedPoi(value: string, data: WorldMapData): MapPoi | undefined {
   const npcId = Number(value);
   if (Number.isInteger(npcId) && npcId > 0) {
-    const match = [...data.pois, ...data.questGivers].find((p) => p.npcId === npcId);
+    const match = [...data.pois, ...data.questGivers, ...data.creatures].find((p) => p.npcId === npcId);
     if (match) return match;
   }
   return data.poiById.get(value);

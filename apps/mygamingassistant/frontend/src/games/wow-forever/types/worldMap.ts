@@ -77,7 +77,7 @@ export interface WorldPoint {
   z?: number;
 }
 
-export const POI_KIND = { service: "service", questGiver: "quest_giver", instance: "instance" } as const;
+export const POI_KIND = { service: "service", questGiver: "quest_giver", instance: "instance", creature: "creature" } as const;
 export type PoiKind = (typeof POI_KIND)[keyof typeof POI_KIND];
 
 /** Quest givers are NPCs or clickable objects (wanted posters, books). */
@@ -87,7 +87,11 @@ export type QuestGiverKind = (typeof QUEST_GIVER_KIND)[keyof typeof QUEST_GIVER_
 export const INSTANCE_KIND = { dungeon: "dungeon", raid: "raid" } as const;
 export type InstanceKind = (typeof INSTANCE_KIND)[keyof typeof INSTANCE_KIND];
 
-export type PoiSubkind = ServiceKind | QuestGiverKind | InstanceKind;
+/** Every other named creature and NPC: only the search finds them, they are on no layer. */
+export const CREATURE_SUBKIND = "creature";
+export type CreatureSubkind = typeof CREATURE_SUBKIND;
+
+export type PoiSubkind = ServiceKind | QuestGiverKind | InstanceKind | CreatureSubkind;
 
 export const POI_SOURCE = { classic: "classic", captured: "captured", gameFiles: "game_files" } as const;
 export type PoiSource = (typeof POI_SOURCE)[keyof typeof POI_SOURCE];
@@ -196,7 +200,9 @@ export interface WorldMapData {
   questGivers: readonly MapPoi[];
   /** Dungeon and raid entrances. */
   instances: readonly MapPoi[];
-  /** Every layer's POIs by id. */
+  /** Every other named creature (one row per spot), for the search only. Empty until its chunk loads. */
+  creatures: readonly MapPoi[];
+  /** Every layer's POIs by id, the creatures' too. */
   poiById: ReadonlyMap<string, MapPoi>;
   flightNodes: readonly FlightNode[];
   /** Directed flight routes between node ids. */

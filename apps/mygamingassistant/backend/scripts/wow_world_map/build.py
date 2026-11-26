@@ -18,6 +18,10 @@ Writes (paths relative to ``apps/mygamingassistant/frontend``):
   service NPCs (trainers, flight masters, inns, banks, ...). Derived from
   cmangos classic-db, so GPL-3.0 — see the LICENSE file in that folder.
 * ``.../classic/classicQuests.json`` — quest givers and their quests (GPL-3.0).
+* ``.../classic/classicCreatures.json`` — every other named creature and NPC, so the
+  search finds them (GPL-3.0).
+* ``.../classic/classicCreatures.json`` — every other named creature and NPC, so the
+  search finds them (GPL-3.0).
 * ``.../classic/classicDungeons.json`` — dungeon / raid entrances (GPL-3.0).
 * ``src/games/wow-forever/data/worldMap/foreverDungeons.json`` — the dungeons
   Forever added, which the Classic file can't have (Forever client tables).
@@ -42,6 +46,8 @@ from scripts.wow_world_map import sources
 from scripts.wow_world_map.areas import COLUMNS as AREA_COLUMNS
 from scripts.wow_world_map.areas import build_areas
 from scripts.wow_world_map.coords import ZoneBounds
+from scripts.wow_world_map.creatures import COLUMNS as CREATURE_COLUMNS
+from scripts.wow_world_map.creatures import build_creatures
 from scripts.wow_world_map.dungeons import COLUMNS as DUNGEON_COLUMNS
 from scripts.wow_world_map.dungeons import build_dungeons
 from scripts.wow_world_map.forever_dungeons import write_forever_dungeons
@@ -99,8 +105,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever World Map data.")
     parser.add_argument("--no-art", action="store_true", help="skip the map art images")
     parser.add_argument("--no-walk", action="store_true", help="skip the walk graphs")
+    parser.add_argument(
+        "--creatures-only", action="store_true",
+        help="rewrite only classicCreatures.json (reads the committed services + quests)",
+    )
     args = parser.parse_args()
     print(f"download cache: {sources.CACHE_DIR}")
+    if args.creatures_only:
+        write_creatures(load_zones()[1], WorldMapArt())
+        return
 
     zones_json, zone_bounds = load_zones()
     world = load_world()
@@ -173,6 +186,8 @@ def main() -> None:
     })
     print(f"quests: {len(quest_rows)}, quest givers: {len(giver_rows)}")
 
+    write_creatures(zone_bounds, art)
+
     dungeon_rows = build_dungeons(zone_bounds, art)
     write_json(CLASSIC_DIR / "classicDungeons.json", {
         "source": classic_source("AreaTrigger, Map, LFGDungeons, UiMapAssignment, WorldMapOverlay, AreaTable"),
@@ -186,6 +201,20 @@ def main() -> None:
     if not args.no_walk:
         for map_id, interior in interiors.items():
             build_interior_walk(int(map_id), interior, WALK_DIR)
+
+
+def write_creatures(zone_bounds: list[ZoneBounds], art: WorldMapArt) -> None:
+    """After the services and quests files: it skips every NPC those already place."""
+    services = json.loads((CLASSIC_DIR / "classicServices.json").read_text(encoding="utf-8"))
+    quests = json.loads((CLASSIC_DIR / "classicQuests.json").read_text(encoding="utf-8"))
+    subzones, rows = build_creatures(zone_bounds, art, services, quests)
+    write_json(CLASSIC_DIR / "classicCreatures.json", {
+        "source": classic_source("FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"),
+        "columns": CREATURE_COLUMNS,
+        "subzones": subzones,
+        "rows": rows,
+    })
+    print(f"creatures: {len(rows)}")
 
 
 def write_areas(zone_bounds: list[ZoneBounds], art: WorldMapArt) -> None:
