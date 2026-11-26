@@ -265,14 +265,14 @@ jobs:
 
             echo "--- Wait for resume-parser worker health check ---"
             for i in $(seq 1 30); do
-              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose -f apps/myjobhunter/docker-compose.yml ps -q resume-parser)" 2>/dev/null || echo missing)
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(app_compose ps -q resume-parser)" 2>/dev/null || echo missing)
               if [ "$STATUS" = "healthy" ]; then
                 echo "resume-parser is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "::error::resume-parser worker not healthy after 30 attempts (status: $STATUS)"
-                docker compose -f apps/myjobhunter/docker-compose.yml logs resume-parser --tail=50
+                app_compose logs resume-parser --tail=50
                 exit 1
               fi
               sleep 5
