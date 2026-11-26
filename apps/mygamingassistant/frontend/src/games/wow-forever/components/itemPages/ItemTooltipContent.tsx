@@ -1,4 +1,5 @@
 import ItemStatsBlock from "@/games/wow-forever/components/itemPages/ItemStatsBlock";
+import RecipeItemTooltipBody from "@/games/wow-forever/components/itemPages/RecipeItemTooltipBody";
 import ItemTooltipSkeleton from "@/games/wow-forever/components/itemPages/ItemTooltipSkeleton";
 import { NO_ITEM_FACTS } from "@/games/wow-forever/data/itemPages/itemTooltipConfig";
 import { ITEM_TOOLTIP_STATUS } from "@/games/wow-forever/data/itemPages/itemTooltipStatus";
@@ -23,6 +24,7 @@ export default function ItemTooltipContent({ itemId, item }: ItemTooltipContentP
     return <ItemStatsBlock item={item} facts={facts} showVendorPrice={false} className="shadow-lg" />;
   }
   if (state.status === ITEM_TOOLTIP_STATUS.LOADING) return <ItemTooltipSkeleton />;
+  if (state.status === ITEM_TOOLTIP_STATUS.RECIPE) return <RecipeItemTooltipBody data={state.data} />;
   if (state.status === ITEM_TOOLTIP_STATUS.MISSING) return <p className={NOTE}>No stats for this item in the Forever game files yet.</p>;
   return <p className={NOTE}>Couldn't load this item's stats. Hover again to retry.</p>;
 }

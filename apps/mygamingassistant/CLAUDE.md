@@ -619,6 +619,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   picked item, the item finder), else only the item's Forever shard
   (`lib/itemPages/itemTooltipLoader.ts`, cached per shard). No vendor price in
   the tooltip; the bind line's place is held while the shard loads.
+  **Recipe items** (Pattern / Plans / Formula the Forever item files lack, e.g. 14488):
+  when the shard has no row, the loader also reads the crafting JSONs
+  (`loadAllCraftingFiles`, index `lib/itemPages/recipeItemIndex.ts` by `learn.itemId`)
+  and the tooltip (`RecipeItemTooltipBody`) shows bind (`learn.bop`), "Requires
+  <Profession> (skill)" (Classic-estimated skills say "about" + the Classic badge),
+  "Use: Teaches you how to make X", the made item's Forever stats block, then the
+  reagents. Non-recipe missing items keep "No stats for this item…". Every
+  `ItemNameLink` benefits (one seam: `itemTooltipLoader`). Tests:
+  `wowRecipeItemTooltip.test.tsx`, `e2e/mocked/wow-forever-recipe-item-tooltip.spec.ts`.
 - A Classic item no Forever client has shown yet (`classic/unseen.json`) says
   so — never "doesn't exist" — and an unknown id says "not found"; both offer
   the compare page's name search (`ItemFinder`, `searchItems`).
