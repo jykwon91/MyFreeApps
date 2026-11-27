@@ -1,4 +1,8 @@
-"""Analytics repository — utility trend aggregations."""
+"""Analytics repository — utility trend aggregations.
+
+A bill split across properties counts each share for its own property
+(``property_allocation``).
+"""
 import uuid
 from collections.abc import Sequence
 from datetime import date
@@ -10,6 +14,11 @@ from sqlalchemy.sql.elements import Label
 from app.core.tags import UTILITY_UNTYPED_BUCKET
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
+from app.repositories.transactions.property_allocation import (
+    ALLOCATED_AMOUNT,
+    ALLOCATED_PROPERTY_ID,
+    allocated,
+)
 
 
 def _utility_bucket() -> Label[str]:
@@ -34,7 +43,7 @@ def _build_utility_filters(
     if end_date is not None:
         filters.append(Transaction.transaction_date <= end_date)
     if property_ids:
-        filters.append(Transaction.property_id.in_(property_ids))
+        filters.append(ALLOCATED_PROPERTY_ID.in_(property_ids))
     return filters
 
 
@@ -76,22 +85,22 @@ async def get_utility_trends(
         group_col = func.extract("month", Transaction.transaction_date).label("month")
 
     result = await db.execute(
-        select(
+        allocated(select(
             year_col,
             group_col,
             bucket_col,
-            Transaction.property_id,
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Property.name.label("property_name"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
-        .outerjoin(Property, Transaction.property_id == Property.id)
+        .select_from(Transaction))
+        .outerjoin(Property, ALLOCATED_PROPERTY_ID == Property.id)
         .where(and_(*filters))
         .group_by(
             year_col,
             group_col,
             bucket_col,
-            Transaction.property_id,
+            ALLOCATED_PROPERTY_ID,
             Property.name,
         )
         .order_by(year_col, group_col)
@@ -116,11 +125,11 @@ async def get_utility_summary(
     )
     bucket_col = _utility_bucket()
     result = await db.execute(
-        select(
+        allocated(select(
             bucket_col,
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
+        .select_from(Transaction))
         .where(and_(*filters))
         .group_by(bucket_col)
     )

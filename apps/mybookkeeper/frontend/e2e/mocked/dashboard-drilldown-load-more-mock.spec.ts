@@ -29,6 +29,7 @@ function aRow(index: number) {
   return {
     id: `txn-${index}`,
     property_id: null,
+    property_splits: [],
     transaction_date: "2026-03-15",
     vendor: `Plumber ${index}`,
     description: null,

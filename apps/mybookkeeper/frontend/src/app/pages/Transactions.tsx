@@ -9,6 +9,7 @@ import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { useTransactionPageState } from "@/app/features/transactions/hooks/useTransactionPageState";
 import { transactionFilterOptions } from "@/shared/utils/transaction-filter-options";
 import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
+import { hasProperty } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
 import TransactionTable from "@/app/features/transactions/TransactionTable";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import ManualEntryForm from "@/app/features/transactions/ManualEntryForm";
@@ -135,7 +136,7 @@ export default function Transactions() {
   const selectedRefs = selection.selectedRefs;
   const selectedCount = selectedRefs.length;
   const isRefApprovable = (ref: TransactionSelectionRef) =>
-    !!ref.property_id && APPROVABLE_STATUSES.includes(ref.status);
+    hasProperty(ref) && APPROVABLE_STATUSES.includes(ref.status);
   const hasApprovable = selectedRefs.some(isRefApprovable);
 
   const deleteTarget = confirmDeleteId ? transactions.find((t) => t.id === confirmDeleteId) : null;

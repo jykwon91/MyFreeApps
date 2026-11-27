@@ -18,6 +18,8 @@ import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
+import SplitWaysBadge from "@/app/features/transactions/SplitWaysBadge";
+import { isSplit, splitDetail } from "@mybookkeeper/api-client/utils/propertySplit";
 import TransactionRowCheckbox from "@/app/features/transactions/TransactionRowCheckbox";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
 
@@ -145,9 +147,9 @@ export function useTransactionColumns(
     }),
     columnHelper.accessor("property_id", {
       header: "Property",
-      cell: ({ getValue }) => (
-        <span className="text-muted-foreground">{getValue() ? (propertyMap.get(getValue()!) ?? "\u2014") : "\u2014"}</span>
-      ),
+      cell: ({ row, getValue }) => (isSplit(row.original)
+        ? <SplitWaysBadge ways={row.original.property_splits.length} detail={splitDetail(row.original.property_splits, propertyMap)} />
+        : <span className="text-muted-foreground">{getValue() ? (propertyMap.get(getValue()!) ?? "\u2014") : "\u2014"}</span>),
     }),
     columnHelper.accessor("account_id", {
       header: "Account",
@@ -171,7 +173,7 @@ export function useTransactionColumns(
         if (!canWrite) return null;
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            {isApprovable && row.original.property_id && (
+            {isApprovable && (row.original.property_id || isSplit(row.original)) && (
               <Button
                 variant="ghost"
                 size="sm"

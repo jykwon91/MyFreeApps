@@ -11,7 +11,7 @@ import type { DrillDownParams } from "../../types/DrillDownParams";
 import PagedListFooter from "../shell/PagedListFooter";
 import TransactionRow from "../transactions/TransactionRow";
 import { TransactionSkeletonRow } from "../transactions/TransactionsSkeleton";
-import { propertyLabel } from "../transactions/transactionDisplay";
+import { propertyLabel, rowPropertyName } from "../transactions/transactionDisplay";
 import DrillDownEmptyList from "./DrillDownEmptyList";
 import DrillDownHeadline from "./DrillDownHeadline";
 import { drillDownHeading } from "./drillDownHeading";
@@ -60,7 +60,7 @@ export default function DrillDownScreen() {
       renderItem={({ item }) => (
         <TransactionRow
           onPress={() => router.push(`/transactions/${item.id}`)}
-          propertyName={item.property_id ? propertyLabel(item.property_id, properties) : null}
+          propertyName={rowPropertyName(item, (id) => propertyLabel(id, properties))}
           transaction={item}
         />
       )}

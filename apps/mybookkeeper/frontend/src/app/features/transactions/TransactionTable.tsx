@@ -17,12 +17,15 @@ import { DataTableHeaderCell } from "@platform/ui";
 import { ColumnFilter } from "@/shared/components/table";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import CapitalImprovementBadge from "@/app/features/transactions/CapitalImprovementBadge";
+import SplitWaysBadge from "@/app/features/transactions/SplitWaysBadge";
+import { isSplit, splitDetail } from "@mybookkeeper/api-client/utils/propertySplit";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { cn } from "@/shared/utils/cn";
 import { LoadingStatus, Skeleton } from "@platform/ui";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import { LIST_LOAD_MODE } from "@/shared/lib/list-load-modes";
 import TransactionSkeletonRows from "@/app/features/transactions/TransactionSkeletonRows";
 
 export interface TransactionTableProps {
@@ -49,8 +52,9 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
       : "No transactions found";
   const start = pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalRows);
+  const rangeLabel = totalRows > 0 ? `${start}–${end} of ${totalRows}` : "0 results";
   // The header (and its filters) and the footer stay up; only the body waits for the rows.
-  const hasRows = mode === "list" || mode === "empty";
+  const hasRows = mode === LIST_LOAD_MODE.list || mode === LIST_LOAD_MODE.empty;
   const dimsRows = isRefreshing && hasRows;
 
   return (
@@ -60,16 +64,15 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
     >
       {/* Mobile card view */}
       <div className={cn("md:hidden divide-y", dimsRows && "opacity-60")} data-testid="transaction-cards">
-        {mode === "loading" ? (
+        {mode === LIST_LOAD_MODE.loading &&
           Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="p-4 space-y-2" data-testid="transaction-card-skeleton">
               <Skeleton className="h-4 w-1/2" />
               <Skeleton className="h-3 w-1/3" />
             </div>
-          ))
-        ) : mode === "error" ? null : table.getRowModel().rows.length === 0 ? (
-          <EmptyState message={emptyMessage} />
-        ) : (
+          ))}
+        {hasRows && table.getRowModel().rows.length === 0 && <EmptyState message={emptyMessage} />}
+        {hasRows &&
           table.getRowModel().rows.map((row) => {
             const t = row.original;
             const isActive = editingId === t.id;
@@ -107,20 +110,20 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                     {formatTag(t.category)}
                   </span>
                   {t.is_capital_improvement ? <CapitalImprovementBadge /> : null}
-                  {propertyName && (
-                    <span className="text-xs text-muted-foreground">{propertyName}</span>
+                  {isSplit(t) && (
+                    <SplitWaysBadge ways={t.property_splits.length} detail={propertyMap ? splitDetail(t.property_splits, propertyMap) : undefined} />
                   )}
+                  {!isSplit(t) && propertyName && <span className="text-xs text-muted-foreground">{propertyName}</span>}
                   {accountName && (
                     <span className="text-xs text-muted-foreground" data-testid="transaction-card-account">{accountName}</span>
                   )}
                 </div>
               </button>
             );
-          })
-        )}
+          })}
       </div>
 
-      {mode === "loading" ? <LoadingStatus label="Loading transactions…" /> : null}
+      {mode === LIST_LOAD_MODE.loading ? <LoadingStatus label="Loading transactions…" /> : null}
 
       {/* Desktop table */}
       <div className="hidden md:block flex-1 overflow-auto">
@@ -150,7 +153,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
             ))}
           </thead>
           <tbody className={cn("divide-y", dimsRows && "opacity-60")}>
-            {mode === "loading" ? <TransactionSkeletonRows /> : null}
+            {mode === LIST_LOAD_MODE.loading ? <TransactionSkeletonRows /> : null}
             {hasRows && table.getRowModel().rows.map((row) => (
               <Fragment key={row.original.id}>
                 <tr
@@ -165,7 +168,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                 </tr>
               </Fragment>
             ))}
-            {mode === "empty" && (
+            {mode === LIST_LOAD_MODE.empty && (
               <tr>
                 <td colSpan={colCount}>
                   <EmptyState message={emptyMessage} />
@@ -192,7 +195,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
         </div>
 
         <div className="flex items-center gap-3">
-          {hasRows ? <span>{totalRows > 0 ? `${start}\u2013${end} of ${totalRows}` : "0 results"}</span> : null}
+          {hasRows && <span>{rangeLabel}</span>}
           <div className="flex items-center gap-1">
             <button aria-label="First page" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronsLeft className="h-4 w-4" />

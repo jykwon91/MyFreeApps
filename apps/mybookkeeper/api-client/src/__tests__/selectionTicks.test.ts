@@ -3,7 +3,7 @@ import type { TransactionSelectionRef } from "../types/transaction/TransactionSe
 import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "../utils/selectionTicks";
 
 function ref(id: string, status: TransactionSelectionRef["status"] = "pending"): TransactionSelectionRef {
-  return { id, property_id: "p1", status };
+  return { id, property_id: "p1", is_split: false, status };
 }
 
 describe("selection ticks", () => {

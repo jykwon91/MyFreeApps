@@ -21,6 +21,7 @@ import TransactionDuplicateActions from "@/app/features/transactions/Transaction
 import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
 import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
+import { PROPERTY_SPLIT_LABELS as SPLIT } from "@mybookkeeper/api-client/constants/propertySplitLabels";
 import PersonalCategorySelect from "./PersonalCategorySelect";
 import SourcePreviewDialog from "./SourcePreviewDialog";
 import TransactionAccountFields from "./TransactionAccountFields";
@@ -36,6 +37,8 @@ export interface TransactionFormProps {
   errors?: FieldErrors<TransactionFormValues>;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
   dupOther: DuplicateTransaction | null;
+  /** How many properties share the transaction; 0 when it isn't split. */
+  splitWays?: number;
   onKeepDuplicate?: (keepId: string, deleteIds: string[]) => Promise<void>;
   onDismissDuplicate?: (transactionIds: string[]) => Promise<void>;
 }
@@ -50,6 +53,7 @@ export default function TransactionForm({
   errors,
   onSubmit,
   dupOther,
+  splitWays = 0,
   onKeepDuplicate,
   onDismissDuplicate,
 }: TransactionFormProps) {
@@ -280,13 +284,14 @@ export default function TransactionForm({
           <Select {...register("property_id")} className={selectClass("property_id")}
             {...field}
           >
-            <option value="">No property</option>
+            <option value="">{splitWays > 0 ? SPLIT.splitAcross(splitWays) : "No property"}</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </Select>
         )}
       </FormField>
+      {splitWays > 0 ? <p className="-mt-2 text-xs text-muted-foreground" data-testid="property-split-hint">{SPLIT.propertyHint}</p> : null}
 
       <FormField label="Channel" dirty={!!dirtyFields.channel}>
         {(field) => (

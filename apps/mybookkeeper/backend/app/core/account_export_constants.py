@@ -167,6 +167,7 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "spending_budgets": {},
     "loan_payees": {},
     "transaction_documents": {},
+    "transaction_property_splits": {},
     "booking_statements": {},
     "reconciliation_sources": {},
     "reconciliation_matches": {},

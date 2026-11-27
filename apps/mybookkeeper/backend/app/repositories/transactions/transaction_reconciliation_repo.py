@@ -14,6 +14,7 @@ from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 from app.repositories.transactions.payer_alias_repo import normalize_payer_name
+from app.repositories.transactions.property_allocation import ALLOCATED_AMOUNT, ALLOCATED_PROPERTY_ID, allocated
 
 
 class _date_diff_days(FunctionElement):
@@ -292,19 +293,20 @@ async def summary_by_property(
     end_date: date | None = None,
     tax_year: int | None = None,
 ) -> list[Row]:
+    """Totals by property, type and category; a split transaction counts each share for its property."""
     stmt = (
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Transaction.transaction_type,
             Transaction.category,
-            func.sum(Transaction.amount).label("total_amount"),
-        )
+            func.sum(ALLOCATED_AMOUNT).label("total_amount"),
+        ).select_from(Transaction))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.deleted_at.is_(None),
             Transaction.status == "approved",
         )
-        .group_by(Transaction.property_id, Transaction.transaction_type, Transaction.category)
+        .group_by(ALLOCATED_PROPERTY_ID, Transaction.transaction_type, Transaction.category)
     )
 
     if start_date is not None:
@@ -323,13 +325,13 @@ async def schedule_e_report(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> list[Row]:
-    """Schedule E totals by property and line; capital improvements are depreciated, not deducted."""
+    """Schedule E totals by property (a split's shares by theirs) and line; capital improvements are depreciated."""
     stmt = (
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Transaction.schedule_e_line,
-            func.sum(Transaction.amount).label("total_amount"),
-        )
+            func.sum(ALLOCATED_AMOUNT).label("total_amount"),
+        ).select_from(Transaction))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.deleted_at.is_(None),
@@ -339,7 +341,7 @@ async def schedule_e_report(
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
             Transaction.is_capital_improvement.is_(False),
         )
-        .group_by(Transaction.property_id, Transaction.schedule_e_line)
+        .group_by(ALLOCATED_PROPERTY_ID, Transaction.schedule_e_line)
     )
     result = await db.execute(stmt)
     return result.all()
@@ -418,18 +420,18 @@ async def distinct_property_ids_by_category(
     tax_year: int,
     category: str,
 ) -> list[uuid.UUID]:
-    """Return distinct non-null property_ids for a given category and tax year."""
+    """Return distinct non-null property_ids (a split's included) for a given category and tax year."""
     stmt = (
-        select(Transaction.property_id)
+        allocated(select(ALLOCATED_PROPERTY_ID).select_from(Transaction))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.category == category,
             Transaction.status == "approved",
             Transaction.deleted_at.is_(None),
-            Transaction.property_id.isnot(None),
+            ALLOCATED_PROPERTY_ID.isnot(None),
         )
-        .group_by(Transaction.property_id)
+        .group_by(ALLOCATED_PROPERTY_ID)
     )
     result = await db.execute(stmt)
     return [row[0] for row in result.all()]

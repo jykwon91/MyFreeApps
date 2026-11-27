@@ -60,6 +60,7 @@ const mockTransactions: Transaction[] = [
     payer_name: null,
     transaction_scope: "rental",
     spending_category_id: null,
+    property_splits: [],
   },
   {
     id: "txn-2",
@@ -111,6 +112,7 @@ const mockTransactions: Transaction[] = [
     payer_name: null,
     transaction_scope: "rental",
     spending_category_id: null,
+    property_splits: [],
   },
 ];
 

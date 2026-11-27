@@ -22,8 +22,9 @@ from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_list_query import TransactionListQuery
 from app.schemas.transactions.transaction_page_query import TransactionPageQuery
+from app.schemas.transactions.transaction_property_split_request import TransactionPropertySplitRequest
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
-from app.services.transactions import duplicate_service, transaction_service
+from app.services.transactions import duplicate_service, property_split_service, transaction_service
 from app.services.transactions.merge_conflict_error import MergeConflictError
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -241,6 +242,32 @@ async def update_transaction(
         **TransactionRead.model_validate(txn).model_dump(),
         retroactive_count=retroactive_count,
     )
+
+
+@router.put("/{transaction_id}/property-splits", response_model=TransactionRead)
+async def set_property_split(
+    transaction_id: uuid.UUID,
+    body: TransactionPropertySplitRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> TransactionRead:
+    try:
+        txn = await property_split_service.set_split(ctx, transaction_id, body)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if txn is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return txn
+
+
+@router.delete("/{transaction_id}/property-splits", response_model=TransactionRead)
+async def remove_property_split(
+    transaction_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> TransactionRead:
+    txn = await property_split_service.remove_split(ctx, transaction_id)
+    if txn is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return txn
 
 
 @router.delete("/{transaction_id}", status_code=204)

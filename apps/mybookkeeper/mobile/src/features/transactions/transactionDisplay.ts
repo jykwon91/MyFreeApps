@@ -1,5 +1,7 @@
 import { PERSONAL_TRANSFER_LABELS } from "@mybookkeeper/api-client/constants/personalTransferLabels";
 import { CAPITAL_IMPROVEMENT_LABEL } from "@mybookkeeper/api-client/constants/capitalImprovementLabels";
+import { PROPERTY_SPLIT_LABELS } from "@mybookkeeper/api-client/constants/propertySplitLabels";
+import { isSplit, splitDetail } from "@mybookkeeper/api-client/utils/propertySplit";
 import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { SortDirection } from "@mybookkeeper/api-client/types/sort/SortDirection";
@@ -40,6 +42,30 @@ export function transactionName(transaction: Transaction): string {
 export function propertyLabel(propertyId: string | null, properties: readonly Property[]): string {
   if (propertyId === null) return "No property";
   return properties.find((property) => property.id === propertyId)?.name ?? "A property";
+}
+
+/** A split row reads "Split 3 ways" where another row names its property. */
+export function rowPropertyName(
+  transaction: Pick<Transaction, "property_id" | "property_splits">,
+  nameOf: (propertyId: string) => string | null,
+): string | null {
+  if (isSplit(transaction)) return PROPERTY_SPLIT_LABELS.splitWays(transaction.property_splits.length);
+  return transaction.property_id ? nameOf(transaction.property_id) : null;
+}
+
+/** The detail's Property line: each share of a split, else the one property. */
+export function transactionPropertyLabel(
+  transaction: Pick<Transaction, "property_id" | "property_splits">,
+  properties: readonly Property[],
+): string {
+  if (!isSplit(transaction)) return propertyLabel(transaction.property_id, properties);
+  const names = new Map(properties.map((property) => [property.id, property.name]));
+  return `${PROPERTY_SPLIT_LABELS.splitWays(transaction.property_splits.length)}: ${splitDetail(transaction.property_splits, names)}`;
+}
+
+/** Editing a split row: it stays split until a property is picked, which ends the split. */
+export function keepsSplit(original: Pick<Transaction, "property_splits">, propertyId: string | null): boolean {
+  return isSplit(original) && propertyId === null;
 }
 
 /** "Mar 1, 2026 to Mar 31, 2026" */

@@ -20,6 +20,15 @@ from app.models.extraction.extraction import Extraction
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
+from app.repositories.transactions.property_allocation import (
+    ALLOCATED_AMOUNT,
+    ALLOCATED_PROPERTY_ID,
+    allocated,
+    amount_on_properties,
+    has_property,
+    is_split,
+    on_any_property,
+)
 from app.repositories.transactions.transaction_filter_args import TransactionFilterArgs
 from app.repositories.transactions.transaction_totals import TransactionTotals
 from app.schemas.transactions.transaction_sort_key import TransactionSortKey
@@ -60,13 +69,13 @@ def _order_term(key: TransactionSortKey) -> ColumnElement[Any]:
 
 
 def _any_property(property_ids: Sequence[uuid.UUID | str]) -> ColumnElement[bool]:
-    """Rows of any of these properties; UNASSIGNED_PROPERTY_ID stands for rows with no property."""
+    """Rows of any of these properties, in whole or in part; UNASSIGNED_PROPERTY_ID stands for rows with no property."""
     ids = [p for p in property_ids if isinstance(p, uuid.UUID)]
     conditions: list[ColumnElement[bool]] = []
     if ids:
-        conditions.append(Transaction.property_id.in_(ids))
+        conditions.append(on_any_property(ids))
     if UNASSIGNED_PROPERTY_ID in property_ids:
-        conditions.append(Transaction.property_id.is_(None))
+        conditions.append(~has_property())
     return or_(*conditions)
 
 
@@ -81,9 +90,9 @@ def _filtered(
         Transaction.deleted_at.is_(None),
     )
     if (property_id := filters.get("property_id")) is not None:
-        stmt = stmt.where(Transaction.property_id == property_id)
+        stmt = stmt.where(on_any_property([property_id]))
     if filters.get("unassigned"):
-        stmt = stmt.where(Transaction.property_id.is_(None))
+        stmt = stmt.where(~has_property())
     if (applicant_id := filters.get("applicant_id")) is not None:
         stmt = stmt.where(Transaction.applicant_id == applicant_id)
     if (account_id := filters.get("account_id")) is not None:
@@ -162,9 +171,14 @@ async def totals_filtered(
     organization_id: uuid.UUID,
     **filters: Unpack[TransactionFilterArgs],
 ) -> TransactionTotals:
-    """How many rows ``list_filtered`` would return across every page for the same filters, and their amounts' sum."""
+    """How many rows ``list_filtered`` would return across every page for the same filters, and their amounts' sum.
+
+    Filtered by property, a split row adds only those properties' shares, as the Dashboard counts it.
+    """
+    property_ids = [p for p in [filters.get("property_id"), *(filters.get("property_ids") or [])] if isinstance(p, uuid.UUID)]
+    amount = amount_on_properties(property_ids) if property_ids else Transaction.amount
     stmt = _filtered(
-        select(func.count(), func.coalesce(func.sum(Transaction.amount), 0)).select_from(Transaction),
+        select(func.count(), func.coalesce(func.sum(amount), 0)).select_from(Transaction),
         organization_id,
         **filters,
     )
@@ -177,8 +191,12 @@ async def list_selection_refs(
     organization_id: uuid.UUID,
     **filters: Unpack[TransactionFilterArgs],
 ) -> Sequence[Row[tuple[uuid.UUID, uuid.UUID | None, str]]]:
-    """(id, property_id, status) of every row the filters match: what "select all" ticks."""
-    stmt = _filtered(select(Transaction.id, Transaction.property_id, Transaction.status), organization_id, **filters)
+    """(id, property_id, status, is_split) of every row the filters match: what "select all" ticks."""
+    stmt = _filtered(
+        select(Transaction.id, Transaction.property_id, Transaction.status, is_split().label("is_split")),
+        organization_id,
+        **filters,
+    )
     result = await db.execute(stmt)
     return result.all()
 
@@ -220,7 +238,7 @@ async def list_unassigned_tax_relevant(
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
-            Transaction.property_id.is_(None),
+            ~has_property(),
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
             Transaction.status == "approved",
@@ -242,7 +260,7 @@ async def list_orphaned_tax_relevant(
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
-            Transaction.property_id.is_(None),
+            ~has_property(),
             Transaction.activity_id.is_(None),
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
@@ -260,22 +278,23 @@ async def list_schedule_e_transaction_details(
 ) -> list[Row]:
     """Return (id, property_id, schedule_e_line, amount) for audit-trail use.
 
+    A split transaction is one row per share, with the share's property and amount.
     Capital improvements are left out: they are depreciated, not deducted.
     """
     stmt = (
-        select(
+        allocated(select(
             Transaction.id,
-            Transaction.property_id,
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Transaction.schedule_e_line,
-            Transaction.amount,
-        )
+            ALLOCATED_AMOUNT.label("amount"),
+        ).select_from(Transaction))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
-            Transaction.property_id.isnot(None),
+            ALLOCATED_PROPERTY_ID.isnot(None),
             Transaction.schedule_e_line.isnot(None),
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
             Transaction.is_capital_improvement.is_(False),
@@ -403,26 +422,27 @@ async def sum_schedule_e_by_property_line(
 ) -> list[Row]:
     """Return (property_id, schedule_e_line, total) for tax-relevant approved transactions.
 
+    A split transaction counts each share for its own property.
     Capital improvements are left out: they are depreciated, not deducted.
     """
     stmt = (
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Transaction.schedule_e_line,
-            func.sum(Transaction.amount).label("total"),
-        )
+            func.sum(ALLOCATED_AMOUNT).label("total"),
+        ).select_from(Transaction))
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
-            Transaction.property_id.isnot(None),
+            ALLOCATED_PROPERTY_ID.isnot(None),
             Transaction.schedule_e_line.isnot(None),
             Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
             Transaction.is_capital_improvement.is_(False),
         )
-        .group_by(Transaction.property_id, Transaction.schedule_e_line)
+        .group_by(ALLOCATED_PROPERTY_ID, Transaction.schedule_e_line)
     )
     result = await db.execute(stmt)
     return result.all()

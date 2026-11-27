@@ -19,6 +19,7 @@ from app.repositories import property_repo, transaction_repo
 from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.services.transactions.schedule_e_row import ScheduleERow
 from app.services.transactions.summary_service import get_tax_summary
+from app.services.transactions.transaction_property_label import transaction_property_label
 
 CSV_HEADERS = [
     "Date", "Vendor", "Description", "Amount", "Type", "Category",
@@ -43,7 +44,7 @@ async def export_transactions_csv(
     writer = csv.writer(buf)
     writer.writerow(CSV_HEADERS)
     for txn in transactions:
-        prop_name = prop_names.get(txn.property_id, "") if txn.property_id else ""
+        prop_name = transaction_property_label(txn, prop_names)
         writer.writerow([
             str(txn.transaction_date),
             txn.vendor or "",
@@ -89,7 +90,7 @@ async def export_transactions_pdf(
     headers = ["Date", "Vendor", "Amount", "Type", "Category", "Property", "Status"]
     data = [headers]
     for txn in transactions:
-        prop_name = prop_names.get(txn.property_id, "") if txn.property_id else ""
+        prop_name = transaction_property_label(txn, prop_names)
         data.append([
             str(txn.transaction_date),
             (txn.vendor or "")[:30],

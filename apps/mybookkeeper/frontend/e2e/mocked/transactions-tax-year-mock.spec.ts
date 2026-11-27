@@ -31,6 +31,7 @@ const TXN = {
   category: "rental_revenue",
   tags: [],
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   is_capital_improvement: false,
   payment_method: null,

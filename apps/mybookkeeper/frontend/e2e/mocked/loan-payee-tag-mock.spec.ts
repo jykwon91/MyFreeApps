@@ -37,6 +37,7 @@ const TXN = {
   category: "transfer",
   tags: [],
   property_id: null,
+  property_splits: [],
   tax_relevant: false,
   payment_method: null,
   channel: null,

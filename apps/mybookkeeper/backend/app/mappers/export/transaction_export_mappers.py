@@ -8,6 +8,7 @@ from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
+from app.models.transactions.transaction_property_split import TransactionPropertySplit
 
 DOCUMENTS_EXPORT: Final = TableExportMapper(
     Document,
@@ -103,6 +104,17 @@ TRANSACTION_DOCUMENTS_EXPORT: Final = TableExportMapper(
     ),
 )
 
+TRANSACTION_PROPERTY_SPLITS_EXPORT: Final = TableExportMapper(
+    TransactionPropertySplit,
+    (
+        "id",
+        "transaction_id",
+        "property_id",
+        "amount",
+        "created_at",
+    ),
+)
+
 BOOKING_STATEMENTS_EXPORT: Final = TableExportMapper(
     BookingStatement,
     (
@@ -162,6 +174,7 @@ TRANSACTION_EXPORT_MAPPERS: Final[tuple[TableExportMapper, ...]] = (
     DOCUMENTS_EXPORT,
     TRANSACTIONS_EXPORT,
     TRANSACTION_DOCUMENTS_EXPORT,
+    TRANSACTION_PROPERTY_SPLITS_EXPORT,
     BOOKING_STATEMENTS_EXPORT,
     RECONCILIATION_SOURCES_EXPORT,
     RECONCILIATION_MATCHES_EXPORT,

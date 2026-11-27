@@ -12,6 +12,7 @@ import { json } from "@platform/ui/test-support/mockResponse";
 interface MockRow {
   id: string;
   property_id: string | null;
+  property_splits?: readonly unknown[];
   status: string;
 }
 
@@ -47,7 +48,7 @@ export async function stubTransactionSelection<T extends MockRow>(
   await page.route(/\/api\/transactions\/selection(\?|$)/, (route) => {
     const params = new URL(route.request().url()).searchParams;
     requests.push(params);
-    return route.fulfill(json(matching(rows, params).map(({ id, property_id, status }) => ({ id, property_id, status }))));
+    return route.fulfill(json(matching(rows, params).map(({ id, property_id, property_splits, status }) => ({ id, property_id, is_split: Boolean(property_splits?.length), status }))));
   });
   return requests;
 }

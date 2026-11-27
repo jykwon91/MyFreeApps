@@ -104,6 +104,7 @@ from app.models.transactions.rent_attribution_review_queue import (
 )
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
+from app.models.transactions.transaction_property_split import TransactionPropertySplit
 from app.models.vendors.vendor import Vendor
 from app.models.welcome_manuals.welcome_manual import WelcomeManual
 from app.models.welcome_manuals.welcome_manual_place import WelcomeManualPlace
@@ -183,6 +184,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(Document, Scope.WORKSPACE_MEMBER),
     Source(Transaction, Scope.WORKSPACE_MEMBER),
     Source(TransactionDocument, Scope.CHILD, Transaction, "transaction_id"),
+    Source(TransactionPropertySplit, Scope.CHILD, Transaction, "transaction_id"),
     Source(BookingStatement, Scope.WORKSPACE),
     Source(ReconciliationSource, Scope.WORKSPACE),
     Source(ReconciliationMatch, Scope.CHILD, ReconciliationSource, "reconciliation_source_id"),

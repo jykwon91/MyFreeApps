@@ -75,6 +75,20 @@ describe("listTransactionPages", () => {
   });
 });
 
+describe("property splits", () => {
+  it("puts a split to the transaction and deletes it", async () => {
+    const store = makeStore();
+    await store.dispatch(transactionsApi.endpoints.setPropertySplit.initiate({ id: "t1", data: { even_across: ["p1", "p2", "p3"] } }));
+    await store.dispatch(transactionsApi.endpoints.removePropertySplit.initiate("t1"));
+
+    expect(sent.map((request) => `${request.method} ${request.url}`)).toEqual([
+      "put /transactions/t1/property-splits",
+      "delete /transactions/t1/property-splits",
+    ]);
+    expect(JSON.parse(String(sent[0]?.data))).toEqual({ even_across: ["p1", "p2", "p3"] });
+  });
+});
+
 describe("listTransactions", () => {
   it("sends list filters as repeated keys, never as statuses[]", async () => {
     const store = makeStore();

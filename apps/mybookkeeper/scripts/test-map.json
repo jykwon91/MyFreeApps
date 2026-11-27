@@ -2297,7 +2297,10 @@
         "test_upload_read_caps.py",
         "test_audited_writes_records.py",
         "test_transaction_transfers.py",
-        "test_bank_csv_account_import.py"
+        "test_bank_csv_account_import.py",
+        "test_property_split.py",
+        "test_property_split_math.py",
+        "test_property_split_api.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -2340,7 +2343,8 @@
         "CapitalImprovementCheckbox.test.tsx",
         "TransactionPanelTaxYear.test.tsx",
         "TransactionAccountFields.test.tsx",
-        "TransactionTypeBadge.test.tsx"
+        "TransactionTypeBadge.test.tsx",
+        "TransactionPropertySplitSection.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",

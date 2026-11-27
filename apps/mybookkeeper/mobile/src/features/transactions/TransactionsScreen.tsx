@@ -21,7 +21,7 @@ import { pickerLoadError } from "../../lib/pickerLoadError";
 import { useRefetchCount } from "../../lib/useRefetchCount";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { categoryLabel, customRangeLabel, propertyLabel, sortLabel, taxFilterLabel } from "./transactionDisplay";
+import { categoryLabel, customRangeLabel, propertyLabel, rowPropertyName, sortLabel, taxFilterLabel } from "./transactionDisplay";
 import TransactionSelectionBar from "./TransactionSelectionBar";
 import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
@@ -161,7 +161,7 @@ export default function TransactionsScreen({
         isSelected={isSelected(item.id)}
         onLongPress={canWrite ? start : undefined}
         onPress={openTransaction}
-        propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
+        propertyName={rowPropertyName(item, (id) => propertyNames.get(id) ?? null)}
         transaction={item}
       />
     ),
