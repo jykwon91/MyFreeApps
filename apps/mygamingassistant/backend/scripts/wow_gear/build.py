@@ -4,9 +4,9 @@ Usage (from ``apps/mygamingassistant/backend``)::
 
     python -m scripts.wow_gear.build
 
-Run after the World Map, Professions and Item generators: it reads their
-committed output (``classicDungeons.json``, ``classicQuests.json``, the
-crafting recipe JSON and ``items.json``).
+Run after the World Map, Professions, Item and MGA Loot item-effect generators:
+it reads their committed output (``classicDungeons.json``, ``classicQuests.json``,
+the crafting recipe JSON, ``items.json`` and ``lootAddon/itemEffects.json``).
 
 Writes two files, kept apart because their licences differ:
 
@@ -17,7 +17,9 @@ Writes two files, kept apart because their licences differ:
   leftovers, not Forever rewards).
   The Forever client has NO Encounter Journal tables (``JournalEncounterItem``
   / ``JournalEncounter`` / ``JournalInstance`` are "Table not found" on
-  wago.tools for 1.60.1.70790), so it gives no boss loot.
+  wago.tools for 1.60.1.70790), so it gives no boss loot. ``equipStats`` are the
+  plain stat bonuses an item's Equip spell gives on top of its stat lines (the
+  Royal Seal of Eldre'Thalas' spell power), taken from ``itemEffects.json``.
 * ``data/gear/classic/gearSources.json`` — cmangos classic-db (GPL-3.0, LICENSE
   + README next to it): quest rewards and dungeon-boss drops by Classic item
   id, plus the items only raids or world bosses give (their loot, and quests
@@ -41,6 +43,7 @@ from scripts.wow_gear.loot import (
     MAX_SOURCES_PER_ITEM,
     as_int,
     boss_drops,
+    raid_gameobject_loot,
     creature_items_by_place,
     creature_maps,
     loot_index,
@@ -65,6 +68,10 @@ FACTS_PATH = DATA_DIR / "gearFacts.json"
 CLASSIC_DIR = DATA_DIR / "classic"
 SOURCES_PATH = CLASSIC_DIR / "gearSources.json"
 ITEMS_PATH = WOW_DATA_DIR / "items" / "items.json"
+ITEM_EFFECTS_PATH = WOW_DATA_DIR / "lootAddon" / "itemEffects.json"
+# An itemEffects.json entry for a flat stat an Equip spell adds: "equip: +18 spell power".
+# Other equip entries say "equip: heals ..." or "equip: 12 damage to each attacker ...".
+EQUIP_STAT_PREFIXES = ("equip: +", "equip: -")
 CRAFTING_DIR = WOW_DATA_DIR / "professions" / "crafting"
 WORLD_MAP_CLASSIC = WOW_DATA_DIR / "worldMap" / "classic"
 
@@ -97,9 +104,10 @@ FOREVER_PVP_PREFIX = "Premier "
 CONDITION_REPUTATION_RANK_MIN = 5
 CONDITION_GROUPS = frozenset({-1, -2})
 MAX_CONDITION_DEPTH = 4
-# Places other than a creature's loot an item can come from. Gathering nodes
-# and chests are all counted as outside a raid (cmangos doesn't tie most
-# gameobject loot to a map), which only ever makes the raid gate narrower.
+# Places other than a creature's loot an item can come from. A chest, gathering
+# node or fishing pool counts as inside a raid only when every placed one is
+# (``raid_gameobject_loot``); the rest, and loot no placed object uses, count as
+# outside, which only ever makes the raid gate narrower.
 OTHER_LOOT_TABLES = (
     "gameobject_loot_template", "skinning_loot_template", "pickpocketing_loot_template",
     "fishing_loot_template", "item_loot_template", "mail_loot_template", "disenchant_loot_template",
@@ -115,7 +123,8 @@ level from `../../worldMap/classic/classicDungeons.json`), plus the ids only a
 raid gives — a raid or world boss drops it, or only a quest that needs
 something from a raid rewards it (Plagueheart, Atiesh, the Head of Nefarian),
 or a reputation only raids give (Zandalar Tribe, Brood of Nozdormu: the Signet
-Rings of the Bronze Dragonflight). Raids open later in Forever, so the page
+Rings of the Bronze Dragonflight), or every recipe for it needs a raid-only
+reagent or pattern (Flarecore Leggings, the Bloodvine set). Raids open later in Forever, so the page
 leaves those out, and quests that need a raid item are not listed as sources.
 `pvp` lists gear Classic gated behind a PvP rank or a battleground
 reputation (the page hides PvP gear unless asked). It is derived from
@@ -152,6 +161,38 @@ def crafted_items(docs: Mapping[str, Mapping[str, Any]]) -> dict[int, list[Any]]
             if item_id not in best or key < best[item_id]:
                 best[item_id] = key
     return {item_id: [profession, skill] for item_id, (skill, profession) in best.items()}
+
+
+def raid_crafted(docs: Mapping[str, Mapping[str, Any]], raid_items: set[int]) -> set[int]:
+    """Items every recipe for which needs something only a raid gives: a reagent
+    (Flarecore Leggings' Fiery Core and Lava Core, the Bloodvine set's Bloodvine)
+    or the pattern itself."""
+    needs_raid: dict[int, bool] = {}
+    for doc in docs.values():
+        for recipe in doc.get("recipes", []):
+            creates = recipe.get("creates")
+            if not creates:
+                continue
+            needs = {as_int(r["id"]) for r in recipe.get("reagents", [])}
+            needs.add(as_int((recipe.get("learn") or {}).get("itemId")))
+            item_id = as_int(creates["id"])
+            needs_raid[item_id] = needs_raid.get(item_id, True) and bool(needs & raid_items)
+    return {item_id for item_id, raid in needs_raid.items() if raid}
+
+
+def equip_stats(effects: Mapping[str, list[Mapping[str, Any]]], gear_ids: set[int]) -> dict[int, dict[str, float]]:
+    """Item id -> {stat: amount} its Equip spells add for everyone (not one class's spell change, not PvP-only)."""
+    out: dict[int, dict[str, float]] = {}
+    for key, entries in effects.items():
+        item_id = int(key)
+        if item_id not in gear_ids:
+            continue
+        for entry in entries:
+            if entry.get("class") or entry.get("pvp") or not str(entry["note"]).startswith(EQUIP_STAT_PREFIXES):
+                continue
+            stats = out.setdefault(item_id, {})
+            stats[entry["stat"]] = stats.get(entry["stat"], 0) + entry["value"]
+    return out
 
 
 def item_facts(
@@ -314,9 +355,10 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _forever_facts(gear_ids: set[int], forever: ForeverItemTables) -> dict[int, list[Any]]:
+def _forever_facts(
+    gear_ids: set[int], forever: ForeverItemTables, crafting: Mapping[str, Mapping[str, Any]],
+) -> dict[int, list[Any]]:
     """Write ``gearFacts.json``; return the crafted items (the Classic half needs them)."""
-    crafting = {stem: _load_json(CRAFTING_DIR / f"{stem}.json") for stem in PROFESSIONS}
     crafted = {i: v for i, v in crafted_items(crafting).items() if i in gear_ids}
     skill_names = {as_int(r["ID"]): r["DisplayName_lang"] for r in wago_table("SkillLine") if r.get("DisplayName_lang")}
     faction_names = {as_int(r["ID"]): r["Name_lang"] for r in wago_table("Faction") if r.get("Name_lang")}
@@ -335,6 +377,7 @@ def _forever_facts(gear_ids: set[int], forever: ForeverItemTables) -> dict[int, 
         "reputation": _keyed(facts["reputation"]),
         "pvp": _keyed(facts["pvp"]),
         "bindOnPickup": _keyed(facts["bindOnPickup"]),
+        "equipStats": _keyed(equip_stats(_load_json(ITEM_EFFECTS_PATH)["items"], gear_ids)),
     })
     print(f"crafted {len(crafted):,}, PvP {len(facts['pvp']):,}, deprecated {len(facts['deprecated']):,}")
     return crafted
@@ -346,25 +389,33 @@ def _gated_quests(
     creature_loot: Mapping[int, list[Row]],
     references: Mapping[int, list[Row]],
     instance_types: Mapping[int, int],
-) -> set[int]:
+) -> tuple[set[int], set[int]]:
+    """The raid-gated quests, and every item only a raid gives (directly or through such a quest)."""
     in_raids, elsewhere = creature_items_by_place(
         tables["creature_template"], maps_of, creature_loot, references, instance_types,
     )
+    raid_objects = raid_gameobject_loot(tables["gameobject_template"], tables["gameobject"], instance_types)
     for name in OTHER_LOOT_TABLES:
         index = loot_index(tables[name])
-        elsewhere |= table_items(index, references, index.keys())
+        inside = raid_objects if name == "gameobject_loot_template" else set()
+        in_raids |= table_items(index, references, inside)
+        elsewhere |= table_items(index, references, index.keys() - inside)
     elsewhere |= {as_int(r["item"]) for r in (*tables["npc_vendor"], *tables["npc_vendor_template"])}
     start_items = {as_int(r["startquest"]): as_int(r["entry"]) for r in tables["item_template"] if as_int(r["startquest"]) > 0}
     raid_given = raid_given_quests(tables["creature_questrelation"], tables["creature_template"], maps_of, instance_types)
-    return raid_gated_quests(tables["quest_template"], start_items, in_raids - elsewhere, elsewhere, raid_given)
+    gated = raid_gated_quests(tables["quest_template"], start_items, in_raids - elsewhere, elsewhere, raid_given)
+    rewards = set().union(*(quest_reward_ids(q) for q in tables["quest_template"] if as_int(q["entry"]) in gated))
+    return gated, (in_raids | rewards) - elsewhere
 
 
-def _classic_sources(gear_ids: set[int], crafted: Mapping[int, Any]) -> None:
+def _classic_sources(
+    gear_ids: set[int], crafted: Mapping[int, Any], crafting: Mapping[str, Mapping[str, Any]],
+) -> None:
     """Write ``classic/gearSources.json`` (+ LICENSE, README)."""
     tables = read_dump(cmangos_dump(), {
         "quest_template", "item_template", "creature_template", "creature", "creature_questrelation",
         "creature_loot_template", "reference_loot_template", "npc_vendor", "npc_vendor_template",
-        "conditions", *OTHER_LOOT_TABLES,
+        "conditions", "gameobject_template", "gameobject", *OTHER_LOOT_TABLES,
     })
     listed = {row[0] for row in _load_json(WORLD_MAP_CLASSIC / "classicQuests.json")["quests"]}
     instance_types = {as_int(r["ID"]): as_int(r["InstanceType"]) for r in wago_table("Map")}
@@ -374,13 +425,17 @@ def _classic_sources(gear_ids: set[int], crafted: Mapping[int, Any]) -> None:
     creature_loot = loot_index(tables["creature_loot_template"])
     references = loot_index(tables["reference_loot_template"])
     maps_of = creature_maps(tables["creature"], encounters)
-    gated = _gated_quests(tables, maps_of, creature_loot, references, instance_types)
+    gated, raid_items = _gated_quests(tables, maps_of, creature_loot, references, instance_types)
+    crafted_in_raids = raid_crafted(crafting, raid_items) & gear_ids
     gated_rewards = set().union(*(quest_reward_ids(q) for q in tables["quest_template"] if as_int(q["entry"]) in gated))
     quests = quest_rewards(tables["quest_template"], listed, gear_ids, gated)
     drops, raid_boss = boss_drops(
         tables["creature_template"], maps_of, creature_loot, references, instance_types, encounters, gear_ids,
     )
-    raid_only = sorted(((raid_boss | gated_rewards) & gear_ids) - set(quests) - set(drops) - set(crafted))
+    raid_only = sorted(
+        ((raid_boss | gated_rewards | crafted_in_raids) & gear_ids)
+        - set(quests) - set(drops) - (set(crafted) - crafted_in_raids)
+    )
     write_json(SOURCES_PATH, {
         "source": {"repo": "cmangos/classic-db", "commit": CMANGOS_COMMIT, "license": "GPL-3.0-or-later"},
         "dungeons": _keyed(dungeon_levels(_load_json(WORLD_MAP_CLASSIC / "classicDungeons.json"))),
@@ -408,9 +463,10 @@ def main() -> None:
     cache_path = hotfix_cache_path(parser.parse_args().hotfix_cache)
     gear_ids = {row[0] for row in _load_json(ITEMS_PATH)["items"]}
     print(f"{len(gear_ids):,} gear items; loading Forever tables ({WAGO_BRANCH} {WAGO_BUILD})...")
-    crafted = _forever_facts(gear_ids, load_forever_item_tables(cache_path))
+    crafting = {stem: _load_json(CRAFTING_DIR / f"{stem}.json") for stem in PROFESSIONS}
+    crafted = _forever_facts(gear_ids, load_forever_item_tables(cache_path), crafting)
     print("Reading cmangos classic-db...")
-    _classic_sources(gear_ids, crafted)
+    _classic_sources(gear_ids, crafted, crafting)
     print(f"-> {DATA_DIR}")
 
 

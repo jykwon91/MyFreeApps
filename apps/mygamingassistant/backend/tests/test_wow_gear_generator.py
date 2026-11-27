@@ -19,9 +19,11 @@ from scripts.wow_gear.build import (
     condition_factions,
     crafted_items,
     dungeon_levels,
+    equip_stats,
     era_leftovers,
     item_facts,
     quest_rewards,
+    raid_crafted,
 )
 from scripts.wow_gear.loot import (
     INSTANCE_DUNGEON,
@@ -32,6 +34,7 @@ from scripts.wow_gear.loot import (
     creature_items_by_place,
     creature_maps,
     loot_index,
+    raid_gameobject_loot,
     table_items,
 )
 from scripts.wow_gear.raid_gate import raid_gated_quests, raid_given_quests
@@ -210,6 +213,56 @@ class TestLoot:
         assert raid == {103, 105}
 
 
+class TestRaidCrafts:
+    @staticmethod
+    def _recipe(creates: int, reagents: list[int], pattern: int = 0) -> dict[str, Any]:
+        return {
+            "creates": {"id": creates},
+            "reagents": [{"id": r} for r in reagents],
+            "learn": {"itemId": pattern} if pattern else {},
+        }
+
+    def test_a_raid_reagent_or_pattern_gates_the_craft(self) -> None:
+        docs = {"tailoring": {"recipes": [
+            self._recipe(1, [14342, 17010]),  # Flarecore Leggings: Fiery Core
+            self._recipe(2, [14342], pattern=900),  # pattern only a raid drops
+            self._recipe(3, [14342]),  # Mooncloth only
+        ]}}
+        assert raid_crafted(docs, {17010, 900}) == {1, 2}
+
+    def test_one_open_recipe_keeps_it_craftable(self) -> None:
+        docs = {"a": {"recipes": [self._recipe(1, [17010])]}, "b": {"recipes": [self._recipe(1, [14342])]}}
+        assert raid_crafted(docs, {17010}) == set()
+
+    def test_gameobjects_placed_only_in_raids(self) -> None:
+        templates = [
+            {"entry": 1, "type": 3, "data1": 17201},  # Zul'Gurub Sungrass (Bloodvine)
+            {"entry": 2, "type": 3, "data1": 50},  # a herb in a raid and on Kalimdor
+            {"entry": 3, "type": 3, "data1": 60},  # never placed
+            {"entry": 4, "type": 10, "data1": 70},  # a button, data1 isn't loot
+        ]
+        spawns = [
+            {"id": 1, "map": NAXXRAMAS}, {"id": 2, "map": NAXXRAMAS}, {"id": 2, "map": KALIMDOR}, {"id": 4, "map": NAXXRAMAS},
+        ]
+        assert raid_gameobject_loot(templates, spawns, INSTANCE_TYPES) == {17201}
+
+
+def test_equip_stats_keeps_flat_bonuses_for_everyone() -> None:
+    effects = {
+        "18467": [
+            {"stat": "spell_power", "value": 18.0, "note": "equip: +18 spell power"},
+            {"stat": "unresolved", "value": 0, "note": "a scripted effect"},
+        ],
+        "2": [
+            {"stat": "healing", "value": 5.0, "note": "equip: heals 5 per second → +5 healing (HPS)"},
+            {"stat": "spell_power", "value": 9.0, "note": "equip: +9 spell power", "class": "warlock"},
+            {"stat": "dps", "value": 4.0, "note": "equip: +4 damage to each attacker", "pvp": True},
+        ],
+        "3": [{"stat": "mp5", "value": 4.0, "note": "equip: +4 mp5"}],
+    }
+    assert equip_stats(effects, {18467, 2}) == {18467: {"spell_power": 18.0}}
+
+
 DUNGEON_COLUMNS = ["instance", "name", "type", "maxLevel", "requiredLevel"]
 
 
@@ -248,6 +301,9 @@ class TestCommittedOutput:
     def test_no_encounter_journal_in_the_client(self, facts: dict[str, Any]) -> None:
         assert facts["encounterJournal"] is False
 
+    def test_equip_spell_power(self, facts: dict[str, Any]) -> None:
+        assert facts["equipStats"]["18467"] == {"spell_power": 18.0}  # Royal Seal of Eldre'Thalas (warlock)
+
     def test_deprecated_items(self, facts: dict[str, Any]) -> None:
         assert {17782, 5000}.issubset(facts["deprecated"])  # Talisman of Binding Shard, Coral Band
 
@@ -256,6 +312,7 @@ class TestCommittedOutput:
         assert {21196, 21197, 21198}.issubset(raid_only)  # Signet Rings of the Bronze Dragonflight (Brood of Nozdormu)
         assert {19602, 19603, 19604}.issubset(raid_only)  # Kezan's Taint (Zandalar Tribe)
         assert {22504, 22505, 22506}.issubset(raid_only)  # Plagueheart (Naxxramas tokens)
+        assert {19165, 19683, 19684}.issubset(raid_only)  # Flarecore Leggings (Molten Core), Bloodvine set (Zul'Gurub)
         assert not raid_only & set(map(int, sources["quests"]))
 
     def test_warsong_rewards_are_pvp(self, sources: dict[str, Any]) -> None:

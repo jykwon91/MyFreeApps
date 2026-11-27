@@ -11,4 +11,6 @@ export interface GearFactsFile {
   reputation: Readonly<Record<string, readonly [string, string]>>;
   pvp: Readonly<Record<string, number>>;
   bindOnPickup: Readonly<Record<string, number>>;
+  /** Flat stats an item's Equip spell adds on top of its stat lines, by weight key. */
+  equipStats: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }

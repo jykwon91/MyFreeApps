@@ -51,6 +51,7 @@ const FACTS: GearFactsFile = {
   reputation: {},
   pvp: {},
   bindOnPickup: {},
+  equipStats: {},
 };
 const SOURCES: GearSourcesFile = { dungeons: {}, raidOnly: [], pvp: [], quests: {}, drops: {} };
 

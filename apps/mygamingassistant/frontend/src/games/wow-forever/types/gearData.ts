@@ -1,3 +1,4 @@
+import type { StatValues } from "@/games/wow-forever/data/statKeys";
 import type { GearItemFacts } from "@/games/wow-forever/types/gearItemFacts";
 import type { GearSource } from "@/games/wow-forever/types/gearSource";
 
@@ -11,5 +12,7 @@ export interface GearData {
    * Season of Discovery ids the Classic Era client also has.
    */
   unobtainable: ReadonlySet<number>;
+  /** Stats an item's Equip spell adds (the Royal Seal of Eldre'Thalas' spell power), scored with its own. */
+  equipStats: ReadonlyMap<number, StatValues>;
   clientBuild: string;
 }

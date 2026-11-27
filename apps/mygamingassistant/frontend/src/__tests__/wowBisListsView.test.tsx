@@ -23,7 +23,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 const GEAR = decodeGearData(
-  { clientBuild: "1.60.1.70790", eraLeftovers: [], deprecated: [], crafted: {}, requires: {}, reputation: {}, pvp: {}, bindOnPickup: {} },
+  { clientBuild: "1.60.1.70790", eraLeftovers: [], deprecated: [], crafted: {}, requires: {}, reputation: {}, pvp: {}, bindOnPickup: {}, equipStats: {} },
   { dungeons: {}, raidOnly: [], pvp: [], quests: {}, drops: {} },
 );
 const READY: GearDataState = { status: "ready", list: fixtureList(), gear: GEAR };
