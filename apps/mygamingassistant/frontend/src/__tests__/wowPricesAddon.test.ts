@@ -129,6 +129,16 @@ describe("MGA Prices in the game's tooltips", () => {
     ]);
   });
 
+  // RefreshData from addon code rebuilds the tooltip tainted; in combat the game then rejects secret unit
+  // values in its own tooltip code. So Shift redraws only a tooltip we priced, and never in combat.
+  it("redraws a priced tooltip on Shift, but not in combat and not any other tooltip", () => {
+    const refreshed = (scenario: string) =>
+      tooltip(scenario).filter((line) => line.startsWith("refreshed"));
+    expect(refreshed('hover(GameTooltip, 2589); fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)')).toEqual(["refreshed GameTooltip"]);
+    expect(refreshed('hover(GameTooltip, 2589); InCombatLockdown = function() return true end; fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)')).toEqual([]);
+    expect(refreshed('fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)')).toEqual([]);
+  });
+
   it("says 'not on sale', but stays quiet on soulbound items", () => {
     expect(tooltip("hover(GameTooltip, 4611)")).toEqual(["Auction (Alliance) | not on sale"]);
     expect(tooltip("bind[4611] = 1; hover(GameTooltip, 4611)")).toEqual([]);
