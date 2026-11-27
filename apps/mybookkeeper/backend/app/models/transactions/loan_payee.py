@@ -7,8 +7,8 @@ When the person says a payee is a mortgage or a loan, every payment to it,
 past and future, counts under that heading (``expense_rules``). Nothing on the
 transaction changes, so taking the rule back restores how it counted.
 
-``normalized_payee`` is the payee as Monthly expenses names it, case-folded
-with whitespace collapsed (``core/payee_keys``).
+``normalized_payee`` is the payee's key (``core/payee_keys.payee_key``): the
+payee as Monthly expenses names it, without the payment reference, normalised.
 """
 import uuid
 from datetime import datetime, timezone

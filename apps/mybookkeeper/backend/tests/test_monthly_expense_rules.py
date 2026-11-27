@@ -216,3 +216,16 @@ class TestPayees:
         payees = monthly_expense_detail.payee_totals(transactions)
         assert [(p.payee, p.total_cents, p.transaction_count) for p in payees] == [("HEB", 35_00, 2), ("Costco", 30_00, 1)]
         assert monthly_expense_detail.transactions_for(counted, "Nothing") == []
+
+    def test_payments_to_one_zelle_payee_are_one_payee_whatever_the_reference(self) -> None:
+        counted = [
+            CountedExpense(row=_row("120.00", day=_after(1), description="Zelle payment to Silvia 29520127614"), label="Home"),
+            CountedExpense(row=_row("120.00", day=_after(2), description="Zelle payment to Silvia 31715789323"), label="Home"),
+            CountedExpense(row=_row("80.00", day=_after(3), description="Zelle payment to Jason Lawn Guy JPM99cjlb7cn"), label="Home"),
+        ]
+        transactions = monthly_expense_detail.transactions_for(counted, "Home")
+        assert {t.payee for t in transactions} == {"Silvia", "Jason Lawn Guy"}
+        payees = monthly_expense_detail.payee_totals(transactions)
+        assert [(p.payee, p.total_cents, p.transaction_count) for p in payees] == [
+            ("Silvia", 240_00, 2), ("Jason Lawn Guy", 80_00, 1),
+        ]

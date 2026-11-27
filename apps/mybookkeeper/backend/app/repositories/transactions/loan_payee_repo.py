@@ -6,9 +6,14 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payee_keys import normalized_payee
+from app.core.payee_keys import payee_key
 from app.models.transactions.loan_payee import LoanPayee
 from platform_shared.repositories.audited_writes import delete_rows, upsert_row
+
+
+def _key(payee: str) -> str:
+    """The payee as every payment to it is matched (``payee_key``); empty for a blank name."""
+    return payee_key(payee, None) or ""
 
 
 async def kinds_by_payee(db: AsyncSession, *, organization_id: uuid.UUID) -> dict[str, str]:
@@ -23,7 +28,7 @@ async def get_kind(db: AsyncSession, *, organization_id: uuid.UUID, payee: str) 
     result = await db.execute(
         select(LoanPayee.kind).where(
             LoanPayee.organization_id == organization_id,
-            LoanPayee.normalized_payee == normalized_payee(payee),
+            LoanPayee.normalized_payee == _key(payee),
         ),
     )
     return result.scalar_one_or_none()
@@ -39,7 +44,7 @@ async def remember(
 ) -> LoanPayee:
     """The payee's row with ``kind``, created if absent. Idempotent; tagging
     again with the other kind changes it. Raises ``ValueError`` for a blank payee."""
-    key = normalized_payee(payee)
+    key = _key(payee)
     if not key:
         raise ValueError("A loan payee needs a name")
     row, _ = await upsert_row(
@@ -64,6 +69,6 @@ async def forget(db: AsyncSession, *, organization_id: uuid.UUID, payee: str) ->
         db,
         LoanPayee,
         LoanPayee.organization_id == organization_id,
-        LoanPayee.normalized_payee == normalized_payee(payee),
+        LoanPayee.normalized_payee == _key(payee),
     )
     return bool(deleted)

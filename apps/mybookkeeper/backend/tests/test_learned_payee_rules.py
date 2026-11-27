@@ -70,7 +70,7 @@ class TestOneRulePerPayee:
         await _correct(db, test_user, second, "cleaning_expense")
 
         rules = await _rules(db)
-        assert [(r.match_pattern, r.category) for r in rules] == [("zelle payment to silvia", "cleaning_expense")]
+        assert [(r.match_pattern, r.category) for r in rules] == [("silvia", "cleaning_expense")]
 
     @pytest.mark.asyncio
     async def test_a_confirmation_id_is_left_out_too(
@@ -82,7 +82,7 @@ class TestOneRulePerPayee:
 
         await _correct(db, test_user, txn, "maintenance")
 
-        assert [r.match_pattern for r in await _rules(db)] == ["zelle payment to jason lawn guy"]
+        assert [r.match_pattern for r in await _rules(db)] == ["jason lawn guy"]
 
     @pytest.mark.asyncio
     async def test_the_correction_reaches_the_payees_other_payments(
@@ -143,7 +143,7 @@ class TestExistingRulesAreReinforced:
         assert broad.category == "maintenance"
         matched = await rule_engine.find_vendor_rule(db, test_org.id, "Zelle payment to Jason Lawn Guy XK29PP01QZ7")
         assert matched is not None
-        assert (matched.match_pattern, matched.category) == ("zelle payment to jason lawn guy", "cleaning_expense")
+        assert (matched.match_pattern, matched.category) == ("jason lawn guy", "cleaning_expense")
 
 
 class TestMatchingUsesTheSameKey:
@@ -161,7 +161,7 @@ class TestMatchingUsesTheSameKey:
     ) -> None:
         rule = await _manual_rule(db, test_org, test_user, SILVIA_1, "cleaning_expense")
 
-        assert rule.match_pattern == "zelle payment to silvia"
+        assert rule.match_pattern == "silvia"
         assert await rule_engine.find_vendor_rule(db, test_org.id, SILVIA_2) is rule
 
     @pytest.mark.asyncio
@@ -173,3 +173,22 @@ class TestMatchingUsesTheSameKey:
         assert seven.match_pattern == "7-eleven"
         assert await rule_engine.find_vendor_rule(db, test_org.id, "7-ELEVEN #40112") is seven
         assert await rule_engine.find_vendor_rule(db, test_org.id, "ELEVEN MADISON PARK") is None
+
+    @pytest.mark.asyncio
+    async def test_one_payee_paid_through_another_app_matches_the_same_rule(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        rule = await _manual_rule(db, test_org, test_user, "zelle payment to silvia", "cleaning_expense")
+
+        assert rule.match_pattern == "silvia"
+        assert await rule_engine.find_vendor_rule(db, test_org.id, "Venmo payment to Silvia 8812004411") is rule
+
+    @pytest.mark.asyncio
+    async def test_a_short_payee_matches_only_where_a_word_starts(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        al = await _manual_rule(db, test_org, test_user, "Zelle payment to Al 29520127614", "maintenance")
+
+        assert al.match_pattern == "al"
+        assert await rule_engine.find_vendor_rule(db, test_org.id, "WALMART #1234") is None
+        assert await rule_engine.find_vendor_rule(db, test_org.id, "Zelle to Al 31715789323") is al

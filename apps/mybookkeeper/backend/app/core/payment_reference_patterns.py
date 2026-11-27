@@ -24,7 +24,9 @@ LABELLED_REFERENCE: Final = re.compile(r"(?:ref|conf|confirmation|trace|trn|txn|
 # Words that introduce a reference when the next word carries a digit: "conf 99812", "trace 4471".
 REFERENCE_LABELS: Final[frozenset[str]] = frozenset({"ref", "conf", "confirmation", "trace", "trn", "txn"})
 
-# Chase and other ACH descriptors: "ppd id: 9123456789", "web id: ...".
+# Chase and other ACH descriptors end "ppd id: 9123456789", "web id: ...": the ID of the
+# company that took the payment. It names the payee (a generic "JPMORGAN CHASE CHASE ACH" is
+# the mortgage under one ID and a card under another), so it stays in the key.
 ACH_ENTRY_CODES: Final[frozenset[str]] = frozenset({"ppd", "ccd", "web", "tel", "ctx", "arc", "boc"})
 ACH_ID_WORD: Final = "id"
 

@@ -2635,7 +2635,7 @@
         "test_logs_carry_no_personal_details.py",
         "test_payee_rules.py",
         "test_learned_payee_rules.py",
-        "test_payee_rule_key.py",
+        "test_payee_key.py",
         "test_rule_learning_service.py"
       ],
       "frontend_tests": [
@@ -2896,6 +2896,7 @@
         "backend/app/services/transactions/loan_payee_service.py",
         "backend/app/api/loan_payees.py",
         "backend/alembic/versions/loanpayee261127_add_loan_payees.py",
+        "backend/alembic/versions/payeekey261127_rekey_payees_on_one_key.py",
         "frontend/src/app/features/loan-payee/",
         "frontend/src/shared/hooks/useChartColors.ts",
         "api-client/src/store/loanPayeeApi.ts",
@@ -2930,6 +2931,8 @@
         "test_monthly_expenses_api.py",
         "test_cash_flow_loan_payments.py",
         "test_loan_payee_service.py",
+        "test_payee_key.py",
+        "test_payee_rekey_migration.py",
         "test_loan_payee_routes.py",
         "test_personal_transfer_not_counted.py",
         "test_plaid_transfer_reconciler.py"
