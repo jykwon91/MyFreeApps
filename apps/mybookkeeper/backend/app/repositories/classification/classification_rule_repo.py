@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.payee_keys import payee_rule_key
+from app.core.payee_keys import WORD_START, payee_key
 from app.core.vendors import normalize_address
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty
@@ -16,7 +16,7 @@ def _normalize_pattern(match_type: str, pattern: str) -> str:
     """A vendor rule is stored, and a vendor looked up, by its payee key: the
     descriptor without its payment reference, so one rule matches every payment."""
     if match_type == "vendor":
-        return payee_rule_key(pattern)
+        return payee_key(pattern, None) or ""
     return pattern.strip().lower()
 
 
@@ -39,14 +39,12 @@ def _normalize_context(match_type: str, context: str | None) -> str | None:
 
 
 def _vendor_pattern_filter(normalized: str):
-    """Build a WHERE clause for vendor fuzzy matching.
+    """A vendor rule matches a payee key that has the rule's pattern starting at a word.
 
-    For vendor rules, the stored match_pattern (e.g., "a to z") should be
-    contained within the normalized vendor name (e.g., "a to z complete home
-    maintenance repair"). This enables fuzzy matching where short rule names
-    match longer extracted vendor names.
+    "a to z" matches "a to z complete home maintenance repair" and "depot" matches
+    "home depot", but "al" (a Zelle payee) doesn't match "walmart".
     """
-    return literal(normalized).contains(ClassificationRule.match_pattern)
+    return literal(WORD_START + normalized).contains(WORD_START + ClassificationRule.match_pattern)
 
 
 async def get_matching_rule(

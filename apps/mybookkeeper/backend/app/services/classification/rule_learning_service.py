@@ -11,7 +11,7 @@ from app.core.tags import (
     transaction_type_for_category,
 )
 from app.core.tax_total_inputs import tax_total_inputs
-from app.core.payee_keys import payee_rule_key
+from app.core.payee_keys import payee_key
 from app.core.vendors import normalize_address
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.transactions.transaction import Transaction
@@ -172,7 +172,7 @@ async def _matching_rule(
 
 def _is_this_payee(rule: ClassificationRule | None, vendor: str) -> bool:
     """Whether the rule is keyed on exactly this payee, so the correction updates it."""
-    return rule is not None and rule.match_pattern == payee_rule_key(vendor)
+    return rule is not None and rule.match_pattern == payee_key(vendor, None)
 
 
 def _already_says(
@@ -201,8 +201,8 @@ async def _retroactive_category_fix(
     new_activity_id: uuid.UUID | None,
     exclude_id: uuid.UUID,
 ) -> int:
-    """Update other transactions to the same payee (``payee_rule_key``) with the old category."""
-    normalized = payee_rule_key(vendor)
+    """Update other transactions to the same payee (``payee_key``) with the old category."""
+    normalized = payee_key(vendor, None)
     if not normalized:
         return 0
 
@@ -215,7 +215,7 @@ async def _retroactive_category_fix(
     updated = 0
     totals_moved = False
     for txn in candidates:
-        if payee_rule_key(txn.vendor) == normalized:
+        if payee_key(txn.vendor, None) == normalized:
             old_tax_inputs = tax_total_inputs(txn)
             txn.schedule_e_line = schedule_e_line_after_category_change(
                 txn.schedule_e_line, txn.category, new_category,
@@ -240,7 +240,7 @@ async def _retroactive_property_fix(
     exclude_id: uuid.UUID,
 ) -> int:
     """Update other transactions to the same payee+address with a different property_id."""
-    normalized_vendor = payee_rule_key(vendor)
+    normalized_vendor = payee_key(vendor, None)
     normalized_addr = normalize_address(address)
     if not normalized_vendor or not normalized_addr:
         return 0
@@ -253,7 +253,7 @@ async def _retroactive_property_fix(
     totals_moved = False
     for txn in candidates:
         if (
-            payee_rule_key(txn.vendor) == normalized_vendor
+            payee_key(txn.vendor, None) == normalized_vendor
             and normalize_address(txn.address) == normalized_addr
             and txn.property_id != new_property_id
         ):
