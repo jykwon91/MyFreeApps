@@ -94,6 +94,7 @@ from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.tax.tax_year_profile import TaxYearProfile
 from app.models.transactions.booking_statement import BookingStatement
+from app.models.transactions.loan_payee import LoanPayee
 from app.models.transactions.payer_alias import PayerAlias
 from app.models.transactions.personal_transfer_sender import PersonalTransferSender
 from app.models.transactions.reconciliation_match import ReconciliationMatch
@@ -208,6 +209,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(Holding, Scope.WORKSPACE_MEMBER),
     Source(SpendingCategory, Scope.WORKSPACE),
     Source(SpendingBudget, Scope.WORKSPACE),
+    Source(LoanPayee, Scope.WORKSPACE),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),
     Source(WelcomeManualRoom, Scope.CHILD, WelcomeManual, "manual_id"),

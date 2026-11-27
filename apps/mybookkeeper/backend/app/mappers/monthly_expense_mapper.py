@@ -2,19 +2,14 @@
 from __future__ import annotations
 
 from app.core.cents import to_cents
-from app.core.monthly_expense_constants import PAYEE_PREFIXES, UNKNOWN_PAYEE
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 from app.schemas.monthly_expenses.monthly_expense_transaction_response import MonthlyExpenseTransactionResponse
+from app.core.payee_keys import payee_name
 
 
 def payee_for(row: ExpenseRow) -> str:
     """Who was paid: the merchant, or the person a payment app sent money to."""
-    name = (row.vendor or row.description or "").strip()
-    folded = name.casefold()
-    for prefix in PAYEE_PREFIXES:
-        if folded.startswith(prefix) and len(name) > len(prefix):
-            return name[len(prefix):].strip()
-    return name or UNKNOWN_PAYEE
+    return payee_name(row.vendor, row.description)
 
 
 def to_transaction_response(row: ExpenseRow) -> MonthlyExpenseTransactionResponse:

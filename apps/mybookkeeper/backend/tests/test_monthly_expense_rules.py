@@ -59,8 +59,12 @@ def _label(
     mortgages: frozenset[int] = frozenset(),
     cards: frozenset[uuid.UUID] = frozenset(),
     holders: dict[uuid.UUID, str] = HOLDERS,
+    loan_payees: dict[str, str] | None = None,
 ) -> str | None:
-    context = ExpenseContext(mortgage_payments=mortgages, card_payments=cards, holder_names=holders)
+    context = ExpenseContext(
+        mortgage_payments=mortgages, card_payments=cards, holder_names=holders,
+        loan_payee_labels=loan_payees or {},
+    )
     return expense_rules.expense_label(row, context)
 
 
@@ -121,6 +125,32 @@ class TestMoneySent:
         jason_only = {HOLDER: "Jason"}
         assert _label(_row(external_category="TRANSFER_OUT", description="Jason's Deli"), holders=jason_only) == "Money sent to people"
         assert _label(_row(external_category="TRANSFER_OUT", description="Jason Kwon"), holders={}) == "Money sent to people"
+
+
+class TestPayeesTaggedAsLoans:
+    TDECU = "Jason Kwon External F Jason Kwon WEB ID: 1234567890"
+    TAGGED = {"jason kwon external f jason kwon web id: 1234567890": "Mortgage", "toyota financial services": "Car & other loans"}
+
+    def test_a_tagged_payee_counts_under_its_heading_even_in_your_own_name(self) -> None:
+        own_name = _row("3413.96", external_category="TRANSFER_OUT", description=self.TDECU)
+        assert _label(own_name) is None
+        assert _label(own_name, loan_payees=self.TAGGED) == "Mortgage"
+        # Matched whatever the capitals or spacing, on the vendor first.
+        assert _label(_row(external_category="TRANSFER_OUT", description="JASON KWON  EXTERNAL F jason kwon WEB ID: 1234567890"), loan_payees=self.TAGGED) == "Mortgage"
+        assert _label(_row("816.53", vendor="Toyota Financial Services", description="TOYOTA ACH"), loan_payees=self.TAGGED) == "Car & other loans"
+
+    def test_a_tag_beats_the_card_payment_match(self) -> None:
+        row = _row("816.53", vendor="Toyota Financial Services", external_category="LOAN_PAYMENTS")
+        assert _label(row, cards=frozenset({row.id}), loan_payees=self.TAGGED) == "Car & other loans"
+
+    def test_a_tag_never_makes_a_move_between_your_accounts_or_loan_interest_spending(self) -> None:
+        assert _label(_row(transaction_type="transfer", to_account_type="savings", description=self.TDECU), loan_payees=self.TAGGED) is None
+        assert _label(_row(account_type="mortgage", description=self.TDECU), loan_payees=self.TAGGED) is None
+
+    def test_another_payee_is_unaffected(self) -> None:
+        other = _row(external_category="TRANSFER_OUT", description="Jason Kwon External F Jason Kwon WEB ID: 9999999999")
+        assert _label(other, loan_payees=self.TAGGED) is None
+        assert _label(_row(), loan_payees=self.TAGGED) == "Other"
 
 
 class TestHeadings:

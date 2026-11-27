@@ -6,7 +6,8 @@ Pinned here: $680.00 out of Wise as "Jason Kwon (Sent)" and $678.87 into Chase
 amount that left, the row in soft-deleted as ``duplicate``; a pair stored
 before the rule is folded on the next sync, once; a later sync never brings
 the row in back; and a row in that is filed as a tenant's payment, a row in
-with a twin candidate, and a row out that names someone else are left alone.
+with a twin candidate, a row out that names someone else and a row out to a
+payee tagged a mortgage are left alone.
 """
 from __future__ import annotations
 
@@ -27,6 +28,7 @@ from app.models.integrations.plaid_item import PlaidItem
 from app.models.organization.organization import Organization
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
+from app.repositories.transactions import loan_payee_repo
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_category import PlaidWireCategory
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
@@ -200,3 +202,18 @@ class TestLeftAlone:
 
         assert result.transfers_matched == 0
         assert len(_live(await _rows(db, test_org))) == 2
+
+    async def test_a_row_out_to_a_payee_tagged_a_mortgage(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        wise_item, _, chase_item, _ = await _setup(db, test_org, test_user)
+        await loan_payee_repo.remember(
+            db, organization_id=test_org.id, created_by_user_id=test_user.id,
+            payee="Jason Kwon (Sent)", kind="mortgage",
+        )
+        await db.commit()
+        await _sync(db, wise_item, _batch([_wise_out()]))
+        result = await _sync(db, chase_item, _batch([_chase_in()]))
+
+        assert result.transfers_matched == 0
+        assert sorted(row.transaction_type for row in _live(await _rows(db, test_org))) == ["expense", "income"]

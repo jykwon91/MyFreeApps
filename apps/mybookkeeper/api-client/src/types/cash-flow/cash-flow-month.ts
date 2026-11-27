@@ -4,6 +4,8 @@ export interface CashFlowMonth {
   month: string;
   money_in_cents: number;
   money_out_cents: number;
+  /** The part of money out that paid a mortgage or a loan. */
+  mortgages_loans_cents: number;
   /** in - out. */
   net_cents: number;
 }

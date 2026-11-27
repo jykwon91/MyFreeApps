@@ -13,7 +13,9 @@ never brings it back. The fee itself is not kept as an expense: it exists on
 no bank row of its own, and a row made up for it would be one no later bank
 edit or withdrawal could reach.
 
-A row in that is already filed as a tenant's payment is left for the person.
+A row in that is already filed as a tenant's payment is left for the person,
+and a row out to a payee the person said is a mortgage or a loan
+(``loan_payees``) is never paired: that money went to a lender.
 """
 from __future__ import annotations
 
@@ -23,10 +25,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.payee_keys import payee_key
 from app.core.plaid_constants import PLAID_TRANSFER_MATCH_WINDOW_DAYS
 from app.core.tax_total_inputs import tax_total_inputs
 from app.repositories.tax import tax_return_repo
-from app.repositories.transactions import self_transfer_repo, transaction_repo
+from app.repositories.transactions import loan_payee_repo, self_transfer_repo, transaction_repo
 from app.repositories.user import user_repo
 from app.services.transactions import self_transfer
 from app.services.transactions.transfer_merge import merge_into_transfer
@@ -44,7 +47,13 @@ async def merge_stored_self_transfers(db: AsyncSession, *, organization_id: uuid
     )
     if not holder_names:
         return 0
-    sent = await self_transfer_repo.list_sent_legs(db, organization_id=organization_id, holder_names=holder_names)
+    loan_payees = await loan_payee_repo.kinds_by_payee(db, organization_id=organization_id)
+    sent = [
+        leg for leg in await self_transfer_repo.list_sent_legs(
+            db, organization_id=organization_id, holder_names=holder_names,
+        )
+        if payee_key(leg.vendor, leg.description) not in loan_payees
+    ]
     if not sent:
         return 0
     received = await self_transfer_repo.list_received_legs(

@@ -66,6 +66,7 @@ from app.models.transactions.transaction import Transaction  # noqa: F401
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue  # noqa: F401
 from app.models.transactions.payer_alias import PayerAlias  # noqa: F401
 from app.models.transactions.personal_transfer_sender import PersonalTransferSender  # noqa: F401
+from app.models.transactions.loan_payee import LoanPayee  # noqa: F401
 from app.models.transactions.booking_statement import BookingStatement  # noqa: F401
 from app.models.transactions.reconciliation_source import ReconciliationSource  # noqa: F401
 from app.models.transactions.reconciliation_match import ReconciliationMatch  # noqa: F401

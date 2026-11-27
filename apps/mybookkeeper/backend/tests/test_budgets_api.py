@@ -125,7 +125,7 @@ class TestCashFlow:
         account_id = uuid.uuid4()
         service = AsyncMock(return_value=CashFlowResponse(
             range="12m", scope="personal", account_id=account_id, currency="USD", bank_history_start=None, months=[],
-            totals=CashFlowTotalsResponse(money_in_cents=0, money_out_cents=0, net_cents=0),
+            totals=CashFlowTotalsResponse(money_in_cents=0, money_out_cents=0, mortgages_loans_cents=0, net_cents=0),
         ))
         with patch(f"{_CASH_FLOW}.get_cash_flow", service):
             res = client.get("/cash-flow", params={"range": "12m", "scope": "personal", "account_id": str(account_id)})

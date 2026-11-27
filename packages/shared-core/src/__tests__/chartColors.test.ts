@@ -18,13 +18,20 @@ function contrast(a: string, b: string): number {
 }
 
 describe.each(["light", "dark"] as const)("chart colours in %s mode", (mode) => {
-  const { positive, negative } = CHART_COLORS[mode];
+  const { positive, negative, loans } = CHART_COLORS[mode];
 
-  it.each([["positive", positive], ["negative", negative]])("%s is 3:1 against the card", (_name, colour) => {
-    expect(contrast(colour, CARD[mode])).toBeGreaterThanOrEqual(MIN_RATIO);
-  });
+  it.each([["positive", positive], ["negative", negative], ["loans", loans]])(
+    "%s is 3:1 against the card",
+    (_name, colour) => {
+      expect(contrast(colour, CARD[mode])).toBeGreaterThanOrEqual(MIN_RATIO);
+    },
+  );
 
   it("revenue and expenses differ by 3:1 without hue", () => {
     expect(contrast(positive, negative)).toBeGreaterThanOrEqual(MIN_RATIO);
+  });
+
+  it("loan payments stacked on spending differ from it by 3:1 without hue", () => {
+    expect(contrast(loans, negative)).toBeGreaterThanOrEqual(MIN_RATIO);
   });
 });

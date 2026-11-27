@@ -15,7 +15,7 @@ from app.core.tags import (
     TRANSACTION_TYPE_INCOME,
     TRANSACTION_TYPE_TRANSFER,
 )
-from app.core.transaction_statuses import NOT_MONEY_STATUSES
+from app.core.transaction_statuses import COUNTED_STATUS, NOT_MONEY_STATUSES
 from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.mortgage.mortgage import Mortgage
 from app.models.transactions.spending_category import SpendingCategory
@@ -48,10 +48,14 @@ async def list_outflows(
     end: _dt.date,
     transaction_scope: str | None,
     bank_history_start: _dt.date | None,
+    account_id: uuid.UUID | None = None,
+    approved_only: bool = False,
 ) -> list[ExpenseRow]:
     """Every expense and transfer dated ``start``..``end`` on a cash basis
-    (``cash_basis``), with the accounts either side. ``transaction_scope``
-    None leaves every scope in."""
+    (``cash_basis``), with the accounts either side. ``transaction_scope`` /
+    ``account_id`` None leaves every scope / account in. ``approved_only``
+    keeps only rows that count towards totals (Cash flow's rule); otherwise a
+    row still waiting for review counts too."""
     from_account = aliased(FinancialAccount)
     to_account = aliased(FinancialAccount)
     stmt = (
@@ -87,6 +91,10 @@ async def list_outflows(
     )
     if transaction_scope is not None:
         stmt = stmt.where(Transaction.transaction_scope == transaction_scope)
+    if account_id is not None:
+        stmt = stmt.where(Transaction.account_id == account_id)
+    if approved_only:
+        stmt = stmt.where(Transaction.status == COUNTED_STATUS)
     result = await db.execute(stmt)
     return [
         ExpenseRow(

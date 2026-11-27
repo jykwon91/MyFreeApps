@@ -37,6 +37,8 @@ LABEL_LOANS: Final = "Car & other loans"
 LABEL_OTHER: Final = "Other"
 # A heading is a spending category name or one of the labels here.
 EXPENSE_LABEL_MAX_LENGTH: Final = SPENDING_CATEGORY_NAME_MAX_LENGTH
+# The headings Cash flow shows on its own "Mortgages & loans" line.
+LOAN_PAYMENT_LABELS: Final[frozenset[str]] = frozenset({LABEL_MORTGAGE, LABEL_LOANS})
 
 # MBK categories that already say what the money was for. ``other_expense``
 # and ``uncategorized`` say nothing, so those rows fall through to the bank's
