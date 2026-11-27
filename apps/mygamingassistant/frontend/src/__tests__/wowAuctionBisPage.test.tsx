@@ -52,7 +52,7 @@ function neck(id: number, requiredLevel = 0): ClientItem {
 const GEAR_ITEMS = [neck(40), neck(30), neck(20), neck(10), neck(15, 15)];
 const LIST = { items: GEAR_ITEMS, byId: new Map(GEAR_ITEMS.map((i) => [i.id, i])) } as unknown as ClientItemList;
 const GEAR_DATA: GearData = decodeGearData(
-  { clientBuild: "x", eraLeftovers: [], deprecated: [], crafted: {}, requires: {}, reputation: {}, pvp: {}, bindOnPickup: {} },
+  { clientBuild: "x", eraLeftovers: [], deprecated: [], crafted: {}, requires: {}, reputation: {}, pvp: {}, bindOnPickup: {}, equipStats: {} },
   { dungeons: {}, raidOnly: [], pvp: [], quests: {}, drops: {} },
 );
 

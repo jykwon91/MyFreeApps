@@ -21,6 +21,9 @@ CLASSIC_CONTINENTS = frozenset({0, 1})
 WORLD_DROP_POOL_USERS = 1
 MAX_REFERENCE_DEPTH = 4
 MAX_SOURCES_PER_ITEM = 3
+# gameobject_template types whose data1 is a gameobject_loot_template entry: chests (herb and
+# mining nodes are chests too) and fishing pools.
+GAMEOBJECT_LOOT_TYPES = frozenset({3, 25})
 
 
 def as_int(value: object) -> int:
@@ -134,6 +137,25 @@ def creature_items_by_place(
         table_items(creature_loot, references, raid_loot),
         table_items(creature_loot, references, other_loot),
     )
+
+
+def raid_gameobject_loot(
+    templates: Iterable[Row], spawns: Iterable[Row], instance_types: Mapping[int, int],
+) -> set[int]:
+    """gameobject_loot_template entries every placed object using them stands in a raid
+    (the Bloodvine herbs in Zul'Gurub). An entry no placed object uses isn't one."""
+    maps: dict[int, set[int]] = defaultdict(set)
+    for spawn in spawns:
+        maps[as_int(spawn["id"])].add(as_int(spawn["map"]))
+    inside: dict[int, bool] = {}
+    for template in templates:
+        loot_id = as_int(template.get("data1"))
+        placed = maps.get(as_int(template["entry"]))
+        if as_int(template.get("type")) not in GAMEOBJECT_LOOT_TYPES or loot_id <= 0 or not placed:
+            continue
+        raid = all(instance_types.get(m) == INSTANCE_RAID for m in placed)
+        inside[loot_id] = inside.get(loot_id, True) and raid
+    return {loot_id for loot_id, raid in inside.items() if raid}
 
 
 def boss_drops(

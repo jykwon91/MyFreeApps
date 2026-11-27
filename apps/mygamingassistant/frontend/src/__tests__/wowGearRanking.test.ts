@@ -43,6 +43,7 @@ const FACTS: GearFactsFile = {
   reputation: {},
   pvp: {},
   bindOnPickup: {},
+  equipStats: {},
 };
 
 const SOURCES: GearSourcesFile = { dungeons: {}, raidOnly: [], pvp: [], quests: {}, drops: {} };
@@ -107,6 +108,17 @@ describe("rankPreRaid", () => {
     expect(neck.top.map((r) => r.item.id)).toEqual([4, 3, 2]);
     const withPvp = slot(rankPreRaid(items, gear, { ...PRE_RAID, includePvp: true }), "neck");
     expect(withPvp.top.map((r) => r.item.id)).toEqual([7, 8, 4]);
+  });
+
+  it("scores the stats an Equip spell adds and shows them on the card", () => {
+    const items = [
+      item(1, { stats: { nature_resistance: 15 } }), // Royal Seal: +18 spell power from its Equip spell
+      item(2, { stats: { spell_power: 10 } }),
+    ];
+    const gear = data({ equipStats: { "1": { spell_power: 18, dps: 3 } } });
+    const neck = slot(rankPreRaid(items, gear, PRE_RAID), "neck");
+    expect(neck.top.map((r) => r.item.id)).toEqual([1, 2]);
+    expect(neck.top[0].item.stats).toEqual({ nature_resistance: 15, spell_power: 18 });
   });
 
   it("keeps level 60 epics with no known source apart (they may be raid loot)", () => {

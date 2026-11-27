@@ -1,3 +1,4 @@
+import { isStatKey, type StatValues } from "@/games/wow-forever/data/statKeys";
 import type { GearData } from "@/games/wow-forever/types/gearData";
 import type { GearFactsFile } from "@/games/wow-forever/types/gearFactsFile";
 import type { GearItemFacts } from "@/games/wow-forever/types/gearItemFacts";
@@ -28,6 +29,18 @@ function factsFor(file: GearFactsFile, classicPvp: ReadonlySet<string>, id: stri
     pvp: file.pvp[id] === 1 || classicPvp.has(id),
     bindOnPickup: file.bindOnPickup[id] === 1,
   };
+}
+
+function decodeEquipStats(file: GearFactsFile): Map<number, StatValues> {
+  const out = new Map<number, StatValues>();
+  for (const [id, values] of Object.entries(file.equipStats)) {
+    const stats: StatValues = {};
+    for (const [key, amount] of Object.entries(values)) {
+      if (isStatKey(key)) stats[key] = amount;
+    }
+    if (Object.keys(stats).length > 0) out.set(Number(id), stats);
+  }
+  return out;
 }
 
 /** Join the two generated files into per-item sources and facts. Crafted (game files) first. */
@@ -75,6 +88,7 @@ export function decodeGearData(facts: GearFactsFile, classic: GearSourcesFile): 
     sources,
     facts: itemFacts,
     unobtainable: new Set([...classic.raidOnly, ...facts.deprecated, ...facts.eraLeftovers]),
+    equipStats: decodeEquipStats(facts),
     clientBuild: facts.clientBuild,
   };
 }

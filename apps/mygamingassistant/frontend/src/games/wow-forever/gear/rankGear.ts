@@ -10,6 +10,7 @@ import type { ItemQuality } from "@/games/wow-forever/data/itemSlots";
 import { NO_FACTS } from "@/games/wow-forever/gear/decodeGearData";
 import { availableFrom, isAvailabilityEstimated } from "@/games/wow-forever/gear/gearAvailability";
 import { canEquip, groupUsable, questOpenTo } from "@/games/wow-forever/gear/gearFilters";
+import { withEquipStats } from "@/games/wow-forever/gear/withEquipStats";
 import { fromClientData } from "@/games/wow-forever/lib/toCompareItem";
 import { resolveWeights } from "@/games/wow-forever/scoring/resolveWeights";
 import { scoreItem } from "@/games/wow-forever/scoring/scoreItem";
@@ -74,8 +75,9 @@ export function candidates(
   score: (item: ClientItem, build: string) => number,
 ): Candidate[] {
   const out: Candidate[] = [];
-  for (const item of items) {
-    if (item.randomSuffix || data.unobtainable.has(item.id)) continue;
+  for (const listed of items) {
+    if (listed.randomSuffix || data.unobtainable.has(listed.id)) continue;
+    const item = withEquipStats(listed, data.equipStats);
     if (item.classes !== null && !item.classes.includes(settings.classId)) continue;
     const facts = data.facts.get(item.id) ?? NO_FACTS;
     if (facts.pvp && !settings.includePvp) continue;

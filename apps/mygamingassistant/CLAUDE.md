@@ -541,7 +541,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **Data is GENERATED** — `python -m scripts.wow_gear.build` (from `backend/`,
   last in `wow_refresh`) writes `data/gear/gearFacts.json` (Forever client:
   crafted-by + skill, required skill/reputation, BoP, "Premier" PvP, era
-  leftovers, deprecated items) and `data/gear/classic/gearSources.json`
+  leftovers, deprecated items, and `equipStats` — flat stats an Equip spell adds,
+  copied from `lootAddon/itemEffects.json` and added to the item's stats before
+  scoring, e.g. the Royal Seal of Eldre'Thalas' spell power) and `data/gear/classic/gearSources.json`
   (cmangos GPL — keep LICENSE + README: quest rewards with level/side/class,
   dungeon boss drops, dungeon level ranges, `raidOnly`, `pvp`). The Forever
   client has **no JournalEncounterItem**, so boss drops are Classic data only.
@@ -550,7 +552,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   = Classic data, unknown = none). Filters: deprecated/test
   items, random-suffix items, `raidOnly` (raid/world-boss loot, quests gated
   by raid items or the raid reputations `RAID_REPUTATIONS` in
-  `wow_gear/raid_gate.py` — Zandalar Tribe, Brood of Nozdormu), PvP unless
+  `wow_gear/raid_gate.py` — Zandalar Tribe, Brood of Nozdormu; crafts whose every
+  recipe needs a raid-only reagent or pattern — Flarecore, Bloodvine, Frozen Rune
+  gear. A herb, ore or chest counts as raid-only when every placed one stands in a
+  raid, like the Zul'Gurub herbs that give Bloodvine), PvP unless
   the PvP box is ticked (honor rank, battleground reputation, BG-vendor
   conditions), other-faction / other-class quests.
 - Banner: pre-raid phase, raids open `RAIDS_OPEN_LABEL`, Classic Pawn weights,

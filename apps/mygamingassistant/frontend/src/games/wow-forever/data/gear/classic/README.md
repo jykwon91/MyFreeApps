@@ -6,7 +6,8 @@ level from `../../worldMap/classic/classicDungeons.json`), plus the ids only a
 raid gives — a raid or world boss drops it, or only a quest that needs
 something from a raid rewards it (Plagueheart, Atiesh, the Head of Nefarian),
 or a reputation only raids give (Zandalar Tribe, Brood of Nozdormu: the Signet
-Rings of the Bronze Dragonflight). Raids open later in Forever, so the page
+Rings of the Bronze Dragonflight), or every recipe for it needs a raid-only
+reagent or pattern (Flarecore Leggings, the Bloodvine set). Raids open later in Forever, so the page
 leaves those out, and quests that need a raid item are not listed as sources.
 `pvp` lists gear Classic gated behind a PvP rank or a battleground
 reputation (the page hides PvP gear unless asked). It is derived from
