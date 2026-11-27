@@ -1030,13 +1030,6 @@ local function newTab(i, tab)
   return b
 end
 
-local function newScroll(name, parent)
-  local s = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
-  local c = CreateFrame("Frame", nil, s)
-  s:SetScrollChild(c)
-  return s, c
-end
-
 local function newGrid()
   grid = CreateFrame("Frame", nil, frame)
   grid:SetSize(785, 425)
@@ -1044,7 +1037,7 @@ local function newGrid()
   local back = grid:CreateTexture(nil, "BACKGROUND")
   back:SetTexture(ART.HOME)
   back:SetAllPoints()
-  local s, c = newScroll("MGADungeonQuestsGridScroll", grid)
+  local s, c = MGAHub.UI.Scroll("MGADungeonQuestsGridScroll", grid)
   s:SetPoint("TOPLEFT", 14, -12)
   s:SetPoint("BOTTOMRIGHT", -30, 10)
   c:SetSize(738, 10)
@@ -1068,12 +1061,12 @@ local function newBook()
   title:SetText("Bosses")
 
   local bossScroll
-  bossScroll, bossChild = newScroll("MGADungeonQuestsBossScroll", book)
+  bossScroll, bossChild = MGAHub.UI.Scroll("MGADungeonQuestsBossScroll", book)
   bossScroll:SetPoint("TOPLEFT", 10, -50)
   bossScroll:SetSize(338, 362)
   bossChild:SetSize(330, 10)
 
-  scroll, child = newScroll("MGADungeonQuestsScroll", book)
+  scroll, child = MGAHub.UI.Scroll("MGADungeonQuestsScroll", book)
   scroll:SetPoint("TOPLEFT", 398, -18)
   scroll:SetSize(336, 392)
   child:SetSize(TEXT_WIDTH + 8, 10)
@@ -1093,25 +1086,9 @@ local function newBook()
 end
 
 local function newFrame()
-  local ok, f = pcall(CreateFrame, "Frame", "MGADungeonQuestsFrame", UIParent, "BasicFrameTemplateWithInset")
-  if not ok or not f then
-    f = CreateFrame("Frame", "MGADungeonQuestsFrame", UIParent)
-    local bg = f:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.85)
-  end
+  local f = MGAHub.UI.Window("MGADungeonQuestsFrame", "MGA Dungeon Quests", FRAME_WIDTH, FRAME_HEIGHT, "HIGH")
   frame = f
-  f:SetSize(FRAME_WIDTH, FRAME_HEIGHT)
-  f:SetPoint("CENTER")
-  f:SetFrameStrata("HIGH")
-  f:SetMovable(true)
-  f:EnableMouse(true)
-  f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", f.StartMoving)
-  f:SetScript("OnDragStop", f.StopMovingOrSizing)
   f:Hide()
-  if f.TitleText then f.TitleText:SetText("MGA Dungeon Quests") end
-  if UISpecialFrames then table.insert(UISpecialFrames, "MGADungeonQuestsFrame") end -- Escape closes it
 
   crumbs.home = newCrumb("MGADungeonQuestsHome", 70, 12, function() M.Show(nil) end)
   crumbs.home:SetText("Home")

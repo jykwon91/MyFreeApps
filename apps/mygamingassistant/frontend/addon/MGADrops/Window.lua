@@ -5,18 +5,20 @@
 local M = MGADrops
 local UI = MGAHub.UI
 
-local WIDTH, HEIGHT = 420, 470
+local WIDTH, HEIGHT = 444, 480
 local ROW_HEIGHT, VISIBLE_ROWS = 18, 20
-local TEXT_WIDTH = WIDTH - 36
+local TEXT_WIDTH = WIDTH - 60
 local CHANCE_WIDTH = 120
 
 local frame
 local state = { offset = 0, query = "", mob = nil, fromSearch = false }
 local rows, lines = {}, {}
+local scrollList
 
 local function drawRows()
   local overflow = math.max(0, #lines - VISIBLE_ROWS)
   state.offset = math.min(state.offset, overflow)
+  scrollList.Sync(#lines, state.offset)
   for i, row in ipairs(rows) do
     local line = lines[state.offset + i]
     row.line = line
@@ -71,10 +73,7 @@ local function buildRow(i)
   local row = CreateFrame("Button", "MGADropsRow" .. i, frame)
   row:SetSize(TEXT_WIDTH, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, -(i - 1) * ROW_HEIGHT)
-  row.highlight = row:CreateTexture(nil, "BACKGROUND")
-  row.highlight:SetAllPoints(row)
-  row.highlight:SetColorTexture(1, 1, 1, 0.15)
-  row.highlight:Hide()
+  row.highlight = UI.Highlight(row)
   row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   row.text:SetPoint("LEFT", row, "LEFT", 2, 0)
   row.text:SetWidth(TEXT_WIDTH - CHANCE_WIDTH)
@@ -102,32 +101,8 @@ local function buildRow(i)
 end
 
 local function build()
-  frame = CreateFrame("Frame", "MGADropsWindow", UIParent)
-  frame:SetSize(WIDTH, HEIGHT)
-  frame:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-  frame:SetFrameStrata("DIALOG")
-  frame:SetMovable(true)
-  frame:EnableMouse(true)
-  frame:SetClampedToScreen(true)
-  frame:RegisterForDrag("LeftButton")
-  frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-  frame:EnableMouseWheel(true)
-  frame:SetScript("OnMouseWheel", function(_, delta)
-    state.offset = math.max(0, state.offset - delta * 3)
-    drawRows()
-  end)
-  frame.background = frame:CreateTexture(nil, "BACKGROUND")
-  frame.background:SetAllPoints(frame)
-  frame.background:SetColorTexture(0, 0, 0, 0.9)
-  table.insert(UISpecialFrames, "MGADropsWindow")
-
-  frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -12)
-  frame.title:SetText("MGA Drops")
-  local close = CreateFrame("Button", "MGADropsClose", frame, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
-  frame.note = UI.Label(frame, M.HEADER_NOTE .. ".", "GameFontDisableSmall", frame.title, -4)
+  frame = UI.Window("MGADropsWindow", "MGA Drops", WIDTH, HEIGHT)
+  frame.note = UI.Label(frame, M.HEADER_NOTE .. ".", "GameFontDisableSmall", frame.top, -2)
 
   frame.search = CreateFrame("EditBox", "MGADropsSearch", frame, "InputBoxTemplate")
   frame.search:SetSize(200, 22)
@@ -155,6 +130,11 @@ local function build()
   frame.listTop = CreateFrame("Frame", nil, frame)
   frame.listTop:SetSize(1, 1)
   frame.listTop:SetPoint("TOPLEFT", frame.heading, "BOTTOMLEFT", 0, -6)
+  scrollList = UI.ScrollList(frame, "MGADropsScroll", TEXT_WIDTH, ROW_HEIGHT, VISIBLE_ROWS, function(offset)
+    state.offset = offset
+    drawRows()
+  end)
+  scrollList.scroll:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, 0)
   for i = 1, VISIBLE_ROWS do buildRow(i) end
   frame:Hide()
 end

@@ -5,13 +5,14 @@
 local M = MGAProfessions
 local UI = MGAHub.UI
 
-local WIDTH, HEIGHT = 640, 520
+local WIDTH, HEIGHT = 664, 520
 local LIST_WIDTH, ROW_HEIGHT, VISIBLE_ROWS = 130, 18, 21
-local TEXT_WIDTH = WIDTH - LIST_WIDTH - 52
+local TEXT_WIDTH = WIDTH - LIST_WIDTH - 76
 
 local frame
 local state = { key = nil, tab = "route", offset = 0, full = false }
 local listButtons, tabButtons, rows, lines = {}, {}, {}, {}
+local scrollList
 
 local function visibleTabs(key)
   local tabs = {}
@@ -24,6 +25,7 @@ end
 local function drawRows()
   local overflow = math.max(0, #lines - VISIBLE_ROWS)
   state.offset = math.min(state.offset, overflow)
+  scrollList.Sync(#lines, state.offset)
   for i, row in ipairs(rows) do
     local line = lines[state.offset + i]
     row.line = line
@@ -45,7 +47,8 @@ local function refresh()
   for i, button in ipairs(listButtons) do
     local k = order[i]
     button.key = k
-    button:SetText((k == key and "[" or "") .. M.Profession(k).label .. (k == key and "]" or ""))
+    button:SetText(M.Profession(k).label)
+    button.select(k == key)
     button.own = i <= ownCount
   end
   local tabs = visibleTabs(key)
@@ -54,7 +57,8 @@ local function refresh()
     local tab = tabs[i]
     if tab then
       button.tab = tab.id
-      button:SetText(tab.id == state.tab and ("[" .. tab.label .. "]") or tab.label)
+      button:SetText(tab.label)
+      button.select(tab.id == state.tab)
       button:Show()
     else
       button:Hide()
@@ -73,10 +77,7 @@ local function buildRow(i)
   local row = CreateFrame("Button", "MGAProfessionsRow" .. i, frame)
   row:SetSize(TEXT_WIDTH, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, -(i - 1) * ROW_HEIGHT)
-  row.highlight = row:CreateTexture(nil, "BACKGROUND")
-  row.highlight:SetAllPoints(row)
-  row.highlight:SetColorTexture(1, 1, 1, 0.15)
-  row.highlight:Hide()
+  row.highlight = UI.Highlight(row)
   row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   row.text:SetPoint("LEFT", row, "LEFT", 2, 0)
   row.text:SetJustifyH("LEFT")
@@ -87,54 +88,31 @@ local function buildRow(i)
 end
 
 local function build()
-  frame = CreateFrame("Frame", "MGAProfessionsWindow", UIParent)
-  frame:SetSize(WIDTH, HEIGHT)
-  frame:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-  frame:SetFrameStrata("DIALOG")
-  frame:SetMovable(true)
-  frame:EnableMouse(true)
-  frame:SetClampedToScreen(true)
-  frame:RegisterForDrag("LeftButton")
-  frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-  frame:EnableMouseWheel(true)
-  frame:SetScript("OnMouseWheel", function(_, delta)
-    state.offset = math.max(0, state.offset - delta * 3)
-    drawRows()
-  end)
-  frame.background = frame:CreateTexture(nil, "BACKGROUND")
-  frame.background:SetAllPoints(frame)
-  frame.background:SetColorTexture(0, 0, 0, 0.9)
-  table.insert(UISpecialFrames, "MGAProfessionsWindow")
-
-  frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -12)
-  local close = CreateFrame("Button", "MGAProfessionsClose", frame, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+  frame = UI.Window("MGAProfessionsWindow", "MGA Professions", WIDTH, HEIGHT)
 
   for i = 1, #MGAProfessionsData.order do
-    local button = UI.Button(frame, "MGAProfessionsList" .. i, "", LIST_WIDTH, function(self)
+    local button = UI.Tab(frame, "MGAProfessionsList" .. i, "", LIST_WIDTH, function(self)
       state.key, state.offset = self.key, 0
       refresh()
     end)
-    button:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -40 - (i - 1) * 26)
+    button:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -34 - (i - 1) * 26)
     listButtons[i] = button
   end
 
   for i = 1, #M.TABS do
-    local button = UI.Button(frame, "MGAProfessionsTab" .. i, "", 90, function(self)
+    local button = UI.Tab(frame, "MGAProfessionsTab" .. i, "", 90, function(self)
       state.tab, state.offset = self.tab, 0
       refresh()
     end)
-    button:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_WIDTH + 24 + (i - 1) * 94, -40)
+    button:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_WIDTH + 24 + (i - 1) * 94, -34)
     tabButtons[i] = button
   end
 
   frame.listTop = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-  frame.listTop:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_WIDTH + 28, -72)
+  frame.listTop:SetPoint("TOPLEFT", frame, "TOPLEFT", LIST_WIDTH + 28, -66)
 
   frame.full = CreateFrame("CheckButton", "MGAProfessionsFull", frame, "UICheckButtonTemplate")
-  frame.full:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -110, -38)
+  frame.full:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -110, -32)
   frame.full.text = frame.full:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   frame.full.text:SetPoint("LEFT", frame.full, "RIGHT", 2, 0)
   frame.full.text:SetText("Full route")
@@ -143,6 +121,11 @@ local function build()
     refresh()
   end)
 
+  scrollList = UI.ScrollList(frame, "MGAProfessionsScroll", TEXT_WIDTH, ROW_HEIGHT, VISIBLE_ROWS, function(offset)
+    state.offset = offset
+    drawRows()
+  end)
+  scrollList.scroll:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, 0)
   for i = 1, VISIBLE_ROWS do buildRow(i) end
 
   frame.skillNote = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")

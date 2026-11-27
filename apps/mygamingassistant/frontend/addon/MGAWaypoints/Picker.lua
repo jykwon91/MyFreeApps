@@ -4,7 +4,8 @@
 local M = MGAWaypoints
 local UI = MGAHub.UI
 
-local WIDTH, ROW_HEIGHT, VISIBLE_ROWS = 440, 24, 10
+local WIDTH, ROW_HEIGHT, VISIBLE_ROWS = 464, 24, 10
+local ROW_WIDTH = WIDTH - 56
 local CATEGORY_COLUMNS, CATEGORY_WIDTH = 4, 100
 local NOTE = "Distances are straight lines. Places come from Classic data and may sit elsewhere in Forever."
 local PROFESSION_NAMES = {
@@ -17,6 +18,7 @@ local picker
 local state = { category = "class", query = "", offset = 0, profession = "all" }
 local results = {}
 local categoryButtons, rows = {}, {}
+local scrollList
 
 local function rowText(place)
   local where = place.sub ~= "" and (place.zone .. ", " .. place.sub) or place.zone
@@ -33,6 +35,7 @@ local function refresh()
   })
   local overflow = math.max(0, #results - VISIBLE_ROWS)
   state.offset = math.min(state.offset, overflow)
+  scrollList.Sync(#results, state.offset)
   for i, row in ipairs(rows) do
     local place = results[state.offset + i]
     row.place = place
@@ -50,7 +53,7 @@ local function refresh()
   picker.scope:SetText(M.SCOPE_TEXT[settings.scope])
   picker.side:SetText(settings.otherSide and "Both factions" or "My faction")
   for _, button in ipairs(categoryButtons) do
-    button:SetText((button.id == state.category and state.query == "") and ("[" .. button.label .. "]") or button.label)
+    button.select(button.id == state.category and state.query == "")
   end
   if picker.profession then
     if state.category == "prof" and state.query == "" then picker.profession:Show() else picker.profession:Hide() end
@@ -78,12 +81,9 @@ end
 
 local function buildRow(i)
   local row = CreateFrame("Button", "MGAWaypointsPickerRow" .. i, picker)
-  row:SetSize(WIDTH - 32, ROW_HEIGHT)
+  row:SetSize(ROW_WIDTH, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", picker.listTop, "BOTTOMLEFT", 0, -(i - 1) * ROW_HEIGHT)
-  row.highlight = row:CreateTexture(nil, "BACKGROUND")
-  row.highlight:SetAllPoints(row)
-  row.highlight:SetColorTexture(1, 1, 1, 0.15)
-  row.highlight:Hide()
+  row.highlight = UI.Highlight(row)
   row.name = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
   row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -1)
   row.name:SetJustifyH("LEFT")
@@ -99,40 +99,19 @@ local function buildRow(i)
 end
 
 local function build()
-  picker = CreateFrame("Frame", "MGAWaypointsPicker", UIParent)
-  picker:SetSize(WIDTH, 120 + VISIBLE_ROWS * ROW_HEIGHT + 56)
+  picker = UI.Window("MGAWaypointsPicker", "Go to...", WIDTH, 120 + VISIBLE_ROWS * ROW_HEIGHT + 56)
   picker:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-  picker:SetFrameStrata("DIALOG")
-  picker:SetMovable(true)
-  picker:EnableMouse(true)
-  picker:SetClampedToScreen(true)
-  picker:RegisterForDrag("LeftButton")
-  picker:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  picker:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-  picker:EnableMouseWheel(true)
-  picker:SetScript("OnMouseWheel", function(_, delta)
-    state.offset = math.max(0, state.offset - delta * 3)
-    refresh()
-  end)
-  picker.background = picker:CreateTexture(nil, "BACKGROUND")
-  picker.background:SetAllPoints(picker)
-  picker.background:SetColorTexture(0, 0, 0, 0.88)
-  table.insert(UISpecialFrames, "MGAWaypointsPicker")
-
-  picker.title = picker:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  picker.title:SetPoint("TOPLEFT", picker, "TOPLEFT", 16, -12)
-  picker.title:SetText("Go to...")
 
   local previous
   for i, category in ipairs(M.CATEGORIES) do
-    local button = UI.Button(picker, "MGAWaypointsCategory" .. category.id, category.label, CATEGORY_WIDTH, function()
+    local button = UI.Tab(picker, "MGAWaypointsCategory" .. category.id, category.label, CATEGORY_WIDTH, function()
       state.category, state.query, state.offset = category.id, "", 0
       picker.search:SetText("")
       refresh()
     end)
     button.id, button.label = category.id, category.label
     local column, line = (i - 1) % CATEGORY_COLUMNS, math.floor((i - 1) / CATEGORY_COLUMNS)
-    button:SetPoint("TOPLEFT", picker, "TOPLEFT", 16 + column * (CATEGORY_WIDTH + 4), -40 - line * 28)
+    button:SetPoint("TOPLEFT", picker, "TOPLEFT", 16 + column * (CATEGORY_WIDTH + 4), -34 - line * 28)
     table.insert(categoryButtons, button)
     previous = button
   end
@@ -172,6 +151,11 @@ local function build()
   picker.listTop = CreateFrame("Frame", nil, picker)
   picker.listTop:SetSize(1, 1)
   picker.listTop:SetPoint("TOPLEFT", picker.scope, "BOTTOMLEFT", 0, -8)
+  scrollList = UI.ScrollList(picker, "MGAWaypointsScroll", ROW_WIDTH, ROW_HEIGHT, VISIBLE_ROWS, function(offset)
+    state.offset = offset
+    refresh()
+  end)
+  scrollList.scroll:SetPoint("TOPLEFT", picker.listTop, "BOTTOMLEFT", 0, 0)
   for i = 1, VISIBLE_ROWS do buildRow(i) end
 
   picker.empty = picker:CreateFontString(nil, "ARTWORK", "GameFontDisable")

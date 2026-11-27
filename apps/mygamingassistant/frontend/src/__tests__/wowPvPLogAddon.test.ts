@@ -311,7 +311,7 @@ describe("MGA PvP Log window and settings", () => {
     const v = values(lines);
     expect(v[0]).toBe("[PvP Log] | PvP log | - | Settings");
     expect(v[1]).toMatch(/^true Vex \/ Gorak /);
-    expect(v[2]).toMatch(/^\[I killed\] Gorak /);
+    expect(v[2]).toMatch(/^I killed Gorak /);
     expect(v[2]).toMatch(/ false$/);
     expect(v[3]).toBe("Click again to clear 2");
     expect(v[4]).toBe("Clear log 2");

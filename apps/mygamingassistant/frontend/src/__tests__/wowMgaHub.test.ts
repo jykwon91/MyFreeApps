@@ -106,6 +106,49 @@ describe("the MGAHub addon and the addons that use it", () => {
   });
 });
 
+describe("the shared window pieces (MGAHub.UI)", () => {
+  it("builds a framed window from the game's panel template, titled, with a content anchor and Esc to close", () => {
+    const v = run(`
+      local f = MGAHub.UI.Window("TestWin", "Test title", 300, 200)
+      say(f.template .. " " .. f.width .. "x" .. f.height .. " " .. tostring(f.mouse))
+      say(tostring(f.top ~= nil) .. " " .. tostring(#UISpecialFrames > 0 and UISpecialFrames[#UISpecialFrames]))
+    `);
+    expect(v.slice(-2)).toEqual(["chat: BasicFrameTemplateWithInset 300x200 true", "chat: true TestWin"]);
+  });
+
+  it("lights a tab gold and clears it again", () => {
+    const v = run(`
+      local f = MGAHub.UI.Window("TestWin2", "T", 300, 200)
+      local label = { SetTextColor = function(_, r, g, b) say(r .. "," .. g .. "," .. b) end }
+      local tab = MGAHub.UI.Tab(f, "TestTab", "Tab", 80, function() end)
+      tab.GetFontString = function() return label end
+      tab.select(true)
+      tab.select(false)
+    `);
+    expect(v.slice(-2)).toEqual(["chat: 1,0.82,0", "chat: 1,1,1"]);
+  });
+
+  it("scrolls a pooled list by whole rows both ways: bar to offset, offset to bar", () => {
+    const v = run(`
+      local f = MGAHub.UI.Window("TestWin3", "T", 300, 200)
+      local seen, hooks = {}, {}
+      local make = CreateFrame
+      CreateFrame = function(...)
+        local frame = make(...)
+        frame.HookScript = function(_, k, fn) hooks[k] = fn end
+        return frame
+      end
+      local list = MGAHub.UI.ScrollList(f, "TestScroll", 200, 20, 5, function(offset) table.insert(seen, offset) end)
+      hooks.OnVerticalScroll(list.scroll, 61)
+      hooks.OnVerticalScroll(list.scroll, 61)
+      list.Sync(30, 7)
+      hooks.OnVerticalScroll(list.scroll, 140)
+      say(table.concat(seen, ",") .. " " .. list.offset)
+    `);
+    expect(v.slice(-1)[0]).toBe("chat: 3 7");
+  });
+});
+
 describe("MGAHub.GetProfessionSkills", () => {
   const skills = `local s = MGAHub.GetProfessionSkills(); ${say("s and #s .. ' ' .. (s[1] and (s[1].name .. '=' .. s[1].skill .. '/' .. tostring(s[1].line)) or '-') or 'nil'")}`;
   const last = (setup: string): string => run(`${setup}; ${skills}`).slice(-1)[0];

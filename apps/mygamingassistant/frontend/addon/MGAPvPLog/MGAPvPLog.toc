@@ -2,7 +2,7 @@
 ## Title: MGA PvP Log
 ## Notes: Logs the enemy players who fight or kill you, and the ones you kill: who they were, their race, class and guild, where, and how often. Works without the combat log, which Forever hides from addons.
 ## Author: MyGamingAssistant
-## Version: 1.3.0
+## Version: 1.4.0
 ## Dependencies: MGAHub
 ## SavedVariablesPerCharacter: MGAPvPLogDB
 ## IconTexture: Interface\Icons\Ability_DualWield

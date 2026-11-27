@@ -14,7 +14,9 @@
 -- `settings` fills `section` (a frame) with widgets anchored below `top` (the section's
 -- heading) and returns how tall they are; it may set section.refresh to re-read its
 -- saved values whenever the window opens. MGAHub.UI has the widgets (Label, Check,
--- Button, Dropdown) so every section looks the same.
+-- Button, Dropdown) so every section looks the same, and the window chrome every MGA
+-- window shares (Window, Tab, Scroll, ScrollList, Highlight) so they all look like MGA
+-- Dungeon Quests.
 --
 -- Saved: MGAHubSettings (angle = where the button sits on the minimap ring, hidden).
 --
@@ -230,6 +232,120 @@ function UI.Dropdown(parent, name, width, choices, selected, onPick)
     showMenu(self, entries)
   end)
   return b
+end
+
+-- Window chrome. Every MGA window is built from these, so they all look the same as MGA Dungeon Quests:
+-- the game's own framed panel (border, title bar, close button, dark inset), gold tabs, the game's scroll bar.
+
+-- The first content row sits this far below the top of a window (the title bar is 24 tall) and the content
+-- this far in from its sides.
+UI.TOP, UI.SIDE = 34, 14
+
+-- A framed, draggable window that Escape closes. `strata` defaults to DIALOG. frame.title is its title text
+-- (frame.title:SetText changes it); frame.top is a 1x1 anchor at the first content spot, so content hangs
+-- from it with UI.Label(frame, text, font, frame.top, y) or SetPoint("TOPLEFT", frame.top, "BOTTOMLEFT", ...).
+-- Falls back to a plain dark box with its own title and close button on a client without the template.
+function UI.Window(name, title, width, height, strata)
+  local ok, f = pcall(CreateFrame, "Frame", name, UIParent, "BasicFrameTemplateWithInset")
+  local framed = ok and f ~= nil
+  if not framed then
+    f = CreateFrame("Frame", name, UIParent)
+    f.background = f:CreateTexture(nil, "BACKGROUND")
+    f.background:SetAllPoints(f)
+    f.background:SetColorTexture(0, 0, 0, 0.85)
+  end
+  f:SetSize(width, height)
+  f:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
+  f:SetFrameStrata(strata or "DIALOG")
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:SetClampedToScreen(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+  if type(f.TitleText) == "table" then
+    f.title = f.TitleText
+  else
+    f.title = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    f.title:SetPoint("TOP", f, "TOP", 0, -6)
+  end
+  f.title:SetText(title)
+  if not framed then
+    local close = CreateFrame("Button", name .. "Close", f, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -2)
+  end
+  f.top = CreateFrame("Frame", nil, f)
+  f.top:SetSize(1, 1)
+  f.top:SetPoint("TOPLEFT", f, "TOPLEFT", UI.SIDE, -UI.TOP)
+  if UISpecialFrames then table.insert(UISpecialFrames, name) end
+  return f
+end
+
+local TAB_ON, TAB_OFF = { 1, 0.82, 0 }, { 1, 1, 1 }
+
+-- A tab button: a UI.Button that tab.select(true) lights (gold text, held highlight) and select(false) clears.
+function UI.Tab(parent, name, text, width, onClick)
+  local b = UI.Button(parent, name, text, width, onClick)
+  function b.select(on)
+    if on then b:LockHighlight() else b:UnlockHighlight() end
+    local label = b.GetFontString and b:GetFontString()
+    if type(label) == "table" then
+      local color = on and TAB_ON or TAB_OFF
+      label:SetTextColor(color[1], color[2], color[3])
+    end
+  end
+  return b
+end
+
+-- The game's scroll frame (with its scroll bar) over `parent`, and the child frame the content goes on.
+function UI.Scroll(name, parent)
+  local s = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
+  local c = CreateFrame("Frame", nil, s)
+  s:SetScrollChild(c)
+  return s, c
+end
+
+-- A scroll bar for a pooled list: `visible` rows of `rowHeight` that the caller fills from an offset (rows
+-- skipped). Place list.scroll (SetPoint) and anchor the rows over it; the bar sits just right of its edge, so
+-- leave about 24 px. list.Sync(count, offset) sizes the bar for `count` lines at `offset`; dragging it or the
+-- wheel calls onOffset(offset). The frame itself stays free of wheel handling.
+function UI.ScrollList(parent, name, width, rowHeight, visible, onOffset)
+  local scroll, child = UI.Scroll(name, parent)
+  local list = { scroll = scroll, offset = 0 }
+  scroll:SetSize(width, rowHeight * visible)
+  child:SetSize(width, rowHeight * visible)
+  local function range()
+    return (scroll.GetVerticalScrollRange and scroll:GetVerticalScrollRange()) or 0
+  end
+  scroll:HookScript("OnVerticalScroll", function(_, pixels)
+    local row = math.floor((pixels or 0) / rowHeight + 0.5)
+    if row ~= list.offset then
+      list.offset = row
+      onOffset(row)
+    end
+  end)
+  scroll:EnableMouseWheel(true)
+  scroll:SetScript("OnMouseWheel", function(self, delta)
+    local to = math.min(range(), math.max(0, (self:GetVerticalScroll() or 0) - delta * rowHeight * 3))
+    self:SetVerticalScroll(to)
+  end)
+  function list.Sync(count, offset)
+    child:SetHeight(math.max(count, visible) * rowHeight)
+    scroll:UpdateScrollChildRect()
+    list.offset = offset
+    scroll:SetVerticalScroll(offset * rowHeight)
+  end
+  return list
+end
+
+-- The hover highlight every MGA list row uses (the quest log's); returns the texture, hidden until shown.
+function UI.Highlight(row)
+  local h = row:CreateTexture(nil, "BACKGROUND")
+  h:SetAllPoints(row)
+  h:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+  h:SetBlendMode("ADD")
+  h:Hide()
+  return h
 end
 
 -- Settings window (Interface > AddOns > MGA) -----------------------------------------------
