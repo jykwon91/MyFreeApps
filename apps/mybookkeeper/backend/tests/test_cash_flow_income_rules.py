@@ -1,5 +1,5 @@
 """Money arriving under your own name is yours coming back, not income — but
-only a transfer (or a row with no bank category) is judged on the name. Pure."""
+pay that prints your name is still pay. Pure."""
 from __future__ import annotations
 
 import datetime as _dt
@@ -21,13 +21,16 @@ def _in(description: str, external_category: str | None, user_id: uuid.UUID | No
     )
 
 
-def test_a_transfer_in_your_own_name_is_from_yourself() -> None:
+def test_money_in_your_own_name_is_from_yourself() -> None:
     assert income_rules.is_from_self(_in("Cash App Pat Doe PPD", "TRANSFER_IN"), NAMES)
     assert income_rules.is_from_self(_in("Zelle from PAT DOE", None), NAMES)
+    # A card-style descriptor, whatever the bank filed it as.
+    assert income_rules.is_from_self(_in("CASH APP*PAT DOE*CA OAKLAND CA", "GENERAL_SERVICES"), NAMES)
 
 
-def test_a_paycheck_printing_your_name_is_still_income() -> None:
-    assert not income_rules.is_from_self(_in("PAYCHEX PAYROLL PAT DOE", "INCOME"), NAMES)
+def test_pay_printing_your_name_is_still_income() -> None:
+    assert not income_rules.is_from_self(_in("ACME LLC AP PAY PAT DOE", "INCOME"), NAMES)
+    assert not income_rules.is_from_self(_in("PAYCHEX PAYROLL PAT DOE", None), NAMES)
 
 
 def test_someone_else_or_no_account_is_income() -> None:
