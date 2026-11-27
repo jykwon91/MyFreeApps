@@ -30,3 +30,6 @@ GMAIL_SYNC_HARD_CAP_FULL_INTERVALS: Final = 2
 # How long the scheduler waits for a cancelled Gmail sync to unwind (its
 # clean-up writes) before it starts the next one anyway.
 GMAIL_SYNC_CANCEL_GRACE_SECONDS: Final = 30
+
+# How long shutdown waits for a cancelled savings research sweep to unwind.
+SAVINGS_RESEARCH_CANCEL_GRACE_SECONDS: Final = 10

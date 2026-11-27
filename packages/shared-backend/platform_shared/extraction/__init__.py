@@ -2,7 +2,7 @@
 
 - ``ExtractionService`` / ``ExtractionResponse`` — the consumer-facing
   text/document extraction API.
-- ``create_with_backoff`` / ``ThrottleState`` / ``throttle`` /
+- ``create_with_backoff`` / ``stream_with_backoff`` / ``ThrottleState`` / ``throttle`` /
   ``RateLimitEvent`` / ``rate_limit_pause_seconds`` — the lower-level Anthropic-call primitive, reused
   directly by callers that make non-extraction Claude calls (e.g.
   MyBookkeeper's tax advisor) and that need the same shared throttle.
@@ -34,6 +34,7 @@ from platform_shared.extraction.backoff import (
     ThrottleState,
     create_with_backoff,
     rate_limit_pause_seconds,
+    stream_with_backoff,
     throttle,
 )
 from platform_shared.extraction.errors import (
@@ -42,6 +43,7 @@ from platform_shared.extraction.errors import (
     ExtractionParseError,
     ExtractionTruncatedError,
     RateLimitPausedError,
+    ResearchRefusedError,
     extraction_error_from_anthropic,
     is_transient_failure,
 )
@@ -61,6 +63,7 @@ __all__ = [
     "WebSource",
     "find_json",
     "create_with_backoff",
+    "stream_with_backoff",
     "ThrottleState",
     "throttle",
     "RateLimitEvent",
@@ -70,6 +73,7 @@ __all__ = [
     "ExtractionParseError",
     "ExtractionTruncatedError",
     "RateLimitPausedError",
+    "ResearchRefusedError",
     "AnthropicFailure",
     "AnthropicFailureKind",
     "map_anthropic_error",

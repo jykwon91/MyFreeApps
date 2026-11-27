@@ -37,6 +37,8 @@ whole full interval looks stuck and is logged as an error, once per sync. A sync
 ``GMAIL_SYNC_HARD_CAP_FULL_INTERVALS`` full intervals after it started is
 taken as hung: it is cancelled and a new one started, so a hung sync can't
 block every later one. A sync task that dies is logged by its done callback.
+Savings research runs the same way, as its own task started on each tick
+(``savings_research_task``); it researches only for people who are due.
 
 Every part of a tick is isolated: each org's Gmail sync, the channel-iCal
 poll, lease auto-end, the utility-plan check, the rent reminders and the cost
@@ -102,6 +104,7 @@ from app.services.listings.channel_sync_service import poll_all as poll_all_chan
 from app.services.properties import utility_plan_service
 from app.services.rent import rent_reminder_dispatch_service
 from app.workers.email_sync_worker import sync_gmail_connection
+from app.workers.savings_research_task import start_savings_research, stop_savings_research
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +337,7 @@ async def tick_until_stopped(
     last_full: float | None = None
     last_transparency_sync: _dt.datetime | None = None
     gmail_sync: GmailSyncRun | None = None
+    savings_research: asyncio.Task[None] | None = None
     gmail_due = False
     try:
         while not stop.is_set():
@@ -348,6 +352,7 @@ async def tick_until_stopped(
                     cap_seconds=gmail_sync_cap_seconds,
                 )
                 gmail_due = not gmail_started
+            savings_research = start_savings_research(savings_research)
             now = _now()
             transparency_sync = settings.transparency_primary and is_daily_sync_due(
                 last_run=last_transparency_sync, now=now,
@@ -364,6 +369,7 @@ async def tick_until_stopped(
             await wait_or_stop(stop, max(0.0, tick_seconds - elapsed))
     finally:
         await stop_gmail_sync(gmail_sync)
+        await stop_savings_research(savings_research)
 
 
 async def run_scheduler(stop: asyncio.Event) -> None:

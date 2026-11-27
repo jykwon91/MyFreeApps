@@ -81,6 +81,23 @@ class ExtractionTruncatedError(ExtractionParseError):
     """
 
 
+class ResearchRefusedError(ExtractionError):
+    """Raised when the model declined the request (``stop_reason: "refusal"``).
+
+    Not a provider error and not transient: the same request is refused
+    again. ``category`` is the policy category from ``stop_details`` when the
+    API sent one (``cyber``, ``bio``, ``general_harms``, ...); ``error_type``
+    is always ``"refusal"`` so callers that store the failure type have one.
+    """
+
+    def __init__(self, category: str | None) -> None:
+        super().__init__(
+            f"The model declined the research request (category={category})",
+            error_type="refusal",
+        )
+        self.category = category
+
+
 class RateLimitPausedError(ExtractionError):
     """Raised, without calling the API, when the shared throttle outlasts the caller's wait budget.
 

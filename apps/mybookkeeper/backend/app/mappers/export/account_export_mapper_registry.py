@@ -12,6 +12,7 @@ from app.mappers.export.lease_export_mappers import LEASE_EXPORT_MAPPERS
 from app.mappers.export.listing_export_mappers import LISTING_EXPORT_MAPPERS
 from app.mappers.export.property_export_mappers import PROPERTY_EXPORT_MAPPERS
 from app.mappers.export.rent_export_mappers import RENT_EXPORT_MAPPERS
+from app.mappers.export.savings_export_mappers import SAVINGS_EXPORT_MAPPERS
 from app.mappers.export.table_export_mapper import TableExportMapper
 from app.mappers.export.tax_export_mappers import TAX_EXPORT_MAPPERS
 from app.mappers.export.spending_category_export_mappers import (
@@ -38,5 +39,6 @@ EXPORT_MAPPERS: Final[dict[str, TableExportMapper]] = {
         *TAX_EXPORT_MAPPERS,
         *INSURANCE_EXPORT_MAPPERS,
         *WELCOME_MANUAL_EXPORT_MAPPERS,
+        *SAVINGS_EXPORT_MAPPERS,
     )
 }

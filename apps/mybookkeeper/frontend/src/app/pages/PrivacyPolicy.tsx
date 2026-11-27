@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export const PRIVACY_LAST_UPDATED = "2026-11-25";
+export const PRIVACY_LAST_UPDATED = "2026-11-27";
 
 export default function PrivacyPolicy() {
   return (
@@ -201,6 +201,13 @@ export default function PrivacyPolicy() {
                   <li>
                     Messages from your public inquiry form, for a spam check, with names replaced and
                     email addresses and phone numbers removed
+                  </li>
+                  <li>
+                    A summary of your spending, if you turn on daily savings research: totals by
+                    category, recurring charges by merchant name, your accounts' names and types, your
+                    mortgage rate, insurance premiums, utility plans and your properties' city and ZIP. No
+                    account numbers, tenant names, street addresses or other transaction details are
+                    included. Anthropic searches the web with it to find ways for you to save
                   </li>
                 </ul>
                 <p>

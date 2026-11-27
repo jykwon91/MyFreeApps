@@ -24,27 +24,38 @@ for every future caller.
 
 Output shape is pinned with **structured outputs**
 (``output_config.format``), so the model returns schema-valid JSON rather
-than prose the caller has to scrape. A text-scanning fallback is kept for
-the case where a server-tool turn ends without a structured payload.
+than prose the caller has to scrape. Structured outputs combine with the
+2026-02-09 ``web_search`` / ``web_fetch`` tools in one request (verified live
+on claude-opus-5-5, 2026-11-27); only citations conflict, so ``web_fetch``
+declares them off. A text-scanning fallback is kept for the case where a
+server-tool turn ends without a structured payload.
+
+Every request is streamed (``client.beta.messages.stream`` →
+``get_final_message()``): a research turn can run for minutes, and the beta
+surface is what carries ``fallbacks``. A caller passing ``fallbacks=True``
+gets Anthropic's server-side fallback (beta ``server-side-fallback-2026-07-01``,
+``fallbacks: "default"``), so a policy decline on the requested model is
+retried on its default substitute before the turn is reported as a refusal.
+A turn that still ends in ``refusal`` raises ``ResearchRefusedError``; one cut
+off at ``max_tokens`` raises ``ExtractionTruncatedError``. Parsing lives in
+``research_response_parser``.
 """
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from platform_shared.core.model_output_log import describe_model_output
-from platform_shared.extraction.backoff import OnRateLimit, create_with_backoff
+from platform_shared.extraction.backoff import OnRateLimit, stream_with_backoff
 from platform_shared.extraction.errors import (
     ExtractionNotConfiguredError,
-    ExtractionParseError,
     extraction_error_from_anthropic,
 )
-from platform_shared.extraction.json_extract import find_json
+from platform_shared.extraction.research_response import ResearchResponse
+from platform_shared.extraction.research_response_parser import build_research_response
+from platform_shared.extraction.web_source import WebSource
 
-if TYPE_CHECKING:
-    from anthropic.types import Message
+__all__ = ["ResearchResponse", "ResearchService", "WebSource", "SERVER_SIDE_FALLBACK_BETA"]
 
 logger = logging.getLogger(__name__)
 
@@ -64,31 +75,40 @@ _MAX_PAUSE_RESUMES = 6
 _WEB_SEARCH_TYPE = "web_search_20260209"
 _WEB_FETCH_TYPE = "web_fetch_20260209"
 
-
-@dataclass(frozen=True)
-class WebSource:
-    """One page the model actually consulted during a research turn."""
-
-    url: str
-    title: str | None = None
+SERVER_SIDE_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
-@dataclass
-class ResearchResponse:
-    """The parsed model payload, the sources behind it, and token accounting.
+def _search_tool(
+    max_uses: int,
+    *,
+    allowed_domains: list[str] | None = None,
+    blocked_domains: list[str] | None = None,
+) -> dict[str, Any]:
+    if allowed_domains and blocked_domains:
+        raise ValueError(
+            "web_search accepts allowed_domains OR blocked_domains, never both"
+        )
+    tool: dict[str, Any] = {
+        "type": _WEB_SEARCH_TYPE,
+        "name": "web_search",
+        "max_uses": max_uses,
+    }
+    if allowed_domains:
+        tool["allowed_domains"] = allowed_domains
+    if blocked_domains:
+        tool["blocked_domains"] = blocked_domains
+    return tool
 
-    ``data`` is the raw parsed JSON value (schema-valid when the caller
-    supplied a ``json_schema``). Interpreting its shape is the caller's job —
-    this module stays domain-free.
-    """
 
-    data: Any
-    sources: list[WebSource]
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-    model: str
-    server_tool_uses: int = 0
+def _fetch_tool(max_uses: int) -> dict[str, Any]:
+    return {
+        "type": _WEB_FETCH_TYPE,
+        "name": "web_fetch",
+        "max_uses": max_uses,
+        # Citations are incompatible with structured outputs (400) and
+        # we attribute via `sources` instead.
+        "citations": {"enabled": False},
+    }
 
 
 @dataclass
@@ -160,22 +180,13 @@ class ResearchService:
             ExtractionError: provider/transport failure (typed, with
                 ``error_type``/``status``/``kind``).
             ExtractionParseError: no JSON payload in the final response.
+            ResearchRefusedError: the model declined the request.
         """
-        if allowed_domains and blocked_domains:
-            raise ValueError(
-                "web_search accepts allowed_domains OR blocked_domains, never both"
-            )
-
-        tool: dict[str, Any] = {
-            "type": _WEB_SEARCH_TYPE,
-            "name": "web_search",
-            "max_uses": max_searches,
-        }
-        if allowed_domains:
-            tool["allowed_domains"] = allowed_domains
-        if blocked_domains:
-            tool["blocked_domains"] = blocked_domains
-
+        tool = _search_tool(
+            max_searches,
+            allowed_domains=allowed_domains,
+            blocked_domains=blocked_domains,
+        )
         return await self._run(
             system_prompt,
             user_prompt,
@@ -183,6 +194,7 @@ class ResearchService:
             json_schema=json_schema,
             max_tokens=max_tokens,
             effort=effort,
+            fallbacks=False,
             on_rate_limit=on_rate_limit,
         )
 
@@ -206,28 +218,51 @@ class ResearchService:
         along so a page that blocks the fetcher (paywall, bot wall) can still
         be answered from search results instead of failing the request.
         """
-        tools: list[dict[str, Any]] = [
-            {
-                "type": _WEB_FETCH_TYPE,
-                "name": "web_fetch",
-                "max_uses": max_fetches,
-                # Citations are incompatible with structured outputs (400) and
-                # we attribute via `sources` instead.
-                "citations": {"enabled": False},
-            },
-            {
-                "type": _WEB_SEARCH_TYPE,
-                "name": "web_search",
-                "max_uses": max_searches,
-            },
-        ]
         return await self._run(
             system_prompt,
             user_prompt,
-            tools=tools,
+            tools=[_fetch_tool(max_fetches), _search_tool(max_searches)],
             json_schema=json_schema,
             max_tokens=max_tokens,
             effort=effort,
+            fallbacks=False,
+            on_rate_limit=on_rate_limit,
+        )
+
+    async def research(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        json_schema: dict[str, Any],
+        max_searches: int,
+        max_fetches: int,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        effort: str = "high",
+        fallbacks: bool = False,
+        max_wait_seconds: float | None = None,
+        on_rate_limit: OnRateLimit | None = None,
+    ) -> ResearchResponse:
+        """Open-ended research: search the web, read what it finds, answer in JSON.
+
+        Both tools ride along: ``web_search`` finds candidates and
+        ``web_fetch`` reads the pages it found (fetch only reaches URLs
+        already in the conversation, so it reads search results, never a URL
+        the model made up). ``fallbacks`` opts into Anthropic's server-side
+        fallback on a policy decline; ``max_wait_seconds`` bounds the
+        rate-limit sleep (see ``create_with_backoff``).
+
+        Raises the same errors as ``search``.
+        """
+        return await self._run(
+            system_prompt,
+            user_prompt,
+            tools=[_search_tool(max_searches), _fetch_tool(max_fetches)],
+            json_schema=json_schema,
+            max_tokens=max_tokens,
+            effort=effort,
+            fallbacks=fallbacks,
+            max_wait_seconds=max_wait_seconds,
             on_rate_limit=on_rate_limit,
         )
 
@@ -242,7 +277,9 @@ class ResearchService:
         json_schema: dict[str, Any] | None,
         max_tokens: int,
         effort: str,
+        fallbacks: bool,
         on_rate_limit: OnRateLimit | None,
+        max_wait_seconds: float | None = None,
     ) -> ResearchResponse:
         """Drive one research turn to completion, resuming on ``pause_turn``."""
         self._require_ready()
@@ -268,13 +305,20 @@ class ResearchService:
             "output_config": output_config,
             "thinking": {"type": "adaptive"},
         }
+        if fallbacks:
+            request["betas"] = [SERVER_SIDE_FALLBACK_BETA]
+            request["fallbacks"] = "default"
 
         messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
-        responses: list[Message] = []
+        responses: list[Any] = []
 
         for resume in range(_MAX_PAUSE_RESUMES + 1):
-            message = await self._create(
-                client, on_rate_limit=on_rate_limit, messages=messages, **request
+            message = await self._send(
+                client,
+                on_rate_limit=on_rate_limit,
+                max_wait_seconds=max_wait_seconds,
+                messages=messages,
+                **request,
             )
             responses.append(message)
             if getattr(message, "stop_reason", None) != "pause_turn":
@@ -297,21 +341,25 @@ class ResearchService:
                 _MAX_PAUSE_RESUMES,
             )
 
-        return _build_response(responses)
+        return build_research_response(responses)
 
-    async def _create(
+    async def _send(
         self,
         client: Any,
         *,
         on_rate_limit: OnRateLimit | None,
+        max_wait_seconds: float | None,
         **kwargs: Any,
-    ) -> "Message":
-        """``create_with_backoff`` with provider errors wrapped as typed ones."""
+    ) -> Any:
+        """``stream_with_backoff`` with provider errors wrapped as typed ones."""
         import anthropic
 
         try:
-            return await create_with_backoff(
-                client, on_rate_limit=on_rate_limit, **kwargs
+            return await stream_with_backoff(
+                client,
+                on_rate_limit=on_rate_limit,
+                max_wait_seconds=max_wait_seconds,
+                **kwargs,
             )
         except anthropic.APIError as exc:
             # Classified so callers route on ``kind`` instead of importing
@@ -319,117 +367,3 @@ class ResearchService:
             raise extraction_error_from_anthropic(
                 exc, log_prefix="web research", logger=logger
             ) from exc
-
-
-def _build_response(responses: list["Message"]) -> ResearchResponse:
-    """Assemble the payload, sources, and usage from every round-trip."""
-    if not responses:  # pragma: no cover — the loop always appends at least one
-        raise ExtractionParseError("No response received from the model")
-
-    sources: list[WebSource] = []
-    seen: set[str] = set()
-    texts: list[str] = []
-    tool_uses = 0
-    input_tokens = 0
-    output_tokens = 0
-
-    for message in responses:
-        usage = getattr(message, "usage", None)
-        input_tokens += getattr(usage, "input_tokens", 0) or 0
-        output_tokens += getattr(usage, "output_tokens", 0) or 0
-
-        for block in getattr(message, "content", []) or []:
-            block_type = getattr(block, "type", None)
-            if block_type == "text":
-                text = getattr(block, "text", "") or ""
-                if text.strip():
-                    texts.append(text)
-            elif block_type == "server_tool_use":
-                tool_uses += 1
-            elif block_type in ("web_search_tool_result", "web_fetch_tool_result"):
-                for source in _sources_from_result(block):
-                    if source.url not in seen:
-                        seen.add(source.url)
-                        sources.append(source)
-
-    data = _payload_from_texts(texts, stop_reason=getattr(responses[-1], "stop_reason", None))
-    return ResearchResponse(
-        data=data,
-        sources=sources,
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        total_tokens=input_tokens + output_tokens,
-        model=getattr(responses[-1], "model", ""),
-        server_tool_uses=tool_uses,
-    )
-
-
-def _sources_from_result(block: Any) -> list[WebSource]:
-    """URLs out of one server-tool result block.
-
-    Server-tool failures do NOT raise: an error arrives as HTTP 200 with the
-    result block's ``content`` set to a single error *object* (e.g.
-    ``{"error_code": "max_uses_exceeded"}``) where a success is a *list*.
-    Branch on that before iterating, or a failed search raises TypeError deep
-    in the parse instead of degrading to "no sources".
-    """
-    content = getattr(block, "content", None)
-
-    if content is None:
-        return []
-
-    # web_fetch success: a single result object carrying the fetched document.
-    if not isinstance(content, list):
-        error_code = getattr(content, "error_code", None)
-        if error_code is not None:
-            logger.warning(
-                "Server tool %r returned an error: %s",
-                getattr(block, "type", "?"),
-                error_code,
-            )
-            return []
-        url = getattr(content, "url", None)
-        return [WebSource(url=url, title=_document_title(content))] if url else []
-
-    # web_search success: a list of result objects.
-    out: list[WebSource] = []
-    for item in content:
-        url = getattr(item, "url", None)
-        if url:
-            out.append(WebSource(url=url, title=getattr(item, "title", None)))
-    return out
-
-
-def _document_title(content: Any) -> str | None:
-    document = getattr(content, "document", None)
-    return getattr(document, "title", None) if document is not None else None
-
-
-def _payload_from_texts(texts: list[str], *, stop_reason: str | None) -> Any:
-    """The JSON payload out of the response's text blocks.
-
-    With ``output_config.format`` set the final text block *is* the JSON, so
-    the common path is one ``json.loads``. Blocks are tried newest-first
-    because a research turn narrates before it answers: the payload is the
-    last thing said, and scanning from the front would return a JSON-looking
-    fragment out of the commentary.
-    """
-    for text in reversed(texts):
-        stripped = text.strip()
-        if not stripped:
-            continue
-        try:
-            return json.loads(stripped)
-        except json.JSONDecodeError:
-            pass
-        try:
-            return find_json(stripped)
-        except json.JSONDecodeError:
-            continue
-
-    # Never the text itself, only its shape: a research reply can quote what it read.
-    logger.error(
-        "Research response carried no JSON payload — %s",
-        describe_model_output(texts[-1] if texts else "", stop_reason=stop_reason),
-    )
-    raise ExtractionParseError("Model response contained no JSON payload")

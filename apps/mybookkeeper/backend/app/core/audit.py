@@ -119,6 +119,9 @@ MBK_SKIP_TABLES: frozenset[str] = frozenset({
     # One row per account per day, derived from balances whose own changes
     # are audited where they happen (financial_accounts, mortgages, properties).
     "balance_snapshots",
+    # The research job's own run log (status, token counts); the ideas it
+    # writes and the person's on/off choice are audited.
+    "savings_research_runs",
 })
 
 # Large-binary columns where neither the value nor a masked stub is useful.

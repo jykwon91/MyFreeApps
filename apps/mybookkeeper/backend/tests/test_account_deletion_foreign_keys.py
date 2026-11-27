@@ -66,6 +66,8 @@ KNOWN_BLOCKING_FOREIGN_KEYS: dict[str, str] = {
 
 # Look like stored-file references but are not (storage keys are covered by the cleanup).
 NOT_STORED_FILE_COLUMNS: dict[str, str] = {
+    "savings_ideas.idea_key": "Stable idea key derived from its category and subject",
+    "savings_ideas.source_urls": "Links to the public web pages the research cited",
     "channel_listings.external_url": "Link to the listing on another site",
     "channel_listings.ical_import_url": "External calendar feed address",
     "email_queue.attachment_filename": "Display name of an attachment, not a stored key",

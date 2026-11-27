@@ -55,6 +55,7 @@ import Integrations from "@/app/pages/Integrations";
 import Members from "@/app/pages/Members";
 import Transactions from "@/app/pages/Transactions";
 import Reconciliation from "@/app/pages/Reconciliation";
+import Savings from "@/app/pages/Savings";
 import TaxDocuments from "@/app/pages/TaxDocuments";
 import TaxReturns from "@/app/pages/TaxReturns";
 import TaxReturnDetail from "@/app/pages/TaxReturnDetail";
@@ -158,6 +159,7 @@ export default function App() {
               <Route path="net-worth" element={<NetWorth />} />
               <Route path="investments" element={<Investments />} />
               <Route path="budget" element={<Budget />} />
+              <Route path="savings" element={<Savings />} />
               <Route path="cash-flow" element={<CashFlow />} />
               <Route path="personal-finances" element={<PersonalFinances />} />
               <Route path="monthly-expenses" element={<MonthlyExpenses />} />

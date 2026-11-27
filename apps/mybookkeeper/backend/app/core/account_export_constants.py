@@ -40,6 +40,10 @@ EXPORT_EXCLUDED_TABLES: Final[dict[str, str]] = {
     "usage_logs": "AI usage metering for cost control; internal, not user content.",
     "system_events": "Internal operational events and alerts; not user content.",
     "rent_receipt_sequences": "Internal counter that numbers rent receipts; not user content.",
+    "savings_research_runs": (
+        "AI research run log (status, token and search counts); what the runs found is "
+        "exported as savings_ideas."
+    ),
 }
 
 _KEY_VERSION = "Encryption key bookkeeping; the encrypted values themselves are exported decrypted."
@@ -212,4 +216,6 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "welcome_manual_section_images": {"storage_key": _STORAGE_KEY},
     "welcome_manual_places": {},
     "welcome_manual_sends": {"key_version": _KEY_VERSION},
+    "savings_ideas": {},
+    "savings_research_settings": {},
 }
