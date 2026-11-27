@@ -434,14 +434,17 @@ for name in pairs(PRICED_TOOLTIPS) do
   end
 end
 
--- Shift switches between your house and every house while the tooltip is open.
+-- Shift switches between your house and every house while an item's tooltip is open. Only a tooltip we priced,
+-- and never in combat: RefreshData from addon code rebuilds the tooltip tainted, and the game then rejects
+-- secret unit values in its own tooltip code (a Lua error on every Shift press over a mob in a fight).
 local events = CreateFrame("Frame")
 events:RegisterEvent("MODIFIER_STATE_CHANGED")
 events:SetScript("OnEvent", function(_, _, key)
-  if (key == "LSHIFT" or key == "RSHIFT") and GameTooltip:IsShown() and GameTooltip.RefreshData then
-    GameTooltip.mgaPricedItem = nil
-    GameTooltip:RefreshData()
-  end
+  if not (key == "LSHIFT" or key == "RSHIFT") then return end
+  if not (GameTooltip.mgaPricedItem and GameTooltip:IsShown() and GameTooltip.RefreshData) then return end
+  if InCombatLockdown and InCombatLockdown() then return end
+  GameTooltip.mgaPricedItem = nil
+  GameTooltip:RefreshData()
 end)
 
 -- Reload reminder: once per session, when the loaded prices are old enough that the updater has newer ones.

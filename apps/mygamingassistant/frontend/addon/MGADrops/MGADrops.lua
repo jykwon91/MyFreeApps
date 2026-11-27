@@ -117,12 +117,6 @@ SlashCmdList["MGADROPS"] = function(message)
   M.OpenFor(targetNpc())
 end
 
--- Shift held or let go while a creature's tooltip is up: redraw it with the full or the short list.
-local events = CreateFrame("Frame", "MGADropsEvents")
-events:RegisterEvent("MODIFIER_STATE_CHANGED")
-events:SetScript("OnEvent", function(_, _, key)
-  if (key == "LSHIFT" or key == "RSHIFT") and GameTooltip.mgaDropsNpc and GameTooltip:IsShown() and GameTooltip.RefreshData then
-    GameTooltip.mgaDropsNpc = nil
-    GameTooltip:RefreshData()
-  end
-end)
+-- Shift is read when the tooltip is built, so hold it before you mouse over. Never redraw a creature's tooltip
+-- from here: RefreshData from addon code rebuilds it tainted, and in combat the game then rejects the secret
+-- unit in its own tooltip code (a Lua error on every Shift press over a mob in a fight).

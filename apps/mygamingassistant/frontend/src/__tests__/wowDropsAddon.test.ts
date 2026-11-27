@@ -127,13 +127,18 @@ describe("the creature tooltip", () => {
     expect(hover("mouseover", `${MOB(HOGGER)}\nMGADrops.Settings().tooltip = false`)).toEqual([]);
   });
 
-  it("redraws with the full list when Shift is pressed over the tooltip", () => {
+  // The game rejects secret unit values in its own tooltip code once addon code has rebuilt the tooltip
+  // (a Lua error in combat), so a Shift press never redraws a creature's tooltip; it applies on the next hover.
+  it("never redraws a creature's tooltip when Shift is pressed; Shift applies on the next hover", () => {
     const lines = run(`${MOB(HOGGER)}
 hoverUnit("mouseover")
 clear()
 shift = true
 fire("MODIFIER_STATE_CHANGED", "LSHIFT", 1)
+table.insert(out, "after shift " .. #out)
+hoverUnit("mouseover")
 for i, l in ipairs(out) do out[i] = plain(l) end`);
+    expect(lines[0]).toBe("after shift 0");
     expect(lines).toContain("  Malachite | 0.64%");
   });
 

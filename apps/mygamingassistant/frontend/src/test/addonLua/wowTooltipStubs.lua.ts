@@ -52,7 +52,7 @@ local function tip(name)
   function t:HasScript(ev) return ev ~= "OnTooltipSetItem" end
   function t:GetOwner() return self.owner end
   function t:IsShown() return true end
-  function t:RefreshData() end
+  function t:RefreshData() table.insert(out, "refreshed " .. self.name) end
   function t:SetOwner(owner) self.owner = owner end
   -- Like a client whose SetHyperlink fires no tooltip post-call: only clears the tooltip.
   function t:SetHyperlink(link) if self.scripts.OnTooltipCleared then self.scripts.OnTooltipCleared(self) end end
