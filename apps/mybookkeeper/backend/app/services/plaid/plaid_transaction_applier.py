@@ -17,7 +17,9 @@ added and withdrawn in the same batch ends up withdrawn.
   a second — the ledger keeps one row per transfer, so it is never counted
   twice. A row an email or document already brought in (a Zelle alert, a
   bill) is linked to the bank row instead of being stored twice, and pairs
-  stored before that are folded together (``plaid_copy_reconciler``).
+  stored before that are folded together (``plaid_copy_reconciler``). Money
+  you sent yourself that the two banks show at different amounts (a transfer
+  service's fee) is paired after each batch (``plaid_transfer_reconciler``).
 * **Modified** rows update only what the bank owns — date, amount, name. How
   the person filed the row is theirs and is never overwritten.
 * **Removed** rows are soft-deleted, through the same path every delete uses.
@@ -37,7 +39,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.plaid_category_constants import PFC_TRANSFER_PRIMARIES
 from app.core.plaid_constants import PLAID_MIN_TRANSACTION_YEAR, PLAID_TRANSFER_MATCH_WINDOW_DAYS
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
-from app.core.tags import TRANSACTION_TYPE_TRANSFER, TRANSFER_CATEGORY
 from app.core.tax_total_inputs import tax_total_inputs
 from app.mappers import plaid_account_mapper, plaid_transaction_mapper
 from app.models.financial_accounts.financial_account import FinancialAccount
@@ -50,9 +51,9 @@ from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
 from app.services.net_worth import net_worth_service
-from app.services.plaid import plaid_copy_reconciler, plaid_rent_attribution
+from app.services.plaid import plaid_copy_reconciler, plaid_rent_attribution, plaid_transfer_reconciler
 from app.services.transactions.bank_row_classifier import classify_bank_row
-from app.services.transactions.transfer_rules import transfer_overrides
+from app.services.transactions.transfer_merge import merge_into_transfer
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,9 @@ async def apply_batch(
         db, organization_id=item.organization_id, transaction_ids=batch.removed,
     )
     counts.copies_merged = await plaid_copy_reconciler.merge_stored_copies(
+        db, organization_id=item.organization_id,
+    )
+    counts.transfers_matched += await plaid_transfer_reconciler.merge_stored_self_transfers(
         db, organization_id=item.organization_id,
     )
     counts.attributed_as_rent = await plaid_rent_attribution.attribute_untriaged_income(
@@ -161,7 +165,7 @@ async def _apply_added(
         )
         if other_leg is not None:
             old_tax_inputs = tax_total_inputs(other_leg)
-            _merge_into_transfer(other_leg, new_leg_account=account, new_leg_date=txn.date)
+            merge_into_transfer(other_leg, other_account_id=account.id, other_date=txn.date)
             await transaction_repo.update(db, other_leg)
             await tax_return_repo.flag_unfiled_if_totals_moved(db, other_leg, old_tax_inputs)
             claimed.add(other_leg.id)
@@ -208,32 +212,6 @@ async def _find_other_leg(
     if not unclaimed:
         return None
     return min(unclaimed, key=lambda c: abs((c.transaction_date - txn.date).days))
-
-
-def _merge_into_transfer(
-    other_leg: Transaction, *, new_leg_account: FinancialAccount, new_leg_date: _dt.date,
-) -> None:
-    """Make the stored leg the one transfer row: from the account the money
-    left, to the account it arrived in, dated when it left."""
-    if other_leg.transaction_type == _EXPENSE:
-        from_account_id, to_account_id = other_leg.account_id, new_leg_account.id
-    else:
-        from_account_id, to_account_id = new_leg_account.id, other_leg.account_id
-        other_leg.transaction_date = new_leg_date
-        other_leg.tax_year = new_leg_date.year
-    other_leg.transaction_type = TRANSACTION_TYPE_TRANSFER
-    other_leg.category = TRANSFER_CATEGORY
-    other_leg.tags = [TRANSFER_CATEGORY]
-    other_leg.spending_category_id = None
-    other_leg.account_id = from_account_id
-    other_leg.transfer_to_account_id = to_account_id
-    for field, value in transfer_overrides(
-        transaction_type=TRANSACTION_TYPE_TRANSFER,
-        category=TRANSFER_CATEGORY,
-        account_id=from_account_id,
-        transfer_to_account_id=to_account_id,
-    ).items():
-        setattr(other_leg, field, value)
 
 
 async def _apply_modified(

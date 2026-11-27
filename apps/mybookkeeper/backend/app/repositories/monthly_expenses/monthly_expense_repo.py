@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from collections.abc import Collection
 from decimal import Decimal
 
 from sqlalchemy import ColumnElement, select
@@ -21,7 +20,6 @@ from app.models.financial_accounts.financial_account import FinancialAccount
 from app.models.mortgage.mortgage import Mortgage
 from app.models.transactions.spending_category import SpendingCategory
 from app.models.transactions.transaction import Transaction
-from app.models.user.user import User
 from app.repositories.cash_flow.cash_basis import cash_basis_filters
 from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentArrival
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
@@ -147,11 +145,3 @@ async def list_mortgage_payment_parts(
         ).where(Mortgage.organization_id == organization_id, Mortgage.deleted_at.is_(None))
     )
     return [(principal, interest, escrow) for principal, interest, escrow in result.all()]
-
-
-async def holder_names(db: AsyncSession, *, user_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, str]:
-    """The name each of ``user_ids`` goes by, for those who gave one."""
-    if not user_ids:
-        return {}
-    result = await db.execute(select(User.id, User.name).where(User.id.in_(list(user_ids)), User.name.is_not(None)))
-    return {user_id: name for user_id, name in result.all()}
