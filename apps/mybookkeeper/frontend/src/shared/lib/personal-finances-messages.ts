@@ -2,7 +2,7 @@
 export const PERSONAL_FINANCES_MESSAGES = {
   pageTitle: "Personal Finances",
   pageSubtitle:
-    "Everything through your accounts: what came in, what went out, and what was left. Rent shows as what each rental nets; mortgage and loan payments count as expenses on their own line; moving money between your accounts and paying off a card never count.",
+    "Everything through your accounts: what came in, what went out, and what was left. Rent counts as it came in and the rentals' costs as expenses; mortgage and loan payments count as expenses on their own line; moving money between your accounts, paying off a card, and the lender's own moves on a loan never count.",
   loading: "Adding up your finances…",
   loadFailed: "I couldn't add up your finances. Want to try again?",
   noBankTitle: "Connect a bank to see your finances",
@@ -30,7 +30,9 @@ export const PERSONAL_FINANCES_MESSAGES = {
   empty: "Nothing came in or went out in these months.",
   incomeTitle: "Where income came from",
   salary: "Salary",
-  rentalNet: "Rentals, after their costs",
+  rental: "Rent",
+  rentalNet: (net: string, costs: string) => `${net} after ${costs} of rental costs`,
+  oneOffIncome: "One-offs",
   otherIncome: "Other",
   categoriesTitle: "Where it went",
   categoriesEmpty: "No spending in these months.",

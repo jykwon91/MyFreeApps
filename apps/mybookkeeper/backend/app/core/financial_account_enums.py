@@ -41,6 +41,10 @@ LIABILITY_ACCOUNT_TYPES: frozenset[str] = frozenset({
 })
 # The accounts that hold securities: the ones the Investments page lists, a
 # person can add holdings to, and a bank sync asks Plaid's holdings for.
+# A loan or a mortgage: what happens on one (interest charged, an escrow
+# advance or reversal) is the lender's bookkeeping, not money you spent or got.
+LOAN_ACCOUNT_TYPES: frozenset[str] = frozenset({ACCOUNT_TYPE_LOAN, ACCOUNT_TYPE_MORTGAGE})
+
 INVESTMENT_ACCOUNT_TYPES: frozenset[str] = frozenset({
     ACCOUNT_TYPE_BROKERAGE,
     ACCOUNT_TYPE_RETIREMENT,

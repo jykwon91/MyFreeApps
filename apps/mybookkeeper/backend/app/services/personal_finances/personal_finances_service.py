@@ -1,6 +1,6 @@
 """Personal finances: money in and out through your accounts over a range of months.
 
-Orchestration only — money in is ``cash_flow_repo.list_income``, money out is
+Orchestration only — money in is ``income_ledger.counted_income``, money out is
 what ``spending_ledger`` counts as spent (the rows Cash flow and Monthly
 expenses add up), the figures ``personal_finances_figures``. Counts from the
 bank history start only (``cash_basis``): with no bank connected there is
@@ -19,9 +19,11 @@ from app.core.month_text import (
     month_start,
     parse_month,
 )
+from app.core.personal_finance_constants import EMPLOYER_FORM
 from app.core.spending_category_enums import TRANSACTION_SCOPE_RENTAL
 from app.db.session import unit_of_work
-from app.repositories.cash_flow import cash_basis, cash_flow_repo
+from app.repositories.cash_flow import cash_basis
+from app.repositories.tax import tax_form_repo
 from app.schemas.personal_finances.personal_finances_average_response import (
     PersonalFinancesAverageResponse,
 )
@@ -34,7 +36,9 @@ from app.schemas.personal_finances.personal_finances_response import (
 from app.schemas.personal_finances.personal_finances_totals_response import (
     PersonalFinancesTotalsResponse,
 )
+from app.services.cash_flow import income_ledger
 from app.services.monthly_expenses import spending_ledger
+from app.services.personal_finances import income_kinds
 from app.services.personal_finances import personal_finances_figures as figures
 
 
@@ -64,7 +68,7 @@ async def get_personal_finances(
             raise InvalidPersonalFinancesRangeError(f"{start}..{end}")
         first_day, last_day = first_month, month_end(last_month)
 
-        history = await cash_flow_repo.list_income(
+        history = await income_ledger.counted_income(
             db,
             organization_id=organization_id,
             start=history_start,
@@ -89,16 +93,17 @@ async def get_personal_finances(
             bank_history_start=history_start,
             approved_only=True,
         )
+        employers = await tax_form_repo.issuer_names(db, organization_id=organization_id, form_name=EMPLOYER_FORM)
 
     months = _months(first_month, last_month)
     income = [row for row in history if first_day <= row.transaction_date <= last_day]
-    one_offs = figures.one_off_ids(history)
+    context = income_kinds.income_context(history, employers)
     rows, totals, income_split, categories, average = figures.build(
         months,
         income=income,
         spending=spending,
         rental_costs=figures.rental_cost_ids(rental_spending),
-        one_offs=one_offs,
+        context=context,
         this_month=this_month,
     )
     return PersonalFinancesResponse(
@@ -111,7 +116,7 @@ async def get_personal_finances(
         totals=totals,
         income_split=income_split,
         by_category=categories,
-        one_offs=figures.one_off_rows(income, one_offs),
+        one_offs=figures.one_off_rows(income, context),
         average=average,
     )
 
@@ -144,7 +149,9 @@ def nothing_yet() -> PersonalFinancesResponse:
         years=[],
         months=[],
         totals=PersonalFinancesTotalsResponse(income_cents=0, expenses_cents=0, mortgages_loans_cents=0, net_cents=0),
-        income_split=PersonalFinancesIncomeSplitResponse(salary_cents=0, rental_net_cents=0, other_cents=0),
+        income_split=PersonalFinancesIncomeSplitResponse(
+            salary_cents=0, rental_cents=0, rental_costs_cents=0, rental_net_cents=0, one_off_cents=0, other_cents=0,
+        ),
         by_category=[],
         one_offs=[],
         average=PersonalFinancesAverageResponse(

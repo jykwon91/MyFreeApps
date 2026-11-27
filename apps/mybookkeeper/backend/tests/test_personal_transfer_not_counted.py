@@ -65,11 +65,10 @@ async def test_tax_totals(db: AsyncSession, ids) -> None:
 @pytest.mark.asyncio
 async def test_cash_flow(db: AsyncSession, ids) -> None:
     await _pair(db, **ids, transaction_type="income", category="rental_revenue")
-    totals = await cash_flow_repo.income_by_month(
-        db, organization_id=ids["organization_id"], start=_START, end=_END,
-        transaction_scope=None, account_id=None, bank_history_start=None,
+    rows = await cash_flow_repo.list_income(
+        db, organization_id=ids["organization_id"], start=_START, end=_END, bank_history_start=None,
     )
-    assert [Decimal(str(t[-1])) for t in totals] == [Decimal("100.00")]
+    assert [row.amount for row in rows] == [Decimal("100.00")]
 
 
 @pytest.mark.asyncio

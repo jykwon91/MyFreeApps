@@ -29,6 +29,7 @@ from app.core.financial_account_enums import (
     ACCOUNT_TYPE_LOAN,
     ACCOUNT_TYPE_MORTGAGE,
     ACCOUNT_TYPE_OTHER_LIABILITY,
+    LOAN_ACCOUNT_TYPES,
 )
 from app.core.monthly_expense_constants import (
     CARD_PAYMENT_MATCH_WINDOW_DAYS,
@@ -50,7 +51,6 @@ from app.services.transactions.self_transfer import names_holder
 
 # Accounts that owe money on a loan. What is charged to them is interest, not
 # money out of pocket.
-_LOAN_ACCOUNT_TYPES = frozenset({ACCOUNT_TYPE_LOAN, ACCOUNT_TYPE_MORTGAGE})
 _OTHER_LOAN_ACCOUNT_TYPES = frozenset({ACCOUNT_TYPE_LOAN, ACCOUNT_TYPE_OTHER_LIABILITY})
 _MONEY_MOVEMENT_CATEGORIES = frozenset({PFC_LOAN_PAYMENTS, PFC_TRANSFER_OUT})
 
@@ -116,7 +116,7 @@ def category_label(row: ExpenseRow) -> str:
 
 def expense_label(row: ExpenseRow, context: ExpenseContext) -> str | None:
     """The heading ``row`` is spent under, or None when it isn't spending."""
-    if row.account_type in _LOAN_ACCOUNT_TYPES:
+    if row.account_type in LOAN_ACCOUNT_TYPES:
         return None
     is_transfer = row.transaction_type == TRANSACTION_TYPE_TRANSFER
     if is_transfer and row.to_account_type is not None:

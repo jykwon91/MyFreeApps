@@ -11,6 +11,7 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
+from app.repositories.cash_flow.income_row import IncomeRow
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 from app.services.cash_flow import cash_flow_months
 from app.services.monthly_expenses.counted_expense import CountedExpense
@@ -41,11 +42,18 @@ def _spent(day: _dt.date, label: str, amount: str) -> CountedExpense:
     return CountedExpense(row=row, label=label)
 
 
+def _in(day: _dt.date, amount: str) -> IncomeRow:
+    return IncomeRow(
+        id=uuid.uuid4(), transaction_date=day, amount=Decimal(amount), vendor=None, description=None,
+        category="uncategorized", transaction_scope="personal",
+    )
+
+
 def test_every_month_is_listed_and_net_is_in_minus_out() -> None:
     months = [_dt.date(2026, 1, 1), _dt.date(2026, 2, 1), _dt.date(2026, 3, 1)]
     rows, totals = cash_flow_months.build_months(
         months,
-        [(2026, 1, Decimal("1000.00")), (2025, 12, Decimal("999"))],  # the last is outside the range
+        [_in(_dt.date(2026, 1, 20), "1000.00"), _in(_dt.date(2025, 12, 31), "999")],  # the last is outside the range
         [
             _spent(_dt.date(2026, 1, 5), "Groceries", "250.25"),
             _spent(_dt.date(2026, 3, 9), "Other", "10"),

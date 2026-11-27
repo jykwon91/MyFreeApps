@@ -28,7 +28,10 @@ const LOADED: PersonalFinances = {
     { month: "2026-10", income_cents: 2_527_900, expenses_cents: 400_000, mortgages_loans_cents: 341_396, net_cents: 2_127_900 },
   ],
   totals: { income_cents: 3_227_900, expenses_cents: 800_000, mortgages_loans_cents: 682_792, net_cents: 2_427_900 },
-  income_split: { salary_cents: 1_000_000, rental_net_cents: -20_000, other_cents: 2_247_900 },
+  income_split: {
+    salary_cents: 1_000_000, rental_cents: 380_000, rental_costs_cents: 400_000, rental_net_cents: -20_000,
+    one_off_cents: 1_827_900, other_cents: 20_000,
+  },
   by_category: [{ label: "Mortgage", cents: 682_792 }, { label: "Groceries", cents: 117_208 }],
   one_offs: [{ transaction_id: "t-1", date: "2026-10-20", payee: "Schwab beneficiary", amount_cents: 1_827_900 }],
   average: { months: 2, income_cents: 1_613_950, expenses_cents: 400_000, net_cents: 1_213_950, typical_income_cents: 700_000, typical_net_cents: 300_000 },
@@ -73,11 +76,21 @@ describe("PersonalFinancesBody", () => {
     expect(screen.getByTestId("line-net")).toBeInTheDocument();
   });
 
-  it("a rental that cost more than it brought in shows below zero, with no share of income", () => {
+  it("splits income into salary, rent, one-offs and other, each a share of the total", () => {
     renderBody({});
+    expect(screen.getByTestId("personal-finances-income-salary")).toHaveTextContent("$10,000.00");
+    expect(screen.getByTestId("personal-finances-income-one-off")).toHaveTextContent("$18,279.00");
+    expect(screen.getByTestId("personal-finances-income-other")).toHaveTextContent("$200.00");
     const rental = screen.getByTestId("personal-finances-income-rental");
-    expect(rental).toHaveTextContent("-$200.00");
-    expect(rental.querySelector("[style]")).toHaveStyle({ width: "0%" });
+    expect(rental).toHaveTextContent("$3,800.00");
+    expect(rental.querySelector("[style]")).not.toHaveStyle({ width: "0%" });
+  });
+
+  it("rentals that cost more than they brought in net below zero, in red, under rent", () => {
+    renderBody({});
+    const net = screen.getByTestId("personal-finances-rental-net");
+    expect(net).toHaveTextContent("-$200.00 after $4,000.00 of rental costs");
+    expect(net).toHaveClass("text-red-600");
   });
 
   it("lists the one-offs, and hides the section when there are none", () => {

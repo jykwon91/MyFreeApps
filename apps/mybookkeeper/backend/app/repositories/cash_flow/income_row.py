@@ -1,4 +1,4 @@
-"""One counted payment in, with what the personal finances page sorts it by."""
+"""One payment in, with what Cash flow and the personal finances page sort it by."""
 from __future__ import annotations
 
 import datetime as _dt
@@ -14,5 +14,11 @@ class IncomeRow:
     amount: Decimal
     vendor: str | None
     description: str | None
+    # MBK's category ("rental_revenue", "uncategorized", ...).
+    category: str
     # One of ``TRANSACTION_SCOPES``.
     transaction_scope: str
+    # Plaid's primary category, None for a bank CSV or a typed-in row.
+    external_category: str | None = None
+    # Whose account it arrived on, None when it isn't on an account.
+    account_user_id: uuid.UUID | None = None

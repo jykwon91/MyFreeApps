@@ -2,33 +2,30 @@
 
 Money in is every counted income row and money out every row
 ``spending_ledger`` counts as spent — the same rows Cash flow adds up across
-every scope, so the net is Cash flow's net. Two things are moved, never
-dropped:
-
-- the rentals' costs (rental rows other than mortgage and loan payments) come
-  off rent, so a rental shows as what it nets, and leave expenses;
-- one-offs (``one_off_ids``) stay in money in but out of the typical month.
+every scope, so income, expenses and net are Cash flow's. Income is what came
+in, so it is never below zero: the rentals' costs (rental rows other than
+mortgage and loan payments) stay in expenses, and the split says what the
+rentals netted after them. One-offs (``income_kinds``) stay in money in but
+out of the typical month.
 """
 from __future__ import annotations
 
 import datetime as _dt
 import uuid
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from decimal import Decimal
 
 from app.core.cents import to_cents
 from app.core.month_text import format_month, month_start
 from app.core.monthly_expense_constants import LOAN_PAYMENT_LABELS
-from app.core.payee_keys import payee_key, payee_name
+from app.core.payee_keys import payee_name
 from app.core.personal_finance_constants import (
+    INCOME_KIND_ONE_OFF,
     INCOME_KIND_OTHER,
     INCOME_KIND_RENTAL,
     INCOME_KIND_SALARY,
-    ONE_OFF_MIN_CENTS,
-    SALARY_PAYEE_MARKERS,
 )
-from app.core.spending_category_enums import TRANSACTION_SCOPE_RENTAL
 from app.repositories.cash_flow.income_row import IncomeRow
 from app.schemas.personal_finances.personal_finances_average_response import (
     PersonalFinancesAverageResponse,
@@ -49,37 +46,10 @@ from app.schemas.personal_finances.personal_finances_totals_response import (
     PersonalFinancesTotalsResponse,
 )
 from app.services.monthly_expenses.counted_expense import CountedExpense
+from app.services.personal_finances.income_context import IncomeContext
+from app.services.personal_finances.income_kinds import income_kind
 
 _ZERO = Decimal(0)
-
-
-def income_kind(row: IncomeRow) -> str:
-    """Rental by its scope; salary when a payroll company paid it; else other."""
-    if row.transaction_scope == TRANSACTION_SCOPE_RENTAL:
-        return INCOME_KIND_RENTAL
-    name = payee_name(row.vendor, row.description).casefold()
-    if any(marker in name for marker in SALARY_PAYEE_MARKERS):
-        return INCOME_KIND_SALARY
-    return INCOME_KIND_OTHER
-
-
-def one_off_ids(history: Sequence[IncomeRow]) -> set[uuid.UUID]:
-    """Other money in of at least ``ONE_OFF_MIN_CENTS`` from a payer who paid
-    in no other month of ``history`` (pass all of it, not just the range, so
-    a payer who pays every year isn't a one-off in a one-year range)."""
-    months_by_payer: dict[str, set[_dt.date]] = defaultdict(set)
-    for row in history:
-        key = payee_key(row.vendor, row.description)
-        if key is not None:
-            months_by_payer[key].add(month_start(row.transaction_date))
-    ids: set[uuid.UUID] = set()
-    for row in history:
-        if income_kind(row) != INCOME_KIND_OTHER or to_cents(row.amount) < ONE_OFF_MIN_CENTS:
-            continue
-        key = payee_key(row.vendor, row.description)
-        if key is None or len(months_by_payer[key]) == 1:
-            ids.add(row.id)
-    return ids
 
 
 def rental_cost_ids(rental_spending: Iterable[CountedExpense]) -> set[uuid.UUID]:
@@ -88,7 +58,7 @@ def rental_cost_ids(rental_spending: Iterable[CountedExpense]) -> set[uuid.UUID]
     return {counted.row.id for counted in rental_spending if counted.label not in LOAN_PAYMENT_LABELS}
 
 
-def one_off_rows(income: Iterable[IncomeRow], one_offs: set[uuid.UUID]) -> list[PersonalFinancesOneOffResponse]:
+def one_off_rows(income: Iterable[IncomeRow], context: IncomeContext) -> list[PersonalFinancesOneOffResponse]:
     return [
         PersonalFinancesOneOffResponse(
             transaction_id=row.id,
@@ -97,7 +67,7 @@ def one_off_rows(income: Iterable[IncomeRow], one_offs: set[uuid.UUID]) -> list[
             amount_cents=to_cents(row.amount),
         )
         for row in income
-        if row.id in one_offs
+        if row.id in context.one_offs
     ]
 
 
@@ -107,7 +77,7 @@ def build(
     income: Iterable[IncomeRow],
     spending: Iterable[CountedExpense],
     rental_costs: set[uuid.UUID],
-    one_offs: set[uuid.UUID],
+    context: IncomeContext,
     this_month: _dt.date,
 ) -> tuple[
     list[PersonalFinancesMonthResponse],
@@ -122,7 +92,8 @@ def build(
     one_off_in = {month: _ZERO for month in months}
     expenses = {month: _ZERO for month in months}
     loan_payments = {month: _ZERO for month in months}
-    split = {INCOME_KIND_SALARY: _ZERO, INCOME_KIND_RENTAL: _ZERO, INCOME_KIND_OTHER: _ZERO}
+    split = {kind: _ZERO for kind in (INCOME_KIND_SALARY, INCOME_KIND_RENTAL, INCOME_KIND_ONE_OFF, INCOME_KIND_OTHER)}
+    rental_cost_total = _ZERO
     by_label: dict[str, Decimal] = defaultdict(lambda: _ZERO)
 
     for row in income:
@@ -130,17 +101,16 @@ def build(
         if month not in money_in:
             continue
         money_in[month] += row.amount
-        split[income_kind(row)] += row.amount
-        if row.id in one_offs:
+        kind = income_kind(row, context)
+        split[kind] += row.amount
+        if kind == INCOME_KIND_ONE_OFF:
             one_off_in[month] += row.amount
     for counted in spending:
         month = month_start(counted.row.transaction_date)
         if month not in expenses:
             continue
         if counted.row.id in rental_costs:
-            money_in[month] -= counted.row.amount
-            split[INCOME_KIND_RENTAL] -= counted.row.amount
-            continue
+            rental_cost_total += counted.row.amount
         expenses[month] += counted.row.amount
         by_label[counted.label] += counted.row.amount
         if counted.label in LOAN_PAYMENT_LABELS:
@@ -164,9 +134,13 @@ def build(
         mortgages_loans_cents=sum(row.mortgages_loans_cents for row in rows),
         net_cents=total_in - total_out,
     )
+    rental_cents, rental_costs_cents = to_cents(split[INCOME_KIND_RENTAL]), to_cents(rental_cost_total)
     income_split = PersonalFinancesIncomeSplitResponse(
         salary_cents=to_cents(split[INCOME_KIND_SALARY]),
-        rental_net_cents=to_cents(split[INCOME_KIND_RENTAL]),
+        rental_cents=rental_cents,
+        rental_costs_cents=rental_costs_cents,
+        rental_net_cents=rental_cents - rental_costs_cents,
+        one_off_cents=to_cents(split[INCOME_KIND_ONE_OFF]),
         other_cents=to_cents(split[INCOME_KIND_OTHER]),
     )
     categories = sorted(

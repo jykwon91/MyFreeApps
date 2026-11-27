@@ -9,17 +9,26 @@ export interface PersonalFinancesIncomeSplitProps {
   data: PersonalFinances;
 }
 
-/** Salary, rentals after their costs, and everything else. */
+/** Salary, rent, one-offs and everything else, each as its share of income;
+ * under rent, what the rentals netted after their costs. */
 export default function PersonalFinancesIncomeSplit({ data }: PersonalFinancesIncomeSplitProps) {
   const money = (cents: number) => formatAccountBalance(cents, data.currency);
-  const { salary_cents, rental_net_cents, other_cents } = data.income_split;
+  const split = data.income_split;
+  const whole = data.totals.income_cents;
   const parts = [
-    { key: "salary", label: MSG.salary, cents: salary_cents },
-    { key: "rental", label: MSG.rentalNet, cents: rental_net_cents },
-    { key: "other", label: MSG.otherIncome, cents: other_cents },
+    { key: "salary", label: MSG.salary, cents: split.salary_cents },
+    { key: "rental", label: MSG.rental, cents: split.rental_cents },
+    { key: "one-off", label: MSG.oneOffIncome, cents: split.one_off_cents },
+    { key: "other", label: MSG.otherIncome, cents: split.other_cents },
   ];
-  // A rental that cost more than it brought in has no share of what came in.
-  const whole = parts.reduce((sum, part) => sum + Math.max(0, part.cents), 0);
+  const rentalNet = (
+    <p
+      className={`text-xs ${split.rental_net_cents < 0 ? "text-red-600" : "text-muted-foreground"}`}
+      data-testid="personal-finances-rental-net"
+    >
+      {MSG.rentalNet(money(split.rental_net_cents), money(split.rental_costs_cents))}
+    </p>
+  );
   return (
     <Card title={MSG.incomeTitle}>
       <ul className="space-y-4" data-testid="personal-finances-income-split">
@@ -28,8 +37,9 @@ export default function PersonalFinancesIncomeSplit({ data }: PersonalFinancesIn
             key={part.key}
             label={part.label}
             amount={money(part.cents)}
-            percent={progressPercent(Math.max(0, part.cents), whole)}
+            percent={progressPercent(part.cents, whole)}
             testId={`personal-finances-income-${part.key}`}
+            detail={part.key === "rental" ? rentalNet : undefined}
           />
         ))}
       </ul>
