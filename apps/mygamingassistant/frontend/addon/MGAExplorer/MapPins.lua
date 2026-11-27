@@ -1,5 +1,5 @@
 -- MGA Explorer on the World Map (setting mapPins, on by default): the map shows where to go to discover.
---   * A zone map: a round orange marker on every area the zone still needs (setting areaBoxes, off by default, adds a
+--   * A zone map: a gold dot on every area the zone still needs (setting areaBoxes, off by default, adds a
 --     faint box over the patch of map the area covers). Hover names it; a click guides you there.
 --   * A continent map: a round badge on every zone with areas left, showing how many, at the middle of those areas.
 --     Hover names the zone; a click guides you to its nearest area.
@@ -8,9 +8,9 @@
 local M = MGAExplorer
 local W = MGAWaypoints
 
--- A round orange marker (the raid "circle" icon), big enough to spot among quest marks; Interface\COMMON\Indicator-Yellow
--- at 12 was too small to see in game. It grows on hover.
-local PIN_TEXTURE = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_2"
+-- A gold dot, big enough to spot among quest marks. It grows on hover. In the Forever client this texture draws
+-- (it was visible, only too small, at 12); the raid "circle" icon UI-RaidTargetingIcon_2 drew nothing on the map.
+local PIN_TEXTURE = "Interface\\COMMON\\Indicator-Yellow"
 local PIN_SIZE, PIN_HOVER_SIZE = 20, 26
 local BADGE_TEXTURE = "Interface\\Minimap\\UI-Minimap-Background"
 local BADGE_SIZE = 22
