@@ -405,9 +405,11 @@ end
 `;
 
 describe("MGA Explorer on the World Map", () => {
-  it("is on by default: a zone map pins every area it still needs where you discover it, with a box over the area", () => {
+  it("is on by default: a zone map pins every area it still needs where you discover it; the box over each area is opt-in", () => {
     const lines = run(`${MAP_HELPERS}
-      say(M.Settings().mapPins); say(M.Settings().outlines)
+      MGAExplorerSettings = { outlines = true }
+      say(M.Settings().mapPins); say(M.Settings().areaBoxes); say(MGAExplorerSettings.outlines)
+      M.Settings().areaBoxes = true
       discovered[${DEATHKNELL}] = true
       M.Refresh()
       showMap(${TIRISFAL})
@@ -419,7 +421,7 @@ describe("MGA Explorer on the World Map", () => {
       say(r[1] <= pin.area.x and pin.area.x <= r[3] and r[2] <= pin.area.y and pin.area.y <= r[4])
     `);
     expect(withoutChat(lines)).toEqual([
-      "true", "true", "15", "15",
+      "true", "false", "nil", "15", "15",
       "Agamand Mills 0.496 0.358",
       "box 0.383 0.274 0.138 0.180",
       "true",
@@ -433,7 +435,7 @@ describe("MGA Explorer on the World Map", () => {
       MGAExplorerMapPin2.scripts.OnClick(MGAExplorerMapPin2)
       say(target()); say(W.Target().kind)
       showMap(${DUROTAR}); say(shown("MGAExplorerMapPin"))
-      M.Settings().outlines = false; M.DrawMapPins(); say(shown("MGAExplorerMapArea")); say(shown("MGAExplorerMapPin"))
+      M.Settings().areaBoxes = false; M.DrawMapPins(); say(shown("MGAExplorerMapArea")); say(shown("MGAExplorerMapPin"))
       M.SetMapPins(false); say(shown("MGAExplorerMapPin"))
     `);
     expect(withoutChat(lines)).toEqual(["Agamand Mills", "explore", "11", "0", "11", "0"]);

@@ -40,12 +40,12 @@ end
 
 local function buildOptions(section, top)
   local pins = UI.Check(section, "MGAExplorerOptions_mapPins", "Pins on the World Map", "On a zone, every area it still needs; on a continent, how many each zone has left. Click to be guided.", top, -10, setting("mapPins"))
-  local outlines = UI.Check(section, "MGAExplorerOptions_outlines", "Box each area on the map", "A faint box over the patch of map each area covers.", pins, -14, setting("outlines"))
-  local auto = UI.Check(section, "MGAExplorerOptions_autoNext", "Move on by itself", "When you discover the area you are guided to, guide to the next one.", outlines, -14, setting("autoNext"))
+  local boxes = UI.Check(section, "MGAExplorerOptions_areaBoxes", "Box each area on the map", "A faint box over the patch of map each area covers.", pins, -14, setting("areaBoxes"))
+  local auto = UI.Check(section, "MGAExplorerOptions_autoNext", "Move on by itself", "When you discover the area you are guided to, guide to the next one.", boxes, -14, setting("autoNext"))
   function section.refresh()
     local settings = M.Settings()
     pins:SetChecked(settings.mapPins)
-    outlines:SetChecked(settings.outlines)
+    boxes:SetChecked(settings.areaBoxes)
     auto:SetChecked(settings.autoNext)
   end
   section.refresh()
