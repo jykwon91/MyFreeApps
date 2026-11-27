@@ -3,8 +3,9 @@ routes:
   # the app opens on its Practice tab, which does the same.
   /:
     screen: (app)/(tabs)/index
+  # Opened from sign-in's "Forgot your password?". The emailed link opens /reset-password on the website.
   /forgot-password:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on password-reset requests, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("Forgot your password? Reset it on the website").
+    screen: forgot-password
   /login:
     screen: sign-in
   # Opened over the Practice tab by its profile gate, before a learner has picked a language.
@@ -16,8 +17,9 @@ routes:
   # The conversation (spoken or typed), opened from a scenario on the Practice tab.
   /practice:
     screen: (app)/practice
+  # Opened from sign-in's "New here? Create an account". Both show the captcha in a WebView.
   /register:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on sign-up, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("New here? Create an account on the website").
+    screen: register
   /reset-password:
     not_on_mobile: Opened from the link in the password-reset email, which goes to the website.
   # The Practice tab. A scenario opens /practice.

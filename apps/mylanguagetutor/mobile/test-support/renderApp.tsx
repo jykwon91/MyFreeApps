@@ -12,12 +12,16 @@ import SecurityRoute from "../app/(app)/security/index";
 import SecurityTurnOnRoute from "../app/(app)/security/turn-on";
 import NotFoundRoute from "../app/+not-found";
 import SignInRoute from "../app/sign-in";
+import RegisterRoute from "../app/register";
+import ForgotPasswordRoute from "../app/forgot-password";
 
 /** The app's own layouts and screens, as expo-router would find them under app/. */
 export const APP_ROUTES = {
   _layout: RootLayout,
   "+not-found": NotFoundRoute,
   "sign-in": SignInRoute,
+  register: RegisterRoute,
+  "forgot-password": ForgotPasswordRoute,
   "(app)/_layout": { default: AppLayout, unstable_settings: appSettings },
   "(app)/delete-account": DeleteAccountRoute,
   "(app)/onboarding/language": OnboardingLanguageRoute,

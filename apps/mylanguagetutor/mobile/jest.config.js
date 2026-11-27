@@ -14,6 +14,7 @@ module.exports = {
     "<rootDir>/../../../packages/shared-mobile/jest/keyboardController.js",
     "<rootDir>/../../../packages/shared-mobile/jest/netinfo.js",
     "<rootDir>/../../../packages/shared-mobile/jest/safeAreaInsets.js",
+    "<rootDir>/../../../packages/shared-mobile/jest/webview.js",
   ],
   setupFilesAfterEnv: [
     "<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts",
