@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
 from app.models.tax.tax_form_instance import TaxFormInstance
+from app.models.tax.tax_return import TaxReturn
 
 
 async def get_forms_overview(
@@ -154,3 +155,19 @@ async def get_field_by_id(
         select(TaxFormField).where(TaxFormField.id == field_id)
     )
     return result.scalar_one_or_none()
+
+
+async def issuer_names(db: AsyncSession, *, organization_id: uuid.UUID, form_name: str) -> list[str]:
+    """Every name a ``form_name`` form in the organization's returns was issued
+    under (for a W-2, the employer), each once."""
+    result = await db.execute(
+        select(TaxFormInstance.issuer_name)
+        .join(TaxReturn, TaxReturn.id == TaxFormInstance.tax_return_id)
+        .where(
+            TaxReturn.organization_id == organization_id,
+            TaxFormInstance.form_name == form_name,
+            TaxFormInstance.issuer_name.is_not(None),
+        )
+        .distinct(),
+    )
+    return sorted(name for (name,) in result.all() if name)

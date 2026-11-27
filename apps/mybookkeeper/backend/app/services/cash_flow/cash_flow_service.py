@@ -1,6 +1,6 @@
 """Cash flow: money in vs out per month over a range, on a cash basis.
 
-Orchestration only — money in is ``cash_flow_repo``, money out is what
+Orchestration only — money in is ``income_ledger``, money out is what
 ``spending_ledger`` counts as spent (the same rows Monthly expenses adds up),
 which rows count is ``cash_basis``, the per-month sums ``cash_flow_months``.
 """
@@ -9,12 +9,17 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from app.core.budget_constants import BUDGET_CURRENCY, CASH_FLOW_SCOPES, RANGE_MONTHS, SCOPE_ALL
+from app.core.budget_constants import (
+    BUDGET_CURRENCY,
+    CASH_FLOW_SCOPES,
+    RANGE_MONTHS,
+    SCOPE_ALL,
+)
 from app.core.month_text import month_end
 from app.db.session import unit_of_work
-from app.repositories.cash_flow import cash_basis, cash_flow_repo
+from app.repositories.cash_flow import cash_basis
 from app.schemas.cash_flow.cash_flow_response import CashFlowResponse
-from app.services.cash_flow import cash_flow_months
+from app.services.cash_flow import cash_flow_months, income_ledger
 from app.services.monthly_expenses import spending_ledger
 
 
@@ -42,7 +47,7 @@ async def get_cash_flow(
     async with unit_of_work() as db:
         history_start = await cash_basis.bank_history_start(db, organization_id=organization_id)
         transaction_scope = None if scope == SCOPE_ALL else scope
-        income = await cash_flow_repo.income_by_month(
+        income = await income_ledger.counted_income(
             db,
             organization_id=organization_id,
             start=months[0],

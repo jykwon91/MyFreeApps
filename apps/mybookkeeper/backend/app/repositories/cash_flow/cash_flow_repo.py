@@ -7,10 +7,13 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import ColumnElement, extract, func, or_, select
+from sqlalchemy import ColumnElement, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.financial_account_enums import ACCOUNT_TYPE_CREDIT_CARD
+from app.core.financial_account_enums import (
+    ACCOUNT_TYPE_CREDIT_CARD,
+    LOAN_ACCOUNT_TYPES,
+)
 from app.core.plaid_category_constants import PFC_TRANSFER_PRIMARIES
 from app.core.tags import TRANSACTION_TYPE_INCOME
 from app.models.financial_accounts.financial_account import FinancialAccount
@@ -18,8 +21,6 @@ from app.models.transactions.transaction import Transaction
 from app.repositories.cash_flow.cash_basis import cash_basis_filters
 from app.repositories.cash_flow.income_row import IncomeRow
 from app.repositories.transactions.counted_filters import counted_transaction_filters
-
-MonthIncome = tuple[int, int, Decimal]
 
 
 def _income_filters(
@@ -36,7 +37,9 @@ def _income_filters(
     scope / account in. Transfers are never in it, and neither is a payment
     arriving on a credit card (one the bank calls a transfer or loan
     payment): that is paying the card off, not income. A refund on a card is
-    still money in. Needs ``FinancialAccount`` outer-joined."""
+    still money in. Nor is anything arriving on a loan or mortgage account (an
+    escrow advance, a reversal): the lender moving its own money, as interest
+    charged there isn't spending. Needs ``FinancialAccount`` outer-joined."""
     filters: list[ColumnElement[bool]] = [
         *counted_transaction_filters(organization_id),
         *cash_basis_filters(bank_history_start),
@@ -48,6 +51,7 @@ def _income_filters(
             Transaction.external_category.is_(None),
             Transaction.external_category.not_in(list(PFC_TRANSFER_PRIMARIES)),
         ),
+        or_(FinancialAccount.account_type.is_(None), FinancialAccount.account_type.not_in(list(LOAN_ACCOUNT_TYPES))),
         Transaction.transaction_date >= start,
         Transaction.transaction_date <= end,
     ]
@@ -58,21 +62,29 @@ def _income_filters(
     return filters
 
 
-async def income_by_month(
+async def list_income(
     db: AsyncSession,
     *,
     organization_id: uuid.UUID,
     start: _dt.date,
     end: _dt.date,
-    transaction_scope: str | None,
-    account_id: uuid.UUID | None,
     bank_history_start: _dt.date | None,
-) -> list[MonthIncome]:
-    """(year, month, total) of the income ``_income_filters`` counts."""
-    year = extract("year", Transaction.transaction_date)
-    month = extract("month", Transaction.transaction_date)
+    transaction_scope: str | None = None,
+    account_id: uuid.UUID | None = None,
+) -> list[IncomeRow]:
+    """Every row of the income ``_income_filters`` counts, oldest first."""
     stmt = (
-        select(year, month, func.sum(Transaction.amount))
+        select(
+            Transaction.id,
+            Transaction.transaction_date,
+            Transaction.amount,
+            Transaction.vendor,
+            Transaction.description,
+            Transaction.category,
+            Transaction.transaction_scope,
+            Transaction.external_category,
+            FinancialAccount.user_id.label("account_user_id"),
+        )
         .outerjoin(FinancialAccount, FinancialAccount.id == Transaction.account_id)
         .where(
             *_income_filters(
@@ -81,42 +93,6 @@ async def income_by_month(
                 end=end,
                 transaction_scope=transaction_scope,
                 account_id=account_id,
-                bank_history_start=bank_history_start,
-            ),
-        )
-        .group_by(year, month)
-    )
-    result = await db.execute(stmt)
-    return [(int(y), int(m), Decimal(str(total))) for y, m, total in result.all()]
-
-
-async def list_income(
-    db: AsyncSession,
-    *,
-    organization_id: uuid.UUID,
-    start: _dt.date,
-    end: _dt.date,
-    bank_history_start: _dt.date | None,
-) -> list[IncomeRow]:
-    """Every row of the income ``_income_filters`` counts, every scope and
-    account, oldest first."""
-    stmt = (
-        select(
-            Transaction.id,
-            Transaction.transaction_date,
-            Transaction.amount,
-            Transaction.vendor,
-            Transaction.description,
-            Transaction.transaction_scope,
-        )
-        .outerjoin(FinancialAccount, FinancialAccount.id == Transaction.account_id)
-        .where(
-            *_income_filters(
-                organization_id=organization_id,
-                start=start,
-                end=end,
-                transaction_scope=None,
-                account_id=None,
                 bank_history_start=bank_history_start,
             ),
         )
@@ -130,7 +106,10 @@ async def list_income(
             amount=Decimal(str(row.amount)),
             vendor=row.vendor,
             description=row.description,
+            category=row.category,
             transaction_scope=row.transaction_scope,
+            external_category=row.external_category,
+            account_user_id=row.account_user_id,
         )
         for row in result.all()
     ]

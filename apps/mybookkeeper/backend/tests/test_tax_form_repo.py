@@ -263,3 +263,23 @@ class TestGetFieldById:
     ) -> None:
         found = await tax_form_repo.get_field_by_id(db, uuid.uuid4())
         assert found is None
+
+
+class TestIssuerNames:
+    @pytest.mark.asyncio
+    async def test_each_w2_employer_once_across_years(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        for year, issuer in ((2024, "Acme Health, LLC"), (2025, "Acme Health, LLC"), (2025, "Beta Labs Inc")):
+            tr = await _create_return(db, test_org.id, tax_year=year)
+            instance = await _create_instance(db, tr.id)
+            instance.issuer_name = issuer
+        tr = await _create_return(db, test_org.id, tax_year=2025)
+        bank = await _create_instance(db, tr.id, form_name="1099_int")
+        bank.issuer_name = "Some Bank"
+        await _create_instance(db, tr.id)  # no issuer read yet
+        await db.commit()
+
+        names = await tax_form_repo.issuer_names(db, organization_id=test_org.id, form_name="w2")
+
+        assert names == ["Acme Health, LLC", "Beta Labs Inc"]

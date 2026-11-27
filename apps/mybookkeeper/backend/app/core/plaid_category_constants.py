@@ -82,3 +82,6 @@ PFC_TRANSFER_PRIMARIES: Final[frozenset[str]] = frozenset({
     "TRANSFER_OUT",
     "LOAN_PAYMENTS",
 })
+
+# Plaid's primary category for pay, interest, dividends and other money earned.
+PFC_INCOME: Final = "INCOME"

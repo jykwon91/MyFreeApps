@@ -12,6 +12,8 @@
  *     All time asks for the whole history;
  *   - dragging across the chart asks for just those months, and the reset goes
  *     back to the whole year;
+ *   - a real-sized history (25 months, a month the rentals cost more than they
+ *     brought in) renders and the page keeps answering at every width;
  *   - with no bank connected it says so and links to Financial Accounts;
  *   - the skeleton has the loaded page's shape;
  *   - it uses the full width on a desktop and fits a phone.
@@ -35,12 +37,48 @@ const MONTHS = {
   "2026-11": month("2026-11", 100_000, 400_000, 341_396),
 } as const;
 
+const EMPTY_SPLIT = {
+  salary_cents: 0, rental_cents: 0, rental_costs_cents: 0, rental_net_cents: 0, one_off_cents: 0, other_cents: 0,
+};
+
+/** The operator's history shape: 25 months from Nov 2024, the first one the
+ * rentals' repairs outran the rent, and Monthly expenses' full set of headings. */
+function realSizedHistory() {
+  const months: ReturnType<typeof month>[] = [];
+  for (let i = 0; i < 25; i++) {
+    const d = new Date(2024, 10 + i, 1);
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const income = i === 0 ? 58_823 : 2_100_000 + i * 1000;
+    const expenses = i === 0 ? 141_719 : 1_500_000;
+    months.push(month(m, income, expenses, i === 0 ? 0 : 770_000));
+  }
+  const total = (key: "income_cents" | "expenses_cents" | "mortgages_loans_cents" | "net_cents") =>
+    months.reduce((sum, m) => sum + m[key], 0);
+  const labels = ["Mortgage", "Car & other loans", "Groceries", "Dining", "Utilities", "Insurance", "Shopping",
+    "Travel", "Gas", "Subscriptions", "Medical", "Repairs", "Uncategorized", "Other"];
+  return {
+    currency: "USD", bank_history_start: "2024-11-12", start: "2024-11", end: "2026-11", years: [2026, 2025, 2024],
+    months,
+    totals: { income_cents: total("income_cents"), expenses_cents: total("expenses_cents"), mortgages_loans_cents: total("mortgages_loans_cents"), net_cents: total("net_cents") },
+    income_split: {
+      salary_cents: 18_627_400, rental_cents: 20_000_000, rental_costs_cents: 3_500_000, rental_net_cents: 16_500_000,
+      one_off_cents: 2_827_900, other_cents: total("income_cents") - 18_627_400 - 20_000_000 - 2_827_900,
+    },
+    by_category: labels.map((label, i) => ({ label, cents: 5_000_000 - i * 300_000 })),
+    one_offs: [
+      { transaction_id: "t-1", date: "2025-03-04", payee: "Schwab beneficiary", amount_cents: 1_827_900 },
+      { transaction_id: "t-2", date: "2025-06-01", payee: "Deposit", amount_cents: 1_000_000 },
+    ],
+    average: { months: 24, income_cents: 2_100_000, expenses_cents: 1_500_000, net_cents: 600_000, typical_income_cents: 2_000_000, typical_net_cents: 500_000 },
+  };
+}
+
 function personalFinances(start: string | null, end: string | null, noBank: boolean) {
   const empty = { income_cents: 0, expenses_cents: 0, mortgages_loans_cents: 0, net_cents: 0 };
   if (noBank) {
     return {
       currency: "USD", bank_history_start: null, start: null, end: null, years: [], months: [], totals: empty,
-      income_split: { salary_cents: 0, rental_net_cents: 0, other_cents: 0 }, by_category: [], one_offs: [],
+      income_split: EMPTY_SPLIT, by_category: [], one_offs: [],
       average: { months: 0, income_cents: 0, expenses_cents: 0, net_cents: 0, typical_income_cents: 0, typical_net_cents: 0 },
     };
   }
@@ -54,7 +92,10 @@ function personalFinances(start: string | null, end: string | null, noBank: bool
     currency: "USD", bank_history_start: "2026-08-01", start: first, end: last, years: [2026],
     months,
     totals: { income_cents: sum("income_cents"), expenses_cents: sum("expenses_cents"), mortgages_loans_cents: sum("mortgages_loans_cents"), net_cents: sum("net_cents") },
-    income_split: { salary_cents: 1_000_000, rental_net_cents: 370_000, other_cents: sum("income_cents") - 1_370_000 },
+    income_split: {
+      salary_cents: 1_000_000, rental_cents: 400_000, rental_costs_cents: 30_000, rental_net_cents: 370_000,
+      one_off_cents: hasOneOff ? 1_827_900 : 0, other_cents: sum("income_cents") - 1_400_000 - (hasOneOff ? 1_827_900 : 0),
+    },
     by_category: [{ label: "Mortgage", cents: sum("mortgages_loans_cents") }, { label: "Groceries", cents: 120_000 }],
     one_offs: hasOneOff ? [{ transaction_id: "t-1", date: "2026-10-20", payee: "Schwab beneficiary", amount_cents: 1_827_900 }] : [],
     average: {
@@ -107,7 +148,9 @@ test.describe("Personal finances", () => {
     await expect(page.getByTestId("personal-finances-average")).toContainText("$6,793.00");
     await expect(page.getByTestId("personal-finances-average")).toContainText("$700.00 in a typical month, without one-offs");
     await expect(page.getByTestId("personal-finances-income-salary")).toContainText("$10,000.00");
-    await expect(page.getByTestId("personal-finances-income-rental")).toContainText("$3,700.00");
+    await expect(page.getByTestId("personal-finances-income-rental")).toContainText("$4,000.00");
+    await expect(page.getByTestId("personal-finances-rental-net")).toContainText("$3,700.00 after $300.00 of rental costs");
+    await expect(page.getByTestId("personal-finances-income-one-off")).toContainText("$18,279.00");
     await expect(page.getByTestId("personal-finances-category").first()).toContainText("Mortgage");
     await expect(page.getByTestId("personal-finances-one-off")).toContainText("Schwab beneficiary");
     await expect(page.getByTestId("personal-finances-one-off")).toContainText("$18,279.00");
@@ -158,6 +201,25 @@ test.describe("Personal finances", () => {
     await expect.poll(() => server.queries.at(-1)).toBe("start=2026-08&end=2026-10");
     await page.getByTestId("personal-finances-reset-range").click();
     await expect(page).toHaveURL(/\?start=2026-01&end=2026-12$/);
+  });
+
+  test("a real-sized history renders and the page keeps answering at every width", async ({ page }) => {
+    await page.route("**/api/**", (route, request: Request) => route.fulfill(json(request.method() === "GET" ? [] : {})));
+    await stubWorkspaceShell(page, "owner");
+    await page.route(/\/api\/personal-finances(\?.*)?$/, (route) => route.fulfill(json(realSizedHistory())));
+    await page.goto("/personal-finances");
+    await expect(page.getByTestId("personal-finances-chart").locator(".recharts-bar-rectangle").first()).toBeVisible();
+    await expect(page.getByTestId("personal-finances-category")).toHaveCount(14);
+    for (const width of [375, 768, 1024, 1280, 1366, 1600, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      const painted = await Promise.race([
+        page.evaluate(() => new Promise<boolean>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(true))))),
+        new Promise<boolean>((done) => setTimeout(() => done(false), 3000)),
+      ]);
+      expect(painted, `the page should keep painting at ${width}px`).toBe(true);
+    }
+    await page.getByTestId("personal-finances-year").selectOption("2025");
+    await expect(page).toHaveURL(/\?start=2025-01&end=2025-12$/);
   });
 
   test("with no bank connected it says so and links to Financial Accounts", async ({ page }) => {

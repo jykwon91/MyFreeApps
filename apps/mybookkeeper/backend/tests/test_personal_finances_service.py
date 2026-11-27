@@ -104,6 +104,17 @@ async def _setup(db: AsyncSession, org: Organization, user: User) -> None:
                external_category="LOAN_PAYMENTS")
     await _txn(db, org, user, card, "120.00", _dt.date(2026, 10, 12), transaction_type="income",
                category="uncategorized", external_category="LOAN_PAYMENTS")
+    # The lender's own moves on the mortgage account, money back from your own
+    # Cash App, and the property manager's rent scoped personal by mistake.
+    mortgage = await _account(db, org, user, "Home loan", "mortgage")
+    await _txn(db, org, user, mortgage, "709.80", _dt.date(2026, 10, 2), transaction_type="income",
+               category="uncategorized", description="ESCROW ADVANCE")
+    await _txn(db, org, user, checking, "1000.00", _dt.date(2026, 10, 4), transaction_type="income",
+               category="uncategorized", description="Cash App Pat Doe PPD", external_category="TRANSFER_IN")
+    await _txn(db, org, user, checking, "1500.00", _dt.date(2026, 9, 6), transaction_type="income",
+               category="uncategorized", transaction_scope="rental", vendor="VELLO LLC DD PPD")
+    await _txn(db, org, user, checking, "1500.00", _dt.date(2026, 10, 6), transaction_type="income",
+               category="uncategorized", vendor="VELLO LLC DD PPD")
     # Money moved to savings, and a one-off inheritance.
     await _txn(db, org, user, checking, "1000.00", _dt.date(2026, 10, 15), transaction_type="transfer",
                category="transfer", transfer_to_account_id=savings.id)
@@ -125,7 +136,7 @@ class TestPersonalFinances:
         with _session(db):
             result = await _get(test_org)
         assert result.totals.mortgages_loans_cents == 0
-        assert result.totals.expenses_cents == 120_00
+        assert result.totals.expenses_cents == 120_00 + 300_00
 
     async def test_figures_once_the_mortgage_payee_is_tagged(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -142,11 +153,14 @@ class TestPersonalFinances:
             )
 
         assert result.income_split.salary_cents == 10_000_00
-        assert result.income_split.rental_net_cents == 4_000_00 - 300_00
-        assert result.income_split.other_cents == 18_279_00
-        assert result.totals.income_cents == 10_000_00 + 3_700_00 + 18_279_00
+        split = result.income_split
+        assert (split.rental_cents, split.rental_costs_cents, split.rental_net_cents) == (7_000_00, 300_00, 6_700_00)
+        assert (split.one_off_cents, split.other_cents) == (18_279_00, 0)
+        # Neither the escrow advance nor the money from your own Cash App.
+        assert result.totals.income_cents == 10_000_00 + 7_000_00 + 18_279_00
+        assert sum(m.money_in_cents for m in flow.months) == result.totals.income_cents
         assert result.totals.mortgages_loans_cents == 2 * 3_413_96
-        assert result.totals.expenses_cents == 2 * 3_413_96 + 120_00
+        assert result.totals.expenses_cents == 2 * 3_413_96 + 120_00 + 300_00
         assert [(c.label, c.cents) for c in result.by_category][0] == ("Mortgage", 2 * 3_413_96)
 
         # Every row Cash flow counts, so the same net.

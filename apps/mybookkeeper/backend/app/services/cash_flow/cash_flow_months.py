@@ -1,6 +1,6 @@
 """Money in vs out per month. Pure.
 
-Money in is every counted income row, as it is — a refund is money in. (The
+Money in is every row ``income_ledger`` counts, as it is — a refund is money in. (The
 budget page nets a refund against its category instead; this page shows money
 moving.) Money out is every row ``spending_ledger`` counts as spent, the same
 rows Monthly expenses adds up: so it leaves out paying off a card and money
@@ -17,7 +17,7 @@ from app.core.budget_constants import RANGE_MONTHS
 from app.core.cents import to_cents
 from app.core.month_text import add_months, format_month, month_start
 from app.core.monthly_expense_constants import LOAN_PAYMENT_LABELS
-from app.repositories.cash_flow.cash_flow_repo import MonthIncome
+from app.repositories.cash_flow.income_row import IncomeRow
 from app.schemas.cash_flow.cash_flow_month_response import CashFlowMonthResponse
 from app.schemas.cash_flow.cash_flow_totals_response import CashFlowTotalsResponse
 from app.services.monthly_expenses.counted_expense import CountedExpense
@@ -40,16 +40,16 @@ def range_months(range_key: str, today: _dt.date) -> list[_dt.date]:
 
 
 def build_months(
-    months: list[_dt.date], income: Iterable[MonthIncome], spending: Iterable[CountedExpense],
+    months: list[_dt.date], income: Iterable[IncomeRow], spending: Iterable[CountedExpense],
 ) -> tuple[list[CashFlowMonthResponse], CashFlowTotalsResponse]:
     """One entry per month in ``months`` (empty ones are zero), and the sums."""
     money_in = {month: _ZERO for month in months}
     money_out = {month: _ZERO for month in months}
     loan_payments = {month: _ZERO for month in months}
-    for year, month_number, total in income:
-        month = _dt.date(year, month_number, 1)
+    for row in income:
+        month = month_start(row.transaction_date)
         if month in money_in:
-            money_in[month] += total
+            money_in[month] += row.amount
     for counted in spending:
         month = month_start(counted.row.transaction_date)
         if month not in money_out:
