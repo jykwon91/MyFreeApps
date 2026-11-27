@@ -1,7 +1,7 @@
 -- MGA Explorer on the World Map (setting mapPins, on by default): the map shows where to go to discover.
---   * A zone map: a pin on every area the zone still needs, inside a faint box over the patch of map the area
---     covers (its map overlay's hit rect; setting outlines). Hover names it; a click guides you there.
---   * A continent map: a badge on every zone with areas left, showing how many, at the middle of those areas.
+--   * A zone map: a small gold dot on every area the zone still needs (setting areaBoxes, off by default, adds a
+--     faint box over the patch of map the area covers). Hover names it; a click guides you there.
+--   * A continent map: a round badge on every zone with areas left, showing how many, at the middle of those areas.
 --     Hover names the zone; a click guides you to its nearest area.
 -- Guiding is MGA Waypoints' arrow, so its own target pin sits on top of these.
 
@@ -13,7 +13,7 @@ local PIN_SIZE = 16
 local BADGE_SIZE = 26
 -- Gold, the World Map's own colour for names; the box is faint so the map reads through it.
 local BOX_R, BOX_G, BOX_B, BOX_FILL_ALPHA, BOX_EDGE_ALPHA = 1, 0.82, 0, 0.10, 0.55
-local BADGE_ALPHA = 0.75
+local BADGE_ALPHA = 0.8
 local EDGE = 1.5
 local LEVEL_BOX, LEVEL_PIN = 80, 90
 
@@ -43,8 +43,14 @@ local function newPin(i, canvas)
   pin.texture:SetAllPoints()
   pin.texture:SetTexture(PIN_TEXTURE)
   pin:RegisterForClicks("LeftButtonUp")
-  pin:SetScript("OnEnter", function(self) tooltip(self, self.area.name, "Not explored yet. Click to be guided here.") end)
-  pin:SetScript("OnLeave", hideTooltip)
+  pin:SetScript("OnEnter", function(self)
+    self:SetSize(PIN_HOVER_SIZE, PIN_HOVER_SIZE)
+    tooltip(self, self.area.name, "Not explored yet. Click to be guided here.")
+  end)
+  pin:SetScript("OnLeave", function(self)
+    self:SetSize(PIN_SIZE, PIN_SIZE)
+    hideTooltip()
+  end)
   pin:SetScript("OnClick", function(self) M.Guide(self.area) end)
   return pin
 end
@@ -75,8 +81,9 @@ local function newBadge(i, canvas)
   badge:SetSize(BADGE_SIZE, BADGE_SIZE)
   badge.back = badge:CreateTexture(nil, "BACKGROUND")
   badge.back:SetAllPoints()
-  badge.back:SetColorTexture(0, 0, 0, BADGE_ALPHA)
-  badge.count = badge:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  badge.back:SetTexture(BADGE_TEXTURE)
+  badge.back:SetAlpha(BADGE_ALPHA)
+  badge.count = badge:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   badge.count:SetPoint("CENTER", badge, "CENTER", 0, 0)
   badge:RegisterForClicks("LeftButtonUp")
   badge:SetScript("OnEnter", function(self)
@@ -96,12 +103,12 @@ end
 
 local function drawZone(canvas, map)
   local width, height = canvas:GetWidth(), canvas:GetHeight()
-  local outlines = M.Settings().outlines
+  local boxed = M.Settings().areaBoxes
   for i, area in ipairs(M.PinsFor(map)) do
     pins[i] = pins[i] or newPin(i, canvas)
     pins[i].area = area
     place(pins[i], canvas, area.x / 100, area.y / 100)
-    if outlines then
+    if boxed then
       boxes[i] = boxes[i] or newBox(i, canvas)
       local box, r = boxes[i], area.rect
       box:ClearAllPoints()

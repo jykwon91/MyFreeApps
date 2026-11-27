@@ -13,7 +13,7 @@ local M = MGAExplorer
 local Data = MGAExplorerData
 local W = MGAWaypoints
 
-M.DEFAULTS = { mapPins = true, outlines = true, autoNext = true }
+M.DEFAULTS = { mapPins = true, areaBoxes = false, autoNext = true }
 -- Waypoints clears its arrow on arrival. Closer than this to the area's spot, that clear is an arrival,
 -- so we keep guiding until the game says the area is discovered.
 M.KEEP_YARDS = 60
@@ -30,6 +30,7 @@ M.Say = say
 
 function M.Settings()
   MGAExplorerSettings = MGAExplorerSettings or {}
+  MGAExplorerSettings.outlines = nil -- the first release's box setting (on by default); areaBoxes replaced it, off
   for key, value in pairs(M.DEFAULTS) do
     if MGAExplorerSettings[key] == nil then MGAExplorerSettings[key] = value end
   end
