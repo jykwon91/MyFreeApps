@@ -186,7 +186,7 @@
 "17903":{"quests":[7171]},
 "18351":{"instance":{"mobs":[["Magister Kalendris",60,60,20.0,429,"boss"]],"more":0}},
 "18479":{"instance":{"mobs":[["Gordok Mastiff",57,59,0.0,429,""]],"more":0}},
-"18543":{"drop":{"world":false,"levels":[63,63],"mobs":[["Lord Kazzak",63,63,19.0,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419]}},
+"18543":{"drop":{"world":false,"levels":[63,63],"mobs":[["Lord Kazzak",63,63,6.3,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419]}},
 "18735":{"instance":{"mobs":[["Maleki the Pallid",61,61,20.0,329,"boss"]],"more":0}},
 "19119":{"quests":[7843]},
 "19311":{"vendors":[[13219,"Jekyll Flandring","Frostwolf Supply Officer",1416,"Sofera's Naze",62.8,59.3,"H",0,0],[13217,"Thanthaldis Snowgleam","Stormpike Supply Officer",1416,"The Headland",39.4,81.7,"A",0,0]]},

@@ -156,7 +156,7 @@
 "14373":{"drop":{"world":true,"levels":[20,28],"mobs":[],"more":0,"zones":[]}},
 "14437":{"drop":{"world":true,"levels":[48,58],"mobs":[],"more":0,"zones":[]},"instance":{"mobs":[["Princess Theradras",51,51,0.2,349,"boss"]],"more":0}},
 "14565":{"drop":{"world":true,"levels":[16,25],"mobs":[["Swiftmane",21,21,0.7,1413,"Ratchet",61.2,34.5,"rare"]],"more":0,"zones":[1413]},"instance":{"mobs":[["Edwin VanCleef",21,21,0.0,36,"boss"]],"more":0}},
-"14629":{"instance":{"mobs":[["Lord Alexei Barov",60,60,3.7,289,"boss"],["Doctor Theolen Krastinov",60,60,1.1,289,"boss"],["Instructor Malicia",60,60,1.1,289,"boss"],["Lady Illucia Barov",60,60,1.1,289,"boss"],["Lorekeeper Polkelt",60,60,1.1,289,"boss"],["The Ravenian",60,60,1.1,289,"boss"]],"more":0}},
+"14629":{"instance":{"mobs":[["Lord Alexei Barov",60,60,3.6,289,"boss"],["Doctor Theolen Krastinov",60,60,1.1,289,"boss"],["Instructor Malicia",60,60,1.1,289,"boss"],["Lady Illucia Barov",60,60,1.1,289,"boss"],["Lorekeeper Polkelt",60,60,1.1,289,"boss"],["The Ravenian",60,60,1.1,289,"boss"]],"more":0}},
 "14757":{"drop":{"world":true,"levels":[27,34],"mobs":[],"more":0,"zones":[]}},
 "14821":{"drop":{"world":true,"levels":[38,50],"mobs":[],"more":0,"zones":[]}},
 "14949":{"drop":{"world":true,"levels":[40,50],"mobs":[],"more":0,"zones":[]}},
@@ -182,7 +182,7 @@
 "20517":{"quests":[8425]},
 "21413":{"quests":[8707]},
 "21605":{"instance":{"mobs":[["Emperor Vek'nilash",63,63,14.3,531,"boss"]],"more":0}},
-"21669":{"instance":{"mobs":[["Battleguard Sartura",63,63,15.0,531,"boss"]],"more":0}},
+"21669":{"instance":{"mobs":[["Battleguard Sartura",63,63,7.2,531,"boss"]],"more":0}},
 "22245":{"instance":{"mobs":[["Panzor the Invincible",57,57,25.0,230,"rare"]],"more":0}},
 "22437":{"quests":[9055]},
 "22501":{"quests":[9100]}

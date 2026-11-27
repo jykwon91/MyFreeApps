@@ -134,6 +134,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_icons.build", *cache],
         # The AH's names: the client's ItemSparse plus the hotfix cache, like the Item build.
         ["scripts.wow_item_names.build", *cache],
+        # The MGA Drops addon's Data.lua: cmangos creature loot with the Forever client's item names, like the Item build.
+        ["scripts.wow_mob_drops.build", *cache],
         ["scripts.wow_macros.build"],
         # Reads the World Map, Professions and Item output above, so it runs last.
         ["scripts.wow_gear.build", *cache],

@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: MGA Drops
+## Notes: What a mob drops and how often, in its tooltip (hold Shift for everything), and /mgadrops to look any creature up. Classic drop rates: WoW Forever may differ.
+## Author: MyGamingAssistant
+## Version: 1.0.0
+## SavedVariables: MGAHubSettings, MGADropsSettings
+## IconTexture: Interface\Icons\INV_Misc_Bag_10
+
+MGAHub.lua
+Data.lua
+Core.lua
+Window.lua
+MGADrops.lua
