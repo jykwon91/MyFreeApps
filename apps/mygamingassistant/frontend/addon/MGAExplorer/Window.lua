@@ -5,17 +5,19 @@
 local M = MGAExplorer
 local UI = MGAHub.UI
 
-local WIDTH, HEIGHT = 460, 540
+local WIDTH, HEIGHT = 484, 548
 local ROW_HEIGHT, VISIBLE_ROWS = 18, 20
-local TEXT_WIDTH = WIDTH - 36
+local TEXT_WIDTH = WIDTH - 60
 
 local frame
 local state = { offset = 0, expanded = {}, seeded = false }
 local rows, lines = {}, {}
+local scrollList
 
 local function drawRows()
   local overflow = math.max(0, #lines - VISIBLE_ROWS)
   state.offset = math.min(state.offset, overflow)
+  scrollList.Sync(#lines, state.offset)
   for i, row in ipairs(rows) do
     local line = lines[state.offset + i]
     row.line = line
@@ -59,10 +61,7 @@ local function buildRow(i)
   local row = CreateFrame("Button", "MGAExplorerRow" .. i, frame)
   row:SetSize(TEXT_WIDTH, ROW_HEIGHT)
   row:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, -(i - 1) * ROW_HEIGHT)
-  row.highlight = row:CreateTexture(nil, "BACKGROUND")
-  row.highlight:SetAllPoints(row)
-  row.highlight:SetColorTexture(1, 1, 1, 0.15)
-  row.highlight:Hide()
+  row.highlight = UI.Highlight(row)
   row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   row.text:SetPoint("LEFT", row, "LEFT", 2, 0)
   row.text:SetJustifyH("LEFT")
@@ -75,33 +74,9 @@ local function buildRow(i)
 end
 
 local function build()
-  frame = CreateFrame("Frame", "MGAExplorerWindow", UIParent)
-  frame:SetSize(WIDTH, HEIGHT)
-  frame:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-  frame:SetFrameStrata("DIALOG")
-  frame:SetMovable(true)
-  frame:EnableMouse(true)
-  frame:SetClampedToScreen(true)
-  frame:RegisterForDrag("LeftButton")
-  frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-  frame:EnableMouseWheel(true)
-  frame:SetScript("OnMouseWheel", function(_, delta)
-    state.offset = math.max(0, state.offset - delta * 3)
-    drawRows()
-  end)
-  frame.background = frame:CreateTexture(nil, "BACKGROUND")
-  frame.background:SetAllPoints(frame)
-  frame.background:SetColorTexture(0, 0, 0, 0.9)
-  table.insert(UISpecialFrames, "MGAExplorerWindow")
+  frame = UI.Window("MGAExplorerWindow", "MGA Explorer", WIDTH, HEIGHT)
 
-  frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  frame.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -12)
-  frame.title:SetText("MGA Explorer")
-  local close = CreateFrame("Button", "MGAExplorerClose", frame, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
-
-  frame.summary = UI.Label(frame, "", "GameFontHighlight", frame.title, -8)
+  frame.summary = UI.Label(frame, "", "GameFontHighlight", frame.top, -2)
   frame.source = UI.Label(frame, "", "GameFontDisableSmall", frame.summary, -4)
   frame.source:SetWidth(TEXT_WIDTH)
 
@@ -125,6 +100,11 @@ local function build()
   frame.guiding = UI.Label(frame, "", "GameFontNormalSmall", nextButton, -8)
   frame.listTop = UI.Label(frame, "Every zone below counts toward " .. MGAExplorerData.name .. ". Click a zone to see what's left.", "GameFontDisableSmall", frame.guiding, -6)
 
+  scrollList = UI.ScrollList(frame, "MGAExplorerScroll", TEXT_WIDTH, ROW_HEIGHT, VISIBLE_ROWS, function(offset)
+    state.offset = offset
+    drawRows()
+  end)
+  scrollList.scroll:SetPoint("TOPLEFT", frame.listTop, "BOTTOMLEFT", 0, 0)
   for i = 1, VISIBLE_ROWS do buildRow(i) end
   frame:Hide()
 end
