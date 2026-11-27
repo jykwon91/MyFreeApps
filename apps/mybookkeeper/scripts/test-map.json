@@ -2471,6 +2471,9 @@
         "test_plaid_copy_matcher.py",
         "test_plaid_copy_reconciler.py",
         "test_plaid_transfer_reconciler.py",
+        "test_personal_finances_figures.py",
+        "test_personal_finances_service.py",
+        "test_personal_finances_routes.py",
         "test_self_transfer.py",
         "test_monthly_expense_rules.py"
       ],
@@ -2869,7 +2872,19 @@
         "frontend/src/shared/hooks/useChartColors.ts",
         "api-client/src/store/loanPayeeApi.ts",
         "api-client/src/types/loan-payee/",
-        "api-client/src/constants/loanPayeeLabels.ts"
+        "api-client/src/constants/loanPayeeLabels.ts",
+        "backend/app/core/personal_finance_constants.py",
+        "backend/app/services/personal_finances/",
+        "backend/app/schemas/personal_finances/",
+        "backend/app/api/personal_finances.py",
+        "frontend/src/app/pages/PersonalFinances.tsx",
+        "frontend/src/app/features/personal-finances/",
+        "frontend/src/shared/lib/personal-finances-messages.ts",
+        "frontend/src/shared/lib/personal-finances-pages.ts",
+        "frontend/src/shared/hooks/useMonthRangeDrag.ts",
+        "api-client/src/store/personalFinancesApi.ts",
+        "api-client/src/types/personal-finances/",
+        "api-client/src/utils/personalFinancesChartRows.ts"
       ],
       "backend_tests": [
         "test_month_text.py",
@@ -2898,12 +2913,16 @@
         "MonthlyExpenseCategoryRow.test.tsx",
         "monthlyExpensesSearchParams.test.ts",
         "TransactionLoanPayeeSection.test.tsx",
-        "MonthlyChartColours.test.tsx"
+        "MonthlyChartColours.test.tsx",
+        "PersonalFinancesBody.test.tsx",
+        "personalFinancesSearchParams.test.ts",
+        "useMonthRangeDrag.test.ts"
       ],
       "e2e_specs": [
         "mocked/budget-cash-flow-mock.spec.ts",
         "mocked/monthly-expenses-mock.spec.ts",
-        "mocked/loan-payee-tag-mock.spec.ts"
+        "mocked/loan-payee-tag-mock.spec.ts",
+        "mocked/personal-finances-mock.spec.ts"
       ]
     },
     "investments": {

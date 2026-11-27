@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -10,7 +9,6 @@ import {
   ResponsiveContainer,
   ReferenceArea,
 } from "recharts";
-import { parse, format, startOfMonth, endOfMonth } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
 import {
   TAG_COLORS,
@@ -26,6 +24,7 @@ import type { MergedRow } from "@/shared/types/dashboard/merged-row";
 import type { PropertyMonthlySummary } from "@mybookkeeper/api-client/types/summary/PropertyMonthlySummary";
 import { mergeData, buildFilter } from "@/shared/utils/chart-utils";
 import { useChartColors } from "@/shared/hooks/useChartColors";
+import { useMonthRangeDrag } from "@/shared/hooks/useMonthRangeDrag";
 import { axisMoney } from "@mybookkeeper/api-client/utils/axisMoney";
 
 export default function MonthlyOverviewChart({
@@ -51,17 +50,8 @@ export default function MonthlyOverviewChart({
     chartData.map((r) => [r.displayMonth, r.rawMonth]),
   );
 
-  // Drag state lives in a ref so handleMouseUp reads it synchronously —
-  // React 19 automatic batching can otherwise leave handleMouseUp seeing
-  // stale state from handleMouseDown's setState calls, which leaves
-  // `dragged` permanently true and silently swallows every Bar onClick.
-  const dragRef = useRef<{ start: string | null; end: string | null; dragged: boolean }>({
-    start: null,
-    end: null,
-    dragged: false,
-  });
-  // Only the visual overlay needs a re-render trigger.
-  const [dragOverlay, setDragOverlay] = useState<{ start: string; end: string } | null>(null);
+  const drag = useMonthRangeDrag((label) => displayToRaw.get(label), onRangeSelect);
+  const dragOverlay = drag.overlay;
 
   const showRevenue =
     !selectedCategories ||
@@ -72,64 +62,12 @@ export default function MonthlyOverviewChart({
     return chartData.some((row) => (row[cat] as number) > 0);
   });
 
-  function handleMouseDown(e: { activeLabel?: string | number }) {
-    if (e.activeLabel != null) {
-      const label = String(e.activeLabel);
-      dragRef.current = { start: label, end: label, dragged: false };
-    }
-  }
-
-  function handleMouseMove(e: { activeLabel?: string | number }) {
-    const { start } = dragRef.current;
-    if (start && e.activeLabel != null) {
-      const label = String(e.activeLabel);
-      dragRef.current.end = label;
-      if (label !== start) {
-        dragRef.current.dragged = true;
-        setDragOverlay({ start, end: label });
-      }
-    }
-  }
-
-  function handleMouseUp() {
-    const { start, end, dragged } = dragRef.current;
-    dragRef.current.start = null;
-    dragRef.current.end = null;
-    setDragOverlay(null);
-
-    if (dragged && start && end) {
-      const startRaw = displayToRaw.get(start);
-      const endRaw = displayToRaw.get(end);
-      if (startRaw && endRaw) {
-        const [first, last] =
-          startRaw <= endRaw ? [startRaw, endRaw] : [endRaw, startRaw];
-        const startDate = format(
-          startOfMonth(parse(first, "yyyy-MM", new Date())),
-          "yyyy-MM-dd",
-        );
-        const endDate = format(
-          endOfMonth(parse(last, "yyyy-MM", new Date())),
-          "yyyy-MM-dd",
-        );
-        onRangeSelect({ startDate, endDate });
-      }
-    }
-  }
-
   return (
     <ResponsiveContainer width="100%" height={320}>
       <ComposedChart
         data={chartData}
         barCategoryGap="20%"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          if (dragRef.current.start) {
-            dragRef.current = { start: null, end: null, dragged: false };
-            setDragOverlay(null);
-          }
-        }}
+        {...drag.handlers}
       >
         <XAxis dataKey="displayMonth" tick={{ fontSize: 11 }} />
         <YAxis
@@ -163,7 +101,7 @@ export default function MonthlyOverviewChart({
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
                 onClick={(data, _index, e) => {
-                  if (!dragRef.current.dragged) {
+                  if (!drag.wasDragged()) {
                     const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(`rev_${pk.propertyId}`, entry, propertyKeys));
                   }
@@ -179,7 +117,7 @@ export default function MonthlyOverviewChart({
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
                 onClick={(data, _index, e) => {
-                  if (!dragRef.current.dragged) {
+                  if (!drag.wasDragged()) {
                     const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter("revenue", entry));
                   }
@@ -197,7 +135,7 @@ export default function MonthlyOverviewChart({
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
                 onClick={(data, _index, e) => {
-                  if (!dragRef.current.dragged) {
+                  if (!drag.wasDragged()) {
                     const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(`exp_${pk.propertyId}`, entry, propertyKeys));
                   }
@@ -214,7 +152,7 @@ export default function MonthlyOverviewChart({
                 fill={TAG_COLORS[cat] ?? "#94a3b8"}
                 cursor="pointer"
                 onClick={(data, _index, e) => {
-                  if (!dragRef.current.dragged) {
+                  if (!drag.wasDragged()) {
                     const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(cat, entry));
                   }

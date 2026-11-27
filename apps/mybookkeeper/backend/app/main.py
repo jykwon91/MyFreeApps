@@ -5,37 +5,113 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
-
-from platform_shared.core.boot_guards import check_test_mode_off
-from platform_shared.core.git import resolve_git_commit
-from platform_shared.core.lifespan import create_app_lifespan
-from platform_shared.core.openapi import docs_kwargs
-from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
+from platform_shared.core.boot_guards import check_test_mode_off
+from platform_shared.core.git import resolve_git_commit
+from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.request_audit_middleware import RequestAuditMiddleware
+from sqlalchemy import text
 
 from app.core.audit import AUDIT_CONFIG
-from app.core.auth import fastapi_users, auth_backend
-from app.core.permissions import current_admin, current_strict_superuser
+from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
 from app.core.observability import init_sentry
-
+from app.core.permissions import current_admin, current_strict_superuser
 
 GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
+from app.api import (
+    account,
+    activities,
+    admin,
+    analytics,
+    applicants,
+    attribution,
+    audit,
+    blackouts,
+    booking_statements,
+    budgets,
+    calendar,
+    cash_flow,
+    classification_rules,
+    costs,
+    db_admin,
+    demo,
+    documents,
+    exports,
+    financial_accounts,
+    frontend_errors,
+    health_dashboard,
+    holdings,
+    imports,
+    inquiries,
+    insurance_benchmarks,
+    insurance_market,
+    insurance_policies,
+    integrations,
+    lease_templates,
+    listings,
+    loan_payees,
+    market_rate_benchmarks,
+    mobile_auth,
+    monthly_expenses,
+    mortgage_market,
+    mortgages,
+    net_worth,
+    organizations,
+    personal_finances,
+    personal_transfers,
+    plaid,
+    prompts,
+    properties,
+    public_inquiries,
+    public_welcome_manuals,
+    reconciliation,
+    rent_ledger,
+    rent_receipts,
+    rent_reminders,
+    reply_templates,
+    screening,
+    signed_lease_attachments,
+    signed_leases,
+    spending_categories,
+    summary,
+    tax_completeness,
+    tax_documents,
+    tax_profile,
+    tax_returns,
+    tax_year_profiles,
+    taxpayer_profiles,
+    tenants,
+    totp,
+    transactions,
+    utility_plans,
+    vendors,
+    welcome_manual_places,
+    welcome_manual_rooms,
+    welcome_manual_section_fields,
+    welcome_manual_section_images,
+    welcome_manuals,
+)
 from app.core.plaid_boot_guard import check_plaid_configured
-from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
+from app.core.rate_limit import (
+    check_account_not_locked,
+    check_login_rate_limit,
+    check_password_reset_rate_limit,
+    check_register_rate_limit,
+    require_turnstile,
+)
 from app.db.session import AsyncSessionLocal
-from app.schemas.user.user import UserRead, UserCreate, UserUpdate
+from app.schemas.user.user import UserCreate, UserRead, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
-from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, budgets, calendar, cash_flow, classification_rules, costs, db_admin, demo, documents, exports, financial_accounts, frontend_errors, health_dashboard, holdings, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, loan_payees, market_rate_benchmarks, mobile_auth, monthly_expenses, mortgage_market, mortgages, net_worth, organizations, personal_transfers, plaid, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_lease_attachments, signed_leases, spending_categories, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manual_section_fields, welcome_manual_section_images, welcome_manuals
 from app.services.system.admin_service import shared_admin_user_service
 from app.services.user import account_deletion_service
+from app.workers.upload_processor_worker import main as worker_main
 
 logging.basicConfig(
     level=logging.INFO,
@@ -209,6 +285,7 @@ app.include_router(net_worth.router)
 app.include_router(budgets.router)
 app.include_router(holdings.router)
 app.include_router(cash_flow.router)
+app.include_router(personal_finances.router)
 app.include_router(monthly_expenses.router)
 app.include_router(plaid.router)
 app.include_router(spending_categories.router)
