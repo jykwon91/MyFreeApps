@@ -1,17 +1,15 @@
 import { unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import explorerBindings from "../../addon/MGAExplorer/Bindings.xml?raw";
 import explorerCore from "../../addon/MGAExplorer/Core.lua?raw";
 import explorerData from "../../addon/MGAExplorer/Data.lua?raw";
-import explorerHub from "../../addon/MGAExplorer/MGAHub.lua?raw";
 import explorerMain from "../../addon/MGAExplorer/MGAExplorer.lua?raw";
 import explorerToc from "../../addon/MGAExplorer/MGAExplorer.toc?raw";
 import explorerMapPins from "../../addon/MGAExplorer/MapPins.lua?raw";
 import explorerWindow from "../../addon/MGAExplorer/Window.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import waypointsCore from "../../addon/MGAWaypoints/Core.lua?raw";
 import waypointsData from "../../addon/MGAWaypoints/Data.lua?raw";
 import waypointsDisplay from "../../addon/MGAWaypoints/Display.lua?raw";
-import waypointsHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
 import waypointsMain from "../../addon/MGAWaypoints/MGAWaypoints.lua?raw";
 import waypointsPicker from "../../addon/MGAWaypoints/Picker.lua?raw";
 import exploreJson from "@/games/wow-forever/data/explore/explore.json";
@@ -52,17 +50,16 @@ function say(v) table.insert(out, tostring(v)) end
 function target() local t = W.Target(); return t and t.name or "none" end
 `;
 
-/** Loads MGA Waypoints, then MGA Explorer (login included), runs `scenario`, and returns what it printed. */
+/** Loads MGA Hub, MGA Waypoints, then MGA Explorer (login included), runs `scenario`, and returns what it printed. */
 function run(scenario: string): string[] {
   return runAddonLua(
     [
-      ["MGAWaypoints/MGAHub.lua", waypointsHub],
+      ["MGAHub/MGAHub.lua", hubLua],
       ["MGAWaypoints/Data.lua", waypointsData],
       ["MGAWaypoints/Core.lua", waypointsCore],
       ["MGAWaypoints/Display.lua", waypointsDisplay],
       ["MGAWaypoints/Picker.lua", waypointsPicker],
       ["MGAWaypoints/MGAWaypoints.lua", waypointsMain],
-      ["MGAExplorer/MGAHub.lua", explorerHub],
       ["MGAExplorer/Data.lua", explorerData],
       ["MGAExplorer/Core.lua", explorerCore],
       ["MGAExplorer/MapPins.lua", explorerMapPins],
@@ -98,19 +95,19 @@ describe("MGA Explorer files", () => {
     expect(lines).toEqual(["43", String(areas), "0"]);
   });
 
-  it("loads from its toc on the Forever interface after MGA Waypoints, hub first", () => {
+  it("loads from its toc on the Forever interface after MGA Hub and MGA Waypoints", () => {
     expect(explorerToc).toContain("## Interface: 16001");
-    expect(explorerToc).toContain("## Dependencies: MGAWaypoints");
-    expect(explorerToc).toContain("## SavedVariables: MGAHubSettings, MGAExplorerSettings");
-    expect(explorerToc.trim().split(/\r?\n/).slice(-6)).toEqual(["MGAHub.lua", "Data.lua", "Core.lua", "MapPins.lua", "Window.lua", "MGAExplorer.lua"]);
-    expect(explorerBindings).toContain("<Bindings>");
+    expect(explorerToc).toContain("## Dependencies: MGAHub, MGAWaypoints");
+    expect(explorerToc).toContain("## SavedVariables: MGAExplorerSettings");
+    expect(explorerToc).not.toContain("MGAHub.lua");
+    expect(explorerToc.trim().split(/\r?\n/).slice(-5)).toEqual(["Data.lua", "Core.lua", "MapPins.lua", "Window.lua", "MGAExplorer.lua"]);
   });
 
-  it("zips MGA Explorer with MGA Waypoints beside it", () => {
+  it("zips MGA Explorer with MGA Waypoints and MGA Hub beside it", () => {
     const paths = Object.keys(unzipSync(explorerAddonZip()));
-    expect([...new Set(paths.map((path) => path.split("/")[0]))].sort()).toEqual(["MGAExplorer", "MGAWaypoints"]);
+    expect([...new Set(paths.map((path) => path.split("/")[0]))].sort()).toEqual(["MGAExplorer", "MGAHub", "MGAWaypoints"]);
     expect(paths.filter((path) => path.startsWith("MGAExplorer/") && !path.endsWith("/")).sort()).toEqual(
-      ["Bindings.xml", "Core.lua", "Data.lua", "MGAExplorer.lua", "MGAExplorer.toc", "MGAHub.lua", "MapPins.lua", "Window.lua"].map((f) => `MGAExplorer/${f}`),
+      ["Core.lua", "Data.lua", "MGAExplorer.lua", "MGAExplorer.toc", "MapPins.lua", "Window.lua"].map((f) => `MGAExplorer/${f}`),
     );
   });
 });

@@ -33,7 +33,7 @@ export default function ExplorerAddonCard() {
           <li>Download the addon.</li>
           <li>
             Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have{" "}
-            <code>AddOns\MGAExplorer</code> and <code>AddOns\MGAWaypoints</code> folders.
+            <code>AddOns\MGAExplorer</code>, <code>AddOns\MGAWaypoints</code> and <code>AddOns\MGAHub</code> folders (MGA Hub is the minimap button and settings every MGA addon shares).
           </li>
           <li>Restart the game.</li>
           <li>

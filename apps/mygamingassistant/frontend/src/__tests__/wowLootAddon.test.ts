@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import { lootAddonZip } from "@/games/wow-forever/lib/lootAddon/lootAddonZip";
 import addonLua from "../../addon/MGALoot/MGALoot.lua?raw";
-import hubLua from "../../addon/MGALoot/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonToc from "../../addon/MGALoot/MGALoot.toc?raw";
 import { lootAddonDataLua } from "@/games/wow-forever/lib/lootAddon/lootAddonDataLua";
 import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
 import { LOOT_ADDON_TALENT_TABS } from "@/games/wow-forever/data/lootAddon/lootAddonTalentTabs";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_LOOT_STUBS } from "@/test/addonLua/wowLootStubs.lua";
 import itemEffects from "@/games/wow-forever/data/lootAddon/itemEffects.json";
@@ -54,14 +55,16 @@ describe("MGA Loot data", () => {
     }
   });
 
-  it("loads the hub, then Data.lua, before the addon", () => {
-    expect(addonToc.indexOf("MGAHub.lua")).toBeLessThan(addonToc.indexOf("Data.lua"));
+  it("loads after MGA Hub, and Data.lua before the addon", () => {
+    expect(addonToc).toContain("## Dependencies: MGAHub");
+    expect(addonToc).toContain("## SavedVariables: MGALootSettings");
+    expect(addonToc).not.toContain("MGAHub.lua");
     expect(addonToc.indexOf("Data.lua")).toBeLessThan(addonToc.indexOf("MGALoot.lua"));
   });
 
-  it("zips the addon inside its folder", () => {
+  it("zips the addon inside its folder, MGA Hub beside it", () => {
     const files = unzipSync(lootAddonZip());
-    expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Bindings.xml", "MGALoot/Data.lua", "MGALoot/MGAHub.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
+    expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Data.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc", ...HUB_ZIP_PATHS].sort());
     expect(strFromU8(files["MGALoot/Data.lua"])).toBe(lootAddonDataLua());
   });
 });

@@ -23,8 +23,8 @@ test("the Legacy page downloads MGA Explorer with MGA Waypoints beside it", asyn
   const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("explorer-addon-download").click()]);
   expect(download.suggestedFilename()).toBe("MGAExplorer.zip");
   const files = unzipSync(readFileSync(await download.path()));
-  expect(Object.keys(files)).toEqual(expect.arrayContaining(["MGAExplorer/Data.lua", "MGAExplorer/Core.lua", "MGAWaypoints/MGAWaypoints.toc"]));
-  expect(strFromU8(files["MGAExplorer/MGAExplorer.toc"])).toContain("## Dependencies: MGAWaypoints");
+  expect(Object.keys(files)).toEqual(expect.arrayContaining(["MGAExplorer/Data.lua", "MGAExplorer/Core.lua", "MGAWaypoints/MGAWaypoints.toc", "MGAHub/MGAHub.toc"]));
+  expect(strFromU8(files["MGAExplorer/MGAExplorer.toc"])).toContain("## Dependencies: MGAHub, MGAWaypoints");
   expect(strFromU8(files["MGAExplorer/Data.lua"])).toContain('"Tirisfal Glades"');
   await expect(page.getByText("MGA Explorer is downloading. Unzip it into your AddOns folder.", { exact: true })).toBeVisible();
 });

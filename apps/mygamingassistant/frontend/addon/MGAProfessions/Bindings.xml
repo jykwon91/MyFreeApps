@@ -1,12 +1,6 @@
-<!-- Key bindings for the MGA hub (MGAHub.lua) plus this addon's own. The first two bindings are the shared
-     file's (addon/shared/Bindings.xml) byte for byte; a test keeps them in step. MGA_PROFESSIONS is only here. -->
+<!-- MGA Professions' own key binding. The MGA menu and settings bindings live only in the MGAHub addon's
+     Bindings.xml: a binding name may be declared by one loaded addon only. -->
 <Bindings>
-  <Binding name="MGA_MENU" header="MGA" category="MGA">
-    if MGAHub then MGAHub.OpenMenu() end
-  </Binding>
-  <Binding name="MGA_SETTINGS" category="MGA">
-    if MGAHub then MGAHub.OpenSettings() end
-  </Binding>
   <Binding name="MGA_PROFESSIONS" category="MGA">
     if MGAProfessions then MGAProfessions.Toggle() end
   </Binding>

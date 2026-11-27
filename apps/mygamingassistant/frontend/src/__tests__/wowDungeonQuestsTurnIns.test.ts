@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
-import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import turnInsData from "../../addon/MGADungeonQuests/TurnIns.lua?raw";
 import { loadTurnInSpots } from "@/games/wow-forever/lib/dungeonQuestsAddon/loadTurnInSpots";

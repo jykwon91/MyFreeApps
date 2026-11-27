@@ -30,12 +30,10 @@ export default function BuffsAddonCard() {
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>
           <li>
-            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have an{" "}
-            <code>AddOns\MGABuffs</code> folder.
+            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have{" "}
+            <code>AddOns\MGABuffs</code> and <code>AddOns\MGAHub</code> folders (MGA Hub is the minimap button and settings every MGA addon shares).
           </li>
-          <li>
-            Restart the game, or type <code>/reload</code>.
-          </li>
+          <li>Restart the game (a new addon folder needs it; <code>/reload</code> is not enough).</li>
           <li>
             Set it up in the MGA settings (right-click the MGA minimap button, or Options &gt; AddOns &gt; MGA): tick what to remind you about, pick how early to warn, and move the list.
           </li>

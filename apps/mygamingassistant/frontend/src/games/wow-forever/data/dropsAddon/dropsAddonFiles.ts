@@ -1,7 +1,6 @@
 import addonCore from "../../../../../addon/MGADrops/Core.lua?raw";
 import addonData from "../../../../../addon/MGADrops/Data.lua?raw";
 import addonLicense from "../../../../../addon/MGADrops/LICENSE?raw";
-import addonHub from "../../../../../addon/MGADrops/MGAHub.lua?raw";
 import addonLua from "../../../../../addon/MGADrops/MGADrops.lua?raw";
 import addonToc from "../../../../../addon/MGADrops/MGADrops.toc?raw";
 import addonWindow from "../../../../../addon/MGADrops/Window.lua?raw";
@@ -16,7 +15,6 @@ export const DROPS_ADDON_FOLDER = "MGADrops";
  */
 export const DROPS_ADDON_FILES: Readonly<Record<string, string>> = {
   "MGADrops.toc": addonToc,
-  "MGAHub.lua": addonHub,
   "Data.lua": addonData,
   "Core.lua": addonCore,
   "Window.lua": addonWindow,

@@ -1,7 +1,7 @@
 /**
  * The Items page offers the MGA Drops addon: the card opens, says the chances are Classic's, and the download
- * button hands over MGADrops.zip with the generated drop data, the GPL licence that comes with it, and no
- * Bindings.xml. Frontend-only; API calls this spec does not stub answer 404.
+ * button hands over MGADrops.zip with the generated drop data, the GPL licence that comes with it, no
+ * Bindings.xml, and the MGAHub folder it depends on. Frontend-only; API calls this spec does not stub answer 404.
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-items-drops-addon
  */
@@ -29,13 +29,16 @@ test("the Items page downloads MGA Drops with Classic's drop chances inside", as
   expect(download.suggestedFilename()).toBe("MGADrops.zip");
   const files = unzipSync(readFileSync(await download.path()));
   expect(Object.keys(files).filter((path) => !path.endsWith("/")).sort()).toEqual(
-    ["Core.lua", "Data.lua", "LICENSE", "MGADrops.lua", "MGADrops.toc", "MGAHub.lua", "Window.lua"].map((name) => `MGADrops/${name}`),
+    [
+      ...["Core.lua", "Data.lua", "LICENSE", "MGADrops.lua", "MGADrops.toc", "Window.lua"].map((name) => `MGADrops/${name}`),
+      ...["Bindings.xml", "MGAHub.lua", "MGAHub.toc"].map((name) => `MGAHub/${name}`),
+    ].sort(),
   );
   const data = strFromU8(files["MGADrops/Data.lua"]);
   expect(data).toContain('[448] = {"Hogger", 11, 11,');
   expect(data).toContain('{1931, 100, "quest"}');
   expect(strFromU8(files["MGADrops/LICENSE"])).toContain("GNU GENERAL PUBLIC LICENSE");
-  expect(strFromU8(files["MGADrops/MGADrops.toc"])).toContain("## SavedVariables: MGAHubSettings, MGADropsSettings");
+  expect(strFromU8(files["MGADrops/MGADrops.toc"])).toContain("## Dependencies: MGAHub\n## SavedVariables: MGADropsSettings\n");
   await expect(page.getByText("MGA Drops is downloading. Unzip it into your AddOns folder.", { exact: true })).toBeVisible();
 });
 

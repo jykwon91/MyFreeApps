@@ -1,22 +1,6 @@
 import { describe, expect, it } from "vitest";
-import sharedHub from "../../addon/shared/MGAHub.lua?raw";
-import sharedBindings from "../../addon/shared/Bindings.xml?raw";
-import buffsBindings from "../../addon/MGABuffs/Bindings.xml?raw";
-import buffsHub from "../../addon/MGABuffs/MGAHub.lua?raw";
-import dropsHub from "../../addon/MGADrops/MGAHub.lua?raw";
-import dungeonQuestsBindings from "../../addon/MGADungeonQuests/Bindings.xml?raw";
-import dungeonQuestsHub from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
-import explorerBindings from "../../addon/MGAExplorer/Bindings.xml?raw";
-import explorerHub from "../../addon/MGAExplorer/MGAHub.lua?raw";
-import lootBindings from "../../addon/MGALoot/Bindings.xml?raw";
-import lootHub from "../../addon/MGALoot/MGAHub.lua?raw";
-import pricesBindings from "../../addon/MGAPrices/Bindings.xml?raw";
-import pricesHub from "../../addon/MGAPrices/MGAHub.lua?raw";
-import pvpLogBindings from "../../addon/MGAPvPLog/Bindings.xml?raw";
-import pvpLogHub from "../../addon/MGAPvPLog/MGAHub.lua?raw";
-import professionsHub from "../../addon/MGAProfessions/MGAHub.lua?raw";
-import waypointsBindings from "../../addon/MGAWaypoints/Bindings.xml?raw";
-import waypointsHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
+import hubBindings from "../../addon/MGAHub/Bindings.xml?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_HUB_FRAME_STUBS, WOW_HUB_HELPERS } from "@/test/addonLua/wowHubStubs.lua";
 
@@ -48,75 +32,77 @@ function buttons()
 end
 `;
 
+/** Every file in every addon folder (`addon/<Addon>/<file>`), as raw text, keyed by `<Addon>/<file>`. */
+const ADDON_FILES: Record<string, string> = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>("../../addon/*/*.{lua,toc,xml}", { query: "?raw", import: "default", eager: true }),
+  ).map(([path, text]) => [path.replace(/^.*\/addon\//, ""), text]),
+);
+const ADDON_FOLDERS = [...new Set(Object.keys(ADDON_FILES).map((path) => path.split("/")[0]))].sort();
+const OTHER_ADDONS = ADDON_FOLDERS.filter((folder) => folder !== "MGAHub");
+const tocOf = (folder: string): string => ADDON_FILES[`${folder}/${folder}.toc`];
+const tocField = (toc: string, field: string): string[] =>
+  (toc.match(new RegExp(`^## ${field}: (.*)$`, "m"))?.[1] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+const bindingNames = (xml: string): string[] => [...xml.matchAll(/<Binding\s+name="([^"]+)"/g)].map((m) => m[1]);
+
 const plain = (lines: string[]): string[] => lines.map((l) => l.replace(/\|c[0-9a-f]{8}|\|r/g, ""));
 
-/** Loads each hub copy in order, then runs `scenario`; returns what the stubs recorded. */
-function run(scenario: string, copies: string[] = [sharedHub]): string[] {
-  return plain(
-    runAddonLua(
-      [...copies.map((code, i): [string, string] => [`MGAHub.lua#${i}`, code]), ["scenario", scenario]],
-      STUBS,
-    ),
-  );
+/** Loads the hub, then runs `scenario`; returns what the stubs recorded. */
+function run(scenario: string): string[] {
+  return plain(runAddonLua([["MGAHub/MGAHub.lua", hubLua], ["scenario", scenario]], STUBS));
 }
 
 const say = (expr: string): string => `say(${expr})`;
 
-describe("the MGA hub's copies", () => {
-  const copies = {
-    "MGABuffs": [buffsHub, buffsBindings],
-    "MGADungeonQuests": [dungeonQuestsHub, dungeonQuestsBindings],
-    "MGAExplorer": [explorerHub, explorerBindings],
-    "MGALoot": [lootHub, lootBindings],
-    "MGAPrices": [pricesHub, pricesBindings],
-    "MGAPvPLog": [pvpLogHub, pvpLogBindings],
-    "MGAWaypoints": [waypointsHub, waypointsBindings],
-  };
-
-  it.each(Object.entries(copies))("%s ships MGAHub.lua and Bindings.xml identical to addon/shared (edit the shared file, then copy it over)", (_addon, [hub, bindings]) => {
-    expect(hub).toBe(sharedHub);
-    expect(bindings).toBe(sharedBindings);
+describe("the MGAHub addon and the addons that use it", () => {
+  it("finds every addon folder", () => {
+    expect(ADDON_FOLDERS).toContain("MGAHub");
+    expect(OTHER_ADDONS.length).toBeGreaterThanOrEqual(8);
+    for (const folder of ADDON_FOLDERS) expect(tocOf(folder), folder).toBeDefined();
   });
 
-  it("MGAProfessions ships MGAHub.lua identical to addon/shared (its Bindings.xml adds a binding, checked in wowProfessionsAddon.test.ts)", () => {
-    expect(professionsHub).toBe(sharedHub);
+  it("declares every key binding in exactly one addon folder (a second declaration is a load error in game)", () => {
+    const declaredBy = new Map<string, string[]>();
+    for (const [path, text] of Object.entries(ADDON_FILES)) {
+      if (!path.endsWith("/Bindings.xml")) continue;
+      for (const name of bindingNames(text)) declaredBy.set(name, [...(declaredBy.get(name) ?? []), path.split("/")[0]]);
+    }
+    const twice = [...declaredBy].filter(([, folders]) => folders.length > 1).map(([name, folders]) => `${name}: ${folders.join(", ")}`);
+    expect(twice).toEqual([]);
+    expect(declaredBy.get("MGA_MENU")).toEqual(["MGAHub"]);
+    expect(declaredBy.get("MGA_SETTINGS")).toEqual(["MGAHub"]);
   });
 
-  it("MGADrops ships MGAHub.lua identical to addon/shared and no Bindings.xml (the shared bindings load once, from another addon)", () => {
-    expect(dropsHub).toBe(sharedHub);
+  it("names every binding it declares in that folder's Lua", () => {
+    for (const [path, text] of Object.entries(ADDON_FILES)) {
+      if (!path.endsWith("/Bindings.xml")) continue;
+      const folder = path.split("/")[0];
+      const lua = Object.entries(ADDON_FILES).filter(([p]) => p.startsWith(`${folder}/`) && p.endsWith(".lua")).map(([, code]) => code).join("\n");
+      for (const name of bindingNames(text)) expect(lua, `${folder} ${name}`).toContain(`BINDING_NAME_${name} = `);
+    }
   });
-});
 
-describe("loading the hub from several addons", () => {
-  it("makes one button and one menu whether one addon is installed or all four", () => {
-    const one = run(`registerAll(); fire("PLAYER_LOGIN"); ${say("buttons()")}`);
-    expect(one.slice(-1)[0]).toBe("chat: 1");
-    const four = run(`registerAll(); fire("PLAYER_LOGIN"); ${say("buttons()")}`, [buffsHub, dungeonQuestsHub, lootHub, pricesHub]);
-    expect(four.slice(-1)[0]).toBe("chat: 1");
-    const eventFrames = run(`local n = 0; for _, f in ipairs(hubFrames) do if f.events.PLAYER_LOGIN then n = n + 1 end end; ${say("n")}`, [buffsHub, dungeonQuestsHub, lootHub, pricesHub]);
+  it("is an addon of its own on the same interface as the others, saving the hub settings", () => {
+    const toc = tocOf("MGAHub");
+    expect(tocField(toc, "Interface")).toEqual(["16001"]);
+    expect(tocField(toc, "SavedVariables")).toEqual(["MGAHubSettings"]);
+    expect(tocField(toc, "Dependencies")).toEqual([]);
+    expect(toc.trim().split(/\r?\n/).filter((l) => l && !l.startsWith("#"))).toEqual(["MGAHub.lua"]);
+    for (const folder of OTHER_ADDONS) expect(tocField(tocOf(folder), "Interface"), folder).toEqual(tocField(toc, "Interface"));
+  });
+
+  it.each(OTHER_ADDONS)("%s depends on MGAHub and carries no copy of it", (folder) => {
+    const toc = tocOf(folder);
+    expect(tocField(toc, "Dependencies")).toContain("MGAHub");
+    expect(tocField(toc, "SavedVariables")).not.toContain("MGAHubSettings");
+    expect(toc).not.toMatch(/^MGAHub\.lua$/m);
+    expect(ADDON_FILES[`${folder}/MGAHub.lua`]).toBeUndefined();
+  });
+
+  it("makes one minimap button and one login frame", () => {
+    expect(run(`registerAll(); fire("PLAYER_LOGIN"); ${say("buttons()")}`).slice(-1)[0]).toBe("chat: 1");
+    const eventFrames = run(`local n = 0; for _, f in ipairs(hubFrames) do if f.events.PLAYER_LOGIN then n = n + 1 end end; ${say("n")}`);
     expect(eventFrames.slice(-1)[0]).toBe("chat: 1");
-  });
-
-  it("keeps the first copy's hub when a later copy is the same version", () => {
-    const lines = run(`local first = MGAHub; ${say("first == MGAHub")}`, [sharedHub, sharedHub]);
-    expect(lines.slice(-1)[0]).toBe("chat: true");
-  });
-
-  it("hands what an older copy registered to a newer one, which then makes the only button", () => {
-    const older = sharedHub.replace(/local VERSION = \d+/, "local VERSION = 0");
-    expect(older).not.toBe(sharedHub);
-    const lines = run(
-      `MGAHub.Register({ name = "Loot", order = 20, menu = { { text = "Upgrades in your bags", func = function() end } } })
-       fire("PLAYER_LOGIN"); MGAHub.OpenMenu(); ${say("buttons() .. ' ' .. MGAHub.version .. ' ' .. table.concat(menuLines(), ' | ')")}`,
-      [older, sharedHub],
-    );
-    // The older copy loaded first and registered nothing before the newer one replaced it: the scenario registers on the newer.
-    expect(lines.slice(-1)[0]).toBe("chat: 1 2 [Loot] | Upgrades in your bags | - | Settings");
-    const carried = run(
-      `fire("PLAYER_LOGIN"); MGAHub.OpenMenu(); ${say("buttons() .. ' ' .. table.concat(menuLines(), ' | ')")}`,
-      [`${older}\nMGAHub.Register({ name = "Loot", menu = { { text = "Upgrades in your bags", func = function() end } } })`, sharedHub],
-    );
-    expect(carried.slice(-1)[0]).toBe("chat: 1 [Loot] | Upgrades in your bags | - | Settings");
   });
 });
 
@@ -293,15 +279,15 @@ describe("the MGA settings window", () => {
 
 describe("the MGA key bindings", () => {
   it("lists both actions in an MGA category of the game's Key Bindings", () => {
-    expect(sharedBindings).toContain('<Binding name="MGA_MENU" header="MGA" category="MGA">');
-    expect(sharedBindings).toContain('<Binding name="MGA_SETTINGS" category="MGA">');
+    expect(hubBindings).toContain('<Binding name="MGA_MENU" header="MGA" category="MGA">');
+    expect(hubBindings).toContain('<Binding name="MGA_SETTINGS" category="MGA">');
     const lines = run(`${say("BINDING_HEADER_MGA .. '|' .. BINDING_CATEGORY_MGA .. '|' .. BINDING_NAME_MGA_MENU .. '|' .. BINDING_NAME_MGA_SETTINGS")}`);
     expect(lines.slice(-1)[0]).toBe("chat: MGA|MGA|Open MGA menu|Open MGA settings");
   });
 
   it("run the hub's menu and settings", () => {
     const code = (name: string): string => {
-      const body = new RegExp(`<Binding name="${name}"[^>]*>([\\s\\S]*?)</Binding>`).exec(sharedBindings)?.[1];
+      const body = new RegExp(`<Binding name="${name}"[^>]*>([\\s\\S]*?)</Binding>`).exec(hubBindings)?.[1];
       if (!body) throw new Error(`no ${name} binding`);
       return body.trim();
     };

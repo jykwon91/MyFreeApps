@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
-import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonToc from "../../addon/MGADungeonQuests/MGADungeonQuests.toc?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
 import { dungeonQuestsAddonDataLua } from "@/games/wow-forever/lib/dungeonQuestsAddon/dungeonQuestsAddonDataLua";
 import { dungeonQuestsAddonZip } from "@/games/wow-forever/lib/dungeonQuestsAddon/dungeonQuestsAddonZip";
 import { loadDungeonQuestsAddonDetails } from "@/games/wow-forever/lib/dungeonQuestsAddon/loadDungeonQuestsAddonDetails";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DUNGEON_QUEST_STUBS } from "@/test/addonLua/wowDungeonQuestStubs.lua";
 
@@ -98,21 +99,21 @@ describe("MGA Dungeon Quests addon files", () => {
     expect(shown.some((l) => /from .+, Westfall \d/.test(l))).toBe(true);
   });
 
-  it("the toc loads Data.lua and TurnIns.lua before the addon and saves its settings; the zip unzips into one folder", () => {
+  it("the toc loads after MGA Hub, Data.lua and TurnIns.lua before the addon, and saves its settings; the zip unzips into its folder and MGAHub", () => {
     expect(addonToc).toMatch(/## Interface: 16001/);
-    expect(addonToc).toMatch(/## SavedVariables: MGAHubSettings, MGADungeonQuestsSettings/);
-    expect(addonToc.indexOf("MGAHub.lua")).toBeLessThan(addonToc.indexOf("Data.lua"));
+    expect(addonToc).toMatch(/## Dependencies: MGAHub\r?\n/);
+    expect(addonToc).toMatch(/## SavedVariables: MGADungeonQuestsSettings\r?\n/);
+    expect(addonToc).not.toContain("MGAHub.lua");
     expect(addonToc.indexOf("Data.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
     expect(addonToc.indexOf("TurnIns.lua")).toBeLessThan(addonToc.indexOf("MGADungeonQuests.lua\n"));
     const files = unzipSync(dungeonQuestsAddonZip());
     expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual([
-      "MGADungeonQuests/Bindings.xml",
       "MGADungeonQuests/Data.lua",
       "MGADungeonQuests/MGADungeonQuests.lua",
       "MGADungeonQuests/MGADungeonQuests.toc",
-      "MGADungeonQuests/MGAHub.lua",
       "MGADungeonQuests/TurnIns.lua",
-    ]);
+      ...HUB_ZIP_PATHS.filter((name) => !name.endsWith("/")),
+    ].sort());
     expect(strFromU8(files["MGADungeonQuests/MGADungeonQuests.lua"])).toBe(addonLua);
   });
 });

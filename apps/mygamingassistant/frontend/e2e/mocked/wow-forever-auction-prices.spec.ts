@@ -572,7 +572,9 @@ test("the Auction house page downloads the MGA Prices addon with every house's p
   // Disenchant tables ride along: a low green (table 1) gives Strange Dust 80% / Lesser Magic Essence 20%.
   expect(data).toContain("  deItems = {");
   expect(data).toContain("    [1] = {\n      [10938] = {1, 2, 20},\n      [10940] = {1, 2, 80},");
-  expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toContain("## SavedVariables: MGAHubSettings, MGAPricesSettings");
+  expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toContain("## Dependencies: MGAHub\n## SavedVariables: MGAPricesSettings\n");
+  expect(strFromU8(files["MGAHub/Bindings.xml"])).toContain('<Binding name="MGA_MENU"');
+  expect(files["MGAPrices/Bindings.xml"]).toBeUndefined();
   expect(asked).toEqual(expect.arrayContaining(["pvp/alliance", "pvp/horde", "pvp/neutral"]));
   await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });

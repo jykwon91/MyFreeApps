@@ -1,5 +1,3 @@
-import addonBindings from "../../../../../addon/MGADungeonQuests/Bindings.xml?raw";
-import addonHub from "../../../../../addon/MGADungeonQuests/MGAHub.lua?raw";
 import addonData from "../../../../../addon/MGADungeonQuests/Data.lua?raw";
 import addonLua from "../../../../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
 import addonToc from "../../../../../addon/MGADungeonQuests/MGADungeonQuests.toc?raw";
@@ -13,8 +11,6 @@ export const DUNGEON_QUESTS_ADDON_ZIP_NAME = "MGADungeonQuests.zip";
 /** The addon's files, from `apps/mygamingassistant/frontend/addon/MGADungeonQuests` (`Data.lua` is generated from the dungeon pages, `TurnIns.lua` from the quest pages). */
 export const DUNGEON_QUESTS_ADDON_FILES: Readonly<Record<string, string>> = {
   "MGADungeonQuests.toc": addonToc,
-  "MGAHub.lua": addonHub,
-  "Bindings.xml": addonBindings,
   "Data.lua": addonData,
   "TurnIns.lua": addonTurnIns,
   "MGADungeonQuests.lua": addonLua,

@@ -24,8 +24,8 @@ export default function PvPLogAddonCard() {
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>
           <li>
-            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have an{" "}
-            <code>AddOns\MGAPvPLog</code> folder.
+            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have{" "}
+            <code>AddOns\MGAPvPLog</code> and <code>AddOns\MGAHub</code> folders (MGA Hub is the minimap button and settings every MGA addon shares).
           </li>
           <li>
             Restart the game completely (a new addon or file needs it; <code>/reload</code> is not enough).

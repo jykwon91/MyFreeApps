@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import dropsCore from "../../addon/MGADrops/Core.lua?raw";
 import dropsData from "../../addon/MGADrops/Data.lua?raw";
-import dropsHub from "../../addon/MGADrops/MGAHub.lua?raw";
 import dropsMain from "../../addon/MGADrops/MGADrops.lua?raw";
 import dropsToc from "../../addon/MGADrops/MGADrops.toc?raw";
 import dropsWindow from "../../addon/MGADrops/Window.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DROPS_STUBS } from "@/test/addonLua/wowDropsStubs.lua";
 
@@ -14,7 +14,6 @@ const STORMWIND_GUARD = 68;
 const FOREVER_ONLY = 999999;
 
 const FILES: Record<string, string> = {
-  "MGAHub.lua": dropsHub,
   "Data.lua": dropsData,
   "Core.lua": dropsCore,
   "Window.lua": dropsWindow,
@@ -29,10 +28,10 @@ function tocFiles(): string[] {
     .filter((line) => line !== "" && !line.startsWith("#"));
 }
 
-/** Loads MGA Drops in toc order on the stubs, then runs `scenario`; returns what was recorded. */
+/** Loads MGA Hub (its dependency), then MGA Drops in toc order on the stubs, then runs `scenario`; returns what was recorded. */
 function run(scenario: string, before = ""): string[] {
   const chunks: [string, string][] = tocFiles().map((name) => [name, FILES[name]]);
-  return runAddonLua([["before", before], ...chunks, ["scenario", scenario]], WOW_DROPS_STUBS);
+  return runAddonLua([["before", before], ["MGAHub/MGAHub.lua", hubLua], ...chunks, ["scenario", scenario]], WOW_DROPS_STUBS);
 }
 
 /** Hovers a unit and returns the tooltip lines without colour codes or icons. */
@@ -43,13 +42,14 @@ function hover(unit: string, setup = "", before = ""): string[] {
 const MOB = (npc: number, extra = "") => `units.mouseover = { guid = creature(${npc}), attackable = true${extra} }`;
 
 describe("MGA Drops toc", () => {
-  it("targets Forever's interface, saves its settings and loads the data before the code", () => {
+  it("targets Forever's interface, loads after MGA Hub, saves its settings and loads the data before the code", () => {
     expect(dropsToc).toMatch(/^## Interface: 16001$/m);
-    expect(dropsToc).toMatch(/^## SavedVariables: MGAHubSettings, MGADropsSettings$/m);
-    expect(tocFiles()).toEqual(["MGAHub.lua", "Data.lua", "Core.lua", "Window.lua", "MGADrops.lua"]);
+    expect(dropsToc).toMatch(/^## Dependencies: MGAHub$/m);
+    expect(dropsToc).toMatch(/^## SavedVariables: MGADropsSettings$/m);
+    expect(tocFiles()).toEqual(["Data.lua", "Core.lua", "Window.lua", "MGADrops.lua"]);
   });
 
-  it("ships no Bindings.xml, so the shared MGA key bindings aren't loaded twice", () => {
+  it("ships no Bindings.xml: the MGA key bindings load once, from MGAHub", () => {
     const folder = import.meta.glob("../../addon/MGADrops/*", { query: "?raw", import: "default" });
     expect(Object.keys(folder).some((path) => path.endsWith("Bindings.xml"))).toBe(false);
     expect(dropsToc).not.toMatch(/Bindings/);

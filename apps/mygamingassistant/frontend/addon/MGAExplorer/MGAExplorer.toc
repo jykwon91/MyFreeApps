@@ -2,12 +2,11 @@
 ## Title: MGA Explorer
 ## Notes: The Legacy "Explorer" challenge: every area Explore Azeroth still needs, zone by zone, and an arrow to the nearest one.
 ## Author: MyGamingAssistant
-## Version: 1.0.0
-## Dependencies: MGAWaypoints
-## SavedVariables: MGAHubSettings, MGAExplorerSettings
+## Version: 1.1.0
+## Dependencies: MGAHub, MGAWaypoints
+## SavedVariables: MGAExplorerSettings
 ## IconTexture: Interface\Icons\INV_Misc_Map08
 
-MGAHub.lua
 Data.lua
 Core.lua
 MapPins.lua
