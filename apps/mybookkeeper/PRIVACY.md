@@ -18,7 +18,7 @@ Endpoint: `DELETE /api/users/me` (requires password + email confirmation; TOTP c
 
 - We use your data solely to provide the bookkeeping service.
 - We do not sell your data to third parties.
-- We do not share your data except as required to operate the service (e.g. Anthropic API for AI extraction, Google for Gmail OAuth).
+- We do not share your data except as required to operate the service (e.g. Anthropic API for AI extraction, Google for Gmail OAuth, Twilio for rent reminder texts).
 
 ## Data retention
 

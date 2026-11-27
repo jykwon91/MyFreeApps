@@ -26,3 +26,19 @@ SMS_PROVIDER_CODE_NETWORK_ERROR: Final = "network_error"
 # callers check that flag rather than this code.
 SMS_PROVIDER_CODE_OUTCOME_UNKNOWN: Final = "outcome_unknown"
 
+
+# ``MessageStatus`` values Twilio POSTs to a message's status callback
+# (https://www.twilio.com/docs/messaging/api/message-resource#message-status-values).
+# ``queued`` / ``sending`` / ``accepted`` / ``scheduled`` are steps before the
+# carrier has it, so a sender only acts on these four.
+TWILIO_STATUS_SENT: Final = "sent"
+TWILIO_STATUS_DELIVERED: Final = "delivered"
+TWILIO_STATUS_UNDELIVERED: Final = "undelivered"
+TWILIO_STATUS_FAILED: Final = "failed"
+
+# The header Twilio signs every webhook with (HMAC-SHA1 of the URL and the
+# sorted form parameters, keyed by the account's auth token).
+TWILIO_SIGNATURE_HEADER: Final = "X-Twilio-Signature"
+
+# Twilio posts status callbacks as a form; a body of any other type isn't one.
+TWILIO_CALLBACK_MEDIA_TYPE: Final = "application/x-www-form-urlencoded"

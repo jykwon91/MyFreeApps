@@ -3,7 +3,9 @@
 The codes are decided on the server (``app/core/rent_reminder_constants.py``);
 the api-client repeats the words for each one, the prefixes of the codes that
 carry their own detail, the "may still arrive" set it warns about, and the code
-Send now refuses a possible duplicate with.
+Send now refuses a possible duplicate with. It also repeats the send statuses
+(``app/core/rent_reminder_enums.py``) that its row type is built from; the
+channels are compared in ``test_rent_reminder_channels``.
 """
 import re
 from pathlib import Path
@@ -12,11 +14,13 @@ import pytest
 
 from app.core.rent_reminder_constants import (
     MAY_STILL_ARRIVE_ERRORS,
-    PHONE_FAILED_CODE_PREFIX,
     REMINDER_ERROR_CODES,
     REMINDER_MAY_HAVE_BEEN_SENT_CODE,
-    SMS_RELAY_CODE_PREFIX,
+    SMS_FAILED_CODE_PREFIX,
+    SMS_OPT_OUT_SUFFIX,
+    SMS_REFUSED_CODE_PREFIX,
 )
+from app.core.rent_reminder_enums import RENT_REMINDER_SEND_STATUSES
 
 API_CLIENT = Path(__file__).parents[2] / "api-client" / "src"
 
@@ -45,6 +49,13 @@ def _codes_file() -> str:
     return (API_CLIENT / "constants" / "rentReminderErrorCodes.ts").read_text(encoding="utf-8")
 
 
+def _const_object_values(name: str, *, file: str) -> set[str]:
+    """The values of an ``export const NAME = {...} as const`` in ``types/rent``."""
+    source = (API_CLIENT / "types" / "rent" / file).read_text(encoding="utf-8")
+    literal = _between(source, f"export const {name} = {{", "} as const;", file=file)
+    return set(re.findall(r'"([^"]+)"', literal))
+
+
 def test_every_reminder_error_code_has_words() -> None:
     assert REMINDER_ERROR_CODES <= _labelled_codes()
 
@@ -55,7 +66,7 @@ def test_no_words_for_a_code_the_server_never_records() -> None:
 
 @pytest.mark.parametrize(
     ("name", "prefix"),
-    [("PHONE_FAILED_PREFIX", PHONE_FAILED_CODE_PREFIX), ("RELAY_PREFIX", SMS_RELAY_CODE_PREFIX)],
+    [("SMS_FAILED_PREFIX", SMS_FAILED_CODE_PREFIX), ("SMS_REFUSED_PREFIX", SMS_REFUSED_CODE_PREFIX)],
 )
 def test_prefixed_codes_are_spelled_the_same(name: str, prefix: str) -> None:
     literal = _between(_error_words_file(), f"const {name} =", ";", file="rentReminderError.ts")
@@ -79,6 +90,11 @@ def test_may_have_been_sent_code_matches() -> None:
     assert re.findall(r'"([^"]+)"', literal) == [REMINDER_MAY_HAVE_BEEN_SENT_CODE]
 
 
+def test_send_statuses_match() -> None:
+    values = _const_object_values("RENT_REMINDER_SEND_STATUSES", file="rent-reminder-send-status.ts")
+    assert values == set(RENT_REMINDER_SEND_STATUSES)
+
+
 def test_a_moved_file_shape_fails_with_a_clear_message() -> None:
     try:
         _between("nothing here", "Object.entries({", "}));", file="x.ts")
@@ -86,3 +102,14 @@ def test_a_moved_file_shape_fails_with_a_clear_message() -> None:
         assert "update this test's parser" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected a clear failure")
+
+
+def test_sms_opt_out_suffix_matches() -> None:
+    source = (API_CLIENT / "constants" / "rentReminderSmsOptOut.ts").read_text(encoding="utf-8")
+    literal = _between(
+        source,
+        "export const RENT_REMINDER_SMS_OPT_OUT_SUFFIX =",
+        ";\n",
+        file="rentReminderSmsOptOut.ts",
+    )
+    assert re.findall(r'"([^"]+)"', literal) == [SMS_OPT_OUT_SUFFIX]

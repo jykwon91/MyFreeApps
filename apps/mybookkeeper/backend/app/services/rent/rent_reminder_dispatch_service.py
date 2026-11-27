@@ -14,13 +14,14 @@ went out on the other one waits for the next due date instead of trailing
 behind on its own, and "send now" sends every enabled channel at once.
 
 **Delivery.** Email goes straight to the tenant with ``Reply-To`` set to the
-operator. SMS is handed to the operator's Android phone via httpSMS; the row
-sits at ``sent_to_phone`` until the phone confirms through the signed webhook
+operator. SMS goes out from the operator's Twilio number; the row sits at
+``sent_to_provider`` until Twilio confirms through its signed status callback
 (``rent_reminder_webhook_service``), or the watchdog
 (``rent_reminder_watchdog_service``) fails it.
 
-**Failures** of any kind mark the row ``failed`` with a short code and email
-the operator once (``rent_reminder_alert_service``).
+**Failures** of any kind mark the row ``failed`` with a short code
+(``rent_reminder_failure_code``) and email the operator once
+(``rent_reminder_alert_service``).
 
 All data access goes through repositories; this module never imports SQLAlchemy.
 """
@@ -33,9 +34,7 @@ import uuid
 from decimal import Decimal
 
 from platform_shared.core.audit_actor import audit_actor
-from platform_shared.services.email_service import EmailNotConfiguredError, EmailSendError
 from platform_shared.services.phone_number import to_e164
-from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
 from app.core.datetime_utils import as_utc
 from app.core.rent_reminder_channel import RentReminderChannel
@@ -43,15 +42,12 @@ from app.core.rent_reminder_request_id import format_reminder_request_id
 from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
     ERROR_NO_RECIPIENT,
+    ERROR_SMS_NOT_ALLOWED,
     ERROR_SMS_NOT_CONFIGURED,
-    ERROR_EMAIL_NOT_CONFIGURED,
-    ERROR_EMAIL_OUTCOME_UNKNOWN,
-    ERROR_EMAIL_SEND_FAILED,
-    ERROR_SMS_OUTCOME_UNKNOWN,
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
     REMINDER_MAY_HAVE_BEEN_SENT_MESSAGE,
-    SMS_RELAY_CODE_PREFIX,
+    SMS_OPT_OUT_SUFFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_EMAIL, RENT_REMINDER_CHANNEL_SMS
 from app.db.session import unit_of_work
@@ -65,10 +61,14 @@ from app.services.rent import rent_reminder_math as math
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent import rent_reminder_send_state as send_state
 from app.services.rent import rent_reminder_watchdog_service as watchdog
+from app.services.rent.rent_reminder_failure_code import ReminderUndeliverable, failure_code
 from app.services.rent.rent_reminder_outbound import ReminderOutbound
+from app.services.rent.rent_reminder_sms_permission import may_send_texts
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
+    SMS_NOT_ALLOWED_MESSAGE,
     SMS_UNAVAILABLE_MESSAGE,
+    SmsNotAllowedError,
     SmsUnavailableError,
     require_tenant,
 )
@@ -105,12 +105,6 @@ class TenancyEndedError(ValueError):
     """The tenant has moved out, so they get no more rent reminders."""
 
 
-class _Undeliverable(Exception):
-    def __init__(self, code: str) -> None:
-        super().__init__(code)
-        self.code = code
-
-
 def _now() -> _dt.datetime:
     return _dt.datetime.now(_dt.timezone.utc)
 
@@ -121,11 +115,11 @@ def _now() -> _dt.datetime:
 
 
 async def _send(outbound: ReminderOutbound) -> str | None:
-    """Push one reminder out. Returns the httpSMS id for SMS, else ``None``."""
+    """Push one reminder out. Returns the Twilio Message SID for SMS, else ``None``."""
     if outbound.channel == RENT_REMINDER_CHANNEL_EMAIL:
         recipient = (outbound.tenant_email or "").strip()
         if not recipient:
-            raise _Undeliverable(ERROR_NO_RECIPIENT)
+            raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
         await email_service.send_email_or_raise(
             [recipient],
             outbound.subject,
@@ -134,36 +128,20 @@ async def _send(outbound: ReminderOutbound) -> str | None:
         )
         return None
     if not sms_service.is_configured():
-        raise _Undeliverable(ERROR_SMS_NOT_CONFIGURED)
+        raise ReminderUndeliverable(ERROR_SMS_NOT_CONFIGURED)
+    if not outbound.owner_may_text:
+        raise ReminderUndeliverable(ERROR_SMS_NOT_ALLOWED)
     if not (outbound.tenant_phone or "").strip():
-        raise _Undeliverable(ERROR_NO_RECIPIENT)
+        raise ReminderUndeliverable(ERROR_NO_RECIPIENT)
     phone = to_e164(outbound.tenant_phone)
     if phone is None:
-        raise _Undeliverable(ERROR_INVALID_PHONE)
+        raise ReminderUndeliverable(ERROR_INVALID_PHONE)
     return await asyncio.to_thread(
         sms_service.send_or_raise,
         phone,
-        outbound.body,
+        outbound.body + SMS_OPT_OUT_SUFFIX,
         request_id=format_reminder_request_id(outbound.send_id, outbound.attempt),
     )
-
-
-def _failure_code(exc: Exception) -> str:
-    if isinstance(exc, _Undeliverable):
-        return exc.code
-    if isinstance(exc, SmsSendError):
-        if exc.outcome_unknown:
-            return ERROR_SMS_OUTCOME_UNKNOWN
-        return f"{SMS_RELAY_CODE_PREFIX}{exc.provider_code or 'send_failed'}"
-    if isinstance(exc, SmsNotConfiguredError):
-        return ERROR_SMS_NOT_CONFIGURED
-    if isinstance(exc, EmailNotConfiguredError):
-        return ERROR_EMAIL_NOT_CONFIGURED
-    if isinstance(exc, EmailSendError):
-        if exc.delivery_unconfirmed:
-            return ERROR_EMAIL_OUTCOME_UNKNOWN
-        return ERROR_EMAIL_SEND_FAILED
-    return ERROR_UNEXPECTED
 
 
 async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
@@ -173,7 +151,7 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
     try:
         provider_id = await _send(outbound)
     except Exception as exc:  # noqa: BLE001 — every failure is recorded on the row + alerted
-        error_code = _failure_code(exc)
+        error_code = failure_code(exc)
         if error_code == ERROR_UNEXPECTED:
             logger.exception("Rent reminder %s crashed while sending", outbound.send_id)
         elif error_code in MAY_STILL_ARRIVE_ERRORS:
@@ -191,8 +169,8 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
         row = await rent_reminder_send_repo.get(db, send_id=outbound.send_id)
         if row is None:  # pragma: no cover — the claim committed this row
             raise LookupError(str(outbound.send_id))
-        # Each write only applies to this try while it is still queued: the
-        # phone's webhook, the watchdog or a retry may have settled it first,
+        # Each write only applies to this try while it is still queued:
+        # Twilio's callback, the watchdog or a retry may have settled it first,
         # and their news is kept (no alert, no "may have been sent").
         if error_code is not None:
             recorded = await rent_reminder_send_repo.mark_failed(
@@ -204,9 +182,16 @@ async def _deliver(outbound: ReminderOutbound) -> RentReminderSendResponse:
                 db, row=row, attempt=outbound.attempt,
             )
         else:
-            recorded = await rent_reminder_send_repo.mark_sent_to_phone(
+            recorded = await rent_reminder_send_repo.mark_sent_to_provider(
                 db, row=row, attempt=outbound.attempt, provider_message_id=provider_id or "",
             )
+            if not recorded and provider_id:
+                # Twilio's callback got there first. Its status stands, but
+                # when Twilio took the text, and as which message, is ours to
+                # record.
+                await rent_reminder_send_repo.record_handoff(
+                    db, row=row, attempt=outbound.attempt, provider_message_id=provider_id,
+                )
         if not recorded:
             logger.info(
                 "Rent reminder try already settled elsewhere: send_id=%s attempt=%s "
@@ -249,7 +234,11 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
         if due is None or not math.is_due_to_send(terms, due.due_date, now):
             return 0
         rendered = planner.render(
-            plan, due=due, tenant_legal_name=applicant.legal_name, now=now,
+            plan,
+            due=due,
+            tenant_legal_name=applicant.legal_name,
+            sender_name=await alerts.operator_name(db, plan.user_id),
+            now=now,
         )
         # A row that failed BEFORE the scheduled moment came from an early
         # manual "Send now" (e.g. before the tenant's email was on file). It
@@ -288,7 +277,14 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
             "tenant_email": applicant.contact_email,
             "tenant_phone": applicant.contact_phone,
             "operator_email": await alerts.operator_email(db, plan.user_id),
+            "owner_may_text": may_send_texts(plan.user_id),
         }
+        if RENT_REMINDER_CHANNEL_SMS in pending and not snapshot["owner_may_text"]:
+            # The text fails as ``sms_not_allowed`` below; the email still goes.
+            logger.warning(
+                "Rent reminder text held back: the owner may not send texts: plan_id=%s owner_id=%s",
+                plan.id, plan.user_id,
+            )
 
     sent = 0
     for channel in pending:
@@ -332,6 +328,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
                 tenant_email=snapshot["tenant_email"],
                 tenant_phone=snapshot["tenant_phone"],
                 operator_email=snapshot["operator_email"],
+                owner_may_text=snapshot["owner_may_text"],
             ),
         )
         if result.status != "failed":
@@ -432,8 +429,19 @@ async def send_now(
             raise TenancyEndedError("This tenancy has ended, so reminders don't go out.")
         if RENT_REMINDER_CHANNEL_SMS in channels and not sms_service.is_configured():
             raise SmsUnavailableError(SMS_UNAVAILABLE_MESSAGE)
+        owner_may_text = may_send_texts(plan.user_id)
+        if RENT_REMINDER_CHANNEL_SMS in channels and not owner_may_text:
+            logger.warning(
+                "Send now refused: texts on but the owner may not send them: plan_id=%s owner_id=%s",
+                plan.id, plan.user_id,
+            )
+            raise SmsNotAllowedError(SMS_NOT_ALLOWED_MESSAGE)
         rendered = planner.render_for_send_now(
-            plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
+            plan,
+            due=due,
+            tenant_legal_name=applicant.legal_name,
+            sender_name=await alerts.operator_name(db, plan.user_id),
+            now=moment,
         )
         if (
             due.due_date != expected_due_date
@@ -482,6 +490,7 @@ async def send_now(
                     tenant_email=applicant.contact_email,
                     tenant_phone=applicant.contact_phone,
                     operator_email=operator_email,
+                    owner_may_text=owner_may_text,
                 ),
             )
     return [await _deliver(outbound) for outbound in outbounds]

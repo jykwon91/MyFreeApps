@@ -1,8 +1,7 @@
-/** Whether this server can send texts, and from which number. */
+/** Whether this server can send texts, whether the plan's owner may send them, and from which Twilio number. */
 export interface RentReminderSmsStatus {
   available: boolean;
+  /** Whether the plan's owner (the caller, before there's a plan) may send texts. The server decides. */
+  allowed: boolean;
   from_number: string | null;
-  /** Message bodies are end-to-end encrypted through the relay. */
-  encrypted: boolean;
-  webhook_url: string;
 }

@@ -91,17 +91,33 @@ async def _change_behind_the_callers_back(db: AsyncSession, row: RentReminderSen
 # --------------------------------------------------------------------------
 
 
-async def test_mark_sent_to_phone_is_audited(db: AsyncSession) -> None:
+async def test_mark_sent_to_provider_is_audited(db: AsyncSession) -> None:
     owner = uuid.uuid4()
     row = await _send(db, owner=owner)
 
     with audit_actor(owner):
-        assert await repo.mark_sent_to_phone(db, row=row, attempt=1, provider_message_id="msg-1")
+        assert await repo.mark_sent_to_provider(db, row=row, attempt=1, provider_message_id="msg-1")
 
     changes = await _updates(db, row)
-    assert changes["status"] == ("queued", "sent_to_phone")
+    assert changes["status"] == ("queued", "sent_to_provider")
     assert changes["provider_message_id"] == (None, "msg-1")
     assert "sent_at" in changes
+    assert await _actors(db, row) == {str(owner)}
+
+
+async def test_record_handoff_is_audited_and_keeps_the_status(db: AsyncSession) -> None:
+    """Twilio's callback confirmed the try before the sender recorded the hand-off."""
+    owner = uuid.uuid4()
+    row = await _send(db, owner=owner, status="delivered")
+
+    with audit_actor(owner):
+        assert await repo.record_handoff(db, row=row, attempt=1, provider_message_id="msg-1")
+
+    changes = await _updates(db, row)
+    assert changes["provider_message_id"] == (None, "msg-1")
+    assert "sent_at" in changes
+    assert "status" not in changes
+    assert row.status == "delivered"
     assert await _actors(db, row) == {str(owner)}
 
 
@@ -131,32 +147,32 @@ async def test_mark_failed_is_audited(db: AsyncSession) -> None:
 
 async def test_confirm_if_unchanged_is_audited(db: AsyncSession) -> None:
     owner = uuid.uuid4()
-    row = await _send(db, owner=owner, status="sent_to_phone")
+    row = await _send(db, owner=owner, status="sent_to_provider")
 
     with audit_actor(owner):
         assert await repo.confirm_if_unchanged(
-            db, row=row, status="delivered", seen_status="sent_to_phone", seen_error_code=None, seen_attempt=1,
+            db, row=row, status="delivered", seen_status="sent_to_provider", seen_error_code=None, seen_attempt=1,
         )
 
     changes = await _updates(db, row)
-    assert changes["status"] == ("sent_to_phone", "delivered")
+    assert changes["status"] == ("sent_to_provider", "delivered")
     assert "confirmed_at" in changes
     assert await _actors(db, row) == {str(owner)}
 
 
 async def test_fail_if_unchanged_is_audited(db: AsyncSession) -> None:
     owner = uuid.uuid4()
-    row = await _send(db, owner=owner, status="sent_to_phone")
+    row = await _send(db, owner=owner, status="sent_to_provider")
 
     with audit_actor(owner):
         assert await repo.fail_if_unchanged(
-            db, row=row, error_code="phone_failed: no service",
-            seen_status="sent_to_phone", seen_error_code=None, seen_attempt=1,
+            db, row=row, error_code="sms_failed: 30003",
+            seen_status="sent_to_provider", seen_error_code=None, seen_attempt=1,
         )
 
     changes = await _updates(db, row)
-    assert changes["status"] == ("sent_to_phone", "failed")
-    assert changes["error_code"] == (None, "phone_failed: no service")
+    assert changes["status"] == ("sent_to_provider", "failed")
+    assert changes["error_code"] == (None, "sms_failed: 30003")
     assert await _actors(db, row) == {str(owner)}
 
 
@@ -201,16 +217,26 @@ async def test_claim_and_release_operator_alert_are_audited(db: AsyncSession) ->
 # --------------------------------------------------------------------------
 
 
-async def test_a_row_the_phone_confirmed_meanwhile_is_not_marked_failed(db: AsyncSession) -> None:
-    row = await _send(db, owner=uuid.uuid4(), status="sent_to_phone")
+async def test_a_row_twilio_confirmed_meanwhile_is_not_marked_failed(db: AsyncSession) -> None:
+    row = await _send(db, owner=uuid.uuid4(), status="sent_to_provider")
     await _change_behind_the_callers_back(db, row, status="delivered")
-    assert row.status == "sent_to_phone"  # what the watchdog read
+    assert row.status == "sent_to_provider"  # what the watchdog read
 
     assert not await repo.mark_failed(
-        db, row=row, error_code="no_phone_confirmation", seen_status="sent_to_phone", seen_attempt=1,
+        db, row=row, error_code="no_sms_confirmation", seen_status="sent_to_provider", seen_attempt=1,
     )
 
     assert (row.status, row.error_code) == ("delivered", None)  # refreshed to what's stored
+    assert await _updates(db, row) == {}
+
+
+async def test_a_handoff_is_not_recorded_on_a_newer_try(db: AsyncSession) -> None:
+    row = await _send(db, owner=uuid.uuid4(), status="delivered")
+    await _change_behind_the_callers_back(db, row, status="queued", attempt=2)
+
+    assert not await repo.record_handoff(db, row=row, attempt=1, provider_message_id="msg-old")
+
+    assert (row.status, row.attempt, row.provider_message_id, row.sent_at) == ("queued", 2, None, None)
     assert await _updates(db, row) == {}
 
 
@@ -284,7 +310,7 @@ async def test_the_watchdog_audits_each_failure_and_alert_as_the_owner(
 ) -> None:
     long_ago = _dt.datetime(2026, 11, 1, 0, 0, tzinfo=UTC)
     owner_a, owner_b = uuid.uuid4(), uuid.uuid4()
-    row_a = await _send(db, owner=owner_a, status="sent_to_phone", sent_at=long_ago, created_at=long_ago)
+    row_a = await _send(db, owner=owner_a, status="sent_to_provider", sent_at=long_ago, created_at=long_ago)
     row_b = await _send(db, owner=owner_b, created_at=long_ago)
 
     assert await watchdog.run_watchdog(long_ago + _dt.timedelta(days=1)) == 2
@@ -297,17 +323,17 @@ async def test_the_watchdog_audits_each_failure_and_alert_as_the_owner(
         assert await _actors(db, row) == {str(owner)}
 
 
-async def test_the_phone_webhook_audits_as_the_owner(db: AsyncSession, jobs_wired: AsyncMock) -> None:
+async def test_the_twilio_webhook_audits_as_the_owner(db: AsyncSession, jobs_wired: AsyncMock) -> None:
     owner = uuid.uuid4()
-    row = await _send(db, owner=owner, status="sent_to_phone", provider_message_id="msg-1")
+    row = await _send(db, owner=owner, status="sent_to_provider", provider_message_id="SM" + "1" * 32)
 
     assert await webhook.handle_event(
-        {"type": "message.send.failed", "data": {"request_id": f"{row.id}:1", "error_message": "NO_SERVICE"}},
-        event_type_header=None,
+        {"MessageSid": "SM" + "1" * 32, "MessageStatus": "undelivered", "ErrorCode": "30003"},
+        request_id=f"{row.id}:1",
     )
 
     changes = await _updates(db, row)
-    assert changes["status"] == ("sent_to_phone", "failed")
+    assert changes["status"] == ("sent_to_provider", "failed")
     assert changes["operator_alerted_at"][0] is None  # the alert claim
     assert jobs_wired.await_count == 1
     assert await _actors(db, row) == {str(owner)}

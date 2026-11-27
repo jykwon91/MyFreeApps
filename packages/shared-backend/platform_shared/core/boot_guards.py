@@ -196,6 +196,11 @@ def check_email_configured(
             raise EmailNotConfiguredError(" ".join(problems))
 
 
+_SMS_BACKEND_CONSOLE = "console"
+_SMS_BACKEND_TWILIO = "twilio"
+_SMS_BACKENDS = (_SMS_BACKEND_CONSOLE, _SMS_BACKEND_TWILIO)
+
+
 def check_sms_configured(
     *,
     sms_backend: str,
@@ -203,32 +208,31 @@ def check_sms_configured(
     twilio_auth_token: str,
     twilio_from_number: str,
     environment: str,
-    httpsms_api_key: str = "",
-    httpsms_from_number: str = "",
-    httpsms_webhook_signing_key: str = "",
+    console_allowed: bool = False,
 ) -> None:
     """Fail loud at boot if SMS isn't usable in a non-dev environment.
 
-    Only apps that opt in to SMS (via ``create_app_lifespan(sms_required=True)``)
-    invoke this guard. The others don't need to set Twilio env vars: MJH never
-    texts, and MBK's texts are optional, so it checks its sender's
-    ``is_configured()`` before offering them.
+    Only apps that text people invoke this guard, through
+    ``create_app_lifespan(sms_required=True)`` (texts are essential) or
+    ``create_app_lifespan(sms_optional=True)`` (texts are a feature the
+    deployment may leave off). Apps that never text skip it entirely so they
+    don't need to set Twilio env vars.
 
-    Three failure modes guarded:
+    Failure modes guarded:
 
-    1. ``sms_backend == "console"`` in production / staging. Console-mode
-       SMS goes to stdout — useful for dev where the operator wants to
-       see the rendered body, broken in production where customers never
-       see the text.
-    2. ``sms_backend == "twilio"`` with any of ``TWILIO_ACCOUNT_SID`` /
+    1. ``sms_backend`` is not a known backend (``console`` / ``twilio``),
+       e.g. one left over from a removed provider. The app would otherwise
+       treat texts as unavailable without anyone noticing.
+    2. ``sms_backend == "console"`` when ``console_allowed`` is False.
+       Console-mode SMS goes to stdout — useful for dev, broken in
+       production where customers never see the text. An app whose texts
+       are optional passes ``console_allowed=True``: console then means
+       "texts are off here", which the app reports as unavailable.
+    3. ``sms_backend == "twilio"`` with any of ``TWILIO_ACCOUNT_SID`` /
        ``TWILIO_AUTH_TOKEN`` / ``TWILIO_FROM_NUMBER`` empty. The
        ``SmsService`` raises ``SmsNotConfiguredError`` on send when any
-       credential is empty — an operator who forgot one would only
-       notice when the first customer never gets their ready-text.
-    3. ``sms_backend == "httpsms"`` with any of ``HTTPSMS_API_KEY`` /
-       ``HTTPSMS_FROM_NUMBER`` / ``HTTPSMS_WEBHOOK_SIGNING_KEY`` empty.
-       The signing key is required because delivery is only ever
-       confirmed by a signed webhook.
+       credential is empty, and the auth token is also what verifies
+       Twilio's status callbacks.
 
     Args:
         sms_backend: ``"console"`` (dev/CI default — log to stdout) or
@@ -241,17 +245,24 @@ def check_sms_configured(
             from (e.g. ``"+15551234567"``). Required when
             ``sms_backend == "twilio"``.
         environment: The deployment environment name. ``"development"``
-            and ``"test"`` allow any combination; everything else
-            requires a working ``twilio`` backend.
+            and ``"test"`` allow any combination.
+        console_allowed: True for an app whose texts are optional, so
+            ``console`` (texts off) is a valid production setting.
 
     Raises:
-        SmsNotConfiguredError: If ``environment`` is not dev/test and
-            either (a) ``sms_backend == "console"``, or (b)
-            ``sms_backend == "twilio"`` with any empty Twilio credential.
+        SmsNotConfiguredError: In a non-dev environment, on any of the
+            failure modes above.
     """
     if environment in _DEV_ENVIRONMENTS:
         return
-    if sms_backend == "console":
+    if sms_backend not in _SMS_BACKENDS:
+        raise SmsNotConfiguredError(
+            f"SMS_BACKEND={sms_backend!r} is not a known SMS backend. Set "
+            "SMS_BACKEND=twilio and configure TWILIO_ACCOUNT_SID / "
+            "TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER"
+            + (", or SMS_BACKEND=console to leave texts off." if console_allowed else ".")
+        )
+    if sms_backend == _SMS_BACKEND_CONSOLE and not console_allowed:
         raise SmsNotConfiguredError(
             "SMS_BACKEND='console' is not allowed in non-development "
             "environments — ready-text alerts would silently log to stdout "
@@ -259,24 +270,14 @@ def check_sms_configured(
             "configure TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / "
             "TWILIO_FROM_NUMBER."
         )
-    if sms_backend == "twilio" and not (
+    if sms_backend == _SMS_BACKEND_TWILIO and not (
         twilio_account_sid and twilio_auth_token and twilio_from_number
     ):
         raise SmsNotConfiguredError(
             "SMS_BACKEND='twilio' requires TWILIO_ACCOUNT_SID, "
             "TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER to all be set in "
             "non-development environments. Without them the SmsService "
-            "raises on every send and customers never receive ready-texts. "
-            "Set all three."
-        )
-    if sms_backend == "httpsms" and not (
-        httpsms_api_key and httpsms_from_number and httpsms_webhook_signing_key
-    ):
-        raise SmsNotConfiguredError(
-            "SMS_BACKEND='httpsms' requires HTTPSMS_API_KEY, HTTPSMS_FROM_NUMBER, "
-            "and HTTPSMS_WEBHOOK_SIGNING_KEY to all be set in non-development "
-            "environments. Without the signing key no delivery report can be "
-            "verified, so every text would be reported as failed. Set all three."
+            "raises on every send and no text reaches anyone. Set all three."
         )
 
 

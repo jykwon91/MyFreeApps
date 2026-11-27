@@ -12,6 +12,7 @@ const mockOverview = vi.fn();
 const mockPreview = vi.fn();
 const mockSends = vi.fn();
 const mockCreate = vi.fn();
+const mockUpdate = vi.fn();
 const mockSendNow = vi.fn();
 const sendNowState = { isLoading: false };
 
@@ -20,7 +21,7 @@ vi.mock("@mybookkeeper/api-client/store/rentRemindersApi", () => ({
   useGetRentReminderPreviewQuery: (...args: unknown[]) => mockPreview(...args),
   useGetRentReminderSendsQuery: (...args: unknown[]) => mockSends(...args),
   useCreateRentReminderPlanMutation: () => [mockCreate, { isLoading: false }],
-  useUpdateRentReminderPlanMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateRentReminderPlanMutation: () => [mockUpdate, { isLoading: false }],
   useSendRentReminderNowMutation: () => [mockSendNow, sendNowState],
 }));
 
@@ -36,10 +37,10 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
 
 const SMS_OFF = {
   available: false,
+  allowed: true,
   from_number: null,
-  encrypted: false,
-  webhook_url: "https://example.test/api/rent-reminders/sms/webhook",
 };
+const NOT_ALLOWED_NOTE = "Texts can't be sent from your account. Turn this off to keep your email reminders going.";
 
 const NEED_CHANNEL = "Turn on email or text so the reminder has somewhere to go.";
 
@@ -70,7 +71,7 @@ const SONU_REMINDER_PLAN: RentReminderPlan = {
 
 const SONU_PLAN: RentReminderOverview = {
   ...NO_PLAN,
-  sms: { ...SMS_OFF, available: true, from_number: "+17135550199", encrypted: true },
+  sms: { ...SMS_OFF, available: true, from_number: "+17135550199" },
   plan: SONU_REMINDER_PLAN,
 };
 
@@ -94,7 +95,7 @@ const FAILED_TEXT: RentReminderSend = {
   channel: "sms",
   status: "failed",
   amount: "375.00",
-  error_code: "no_phone_confirmation",
+  error_code: "no_sms_confirmation",
   created_at: "2026-10-24T23:00:00Z",
   sent_at: "2026-10-24T23:00:05Z",
   confirmed_at: null,
@@ -178,6 +179,44 @@ describe("RentReminderCard", () => {
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ email_enabled: false, sms_enabled: true }));
   });
 
+  it("has no text switch for an account that may not send texts", () => {
+    mockOverview.mockReturnValue({
+      data: { ...NO_PLAN, sms: { ...SONU_PLAN.sms, allowed: false } },
+      isLoading: false,
+      isError: false,
+    });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-setup"));
+
+    expect(screen.getByTestId("rent-reminder-email")).toBeChecked();
+    expect(screen.queryByTestId("rent-reminder-sms")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^From /)).not.toBeInTheDocument();
+  });
+
+  it("lets an account that may not send texts turn a plan's texts off, and only off", () => {
+    mockOverview.mockReturnValue({
+      data: { ...SONU_PLAN, sms: { ...SONU_PLAN.sms, allowed: false }, tenant_has_phone: false },
+      isLoading: false,
+      isError: false,
+    });
+    mockUpdate.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    renderCard();
+    fireEvent.click(screen.getByTestId("rent-reminder-edit"));
+
+    const text = screen.getByTestId("rent-reminder-sms");
+    expect(text).toBeChecked();
+    expect(text).toBeEnabled();
+    expect(screen.getByTestId("rent-reminder-sms-status")).toHaveTextContent(NOT_ALLOWED_NOTE);
+    expect(screen.queryByText(/No phone number/)).not.toBeInTheDocument();
+
+    fireEvent.click(text);
+    expect(text).not.toBeChecked();
+    expect(text).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId("rent-reminder-save"));
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ email_enabled: true, sms_enabled: false }));
+  });
+
   it("labels a new plan's send time in the device's zone and saves that zone", () => {
     const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions");
     spy.mockReturnValue({ timeZone: "America/Los_Angeles" } as Intl.ResolvedDateTimeFormatOptions);
@@ -234,6 +273,9 @@ describe("RentReminderCard", () => {
       "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday).",
     );
     expect(screen.getByTestId("rent-reminder-send-at")).toHaveTextContent("Sat, Oct 31");
+    expect(screen.getByTestId("rent-reminder-sms-opt-out-note")).toHaveTextContent(
+      'Texts also end with "Reply STOP to opt out."',
+    );
 
     // Email already went out for this due date, so the text waits for the
     // next one — the two never go out at different times.
@@ -244,7 +286,8 @@ describe("RentReminderCard", () => {
 
     const row = screen.getByTestId("rent-reminder-history-row");
     expect(row).toHaveTextContent("Failed");
-    expect(row).toHaveTextContent("battery-optimized");
+    expect(row).toHaveTextContent("The text service never reported back, so it may still arrive");
+    expect(row).toHaveTextContent("Check the Twilio console's messaging logs, or ask the tenant");
   });
 
   it("sends email and text together with one button", () => {
@@ -258,7 +301,7 @@ describe("RentReminderCard", () => {
       unwrap: () =>
         Promise.resolve([
           { ...FAILED_TEXT, channel: "email", status: "sent" },
-          { ...FAILED_TEXT, status: "sent_to_phone" },
+          { ...FAILED_TEXT, status: "sent_to_provider" },
         ]),
     });
     renderCard();
@@ -289,13 +332,14 @@ describe("RentReminderCard", () => {
       unwrap: () => Promise.resolve([{ ...FAILED_TEXT, channel: "email", status: "sent" }]),
     });
     renderCard();
+    expect(screen.queryByTestId("rent-reminder-sms-opt-out-note")).toBeNull();
     const button = screen.getByTestId("rent-reminder-send-now");
     expect(button).toHaveTextContent("Send email now");
     fireEvent.click(button);
     expect(mockSendNow).toHaveBeenCalledWith(expect.objectContaining({ channels: ["email"] }));
   });
 
-  it("says a text the relay never confirmed may already have been sent", async () => {
+  it("says a text the text service never confirmed may already have been sent", async () => {
     mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
     mockPreview.mockReturnValue({ data: { ...PREVIEW, sent_channels: [] }, isLoading: false, isError: false });
     mockSendNow.mockReturnValue({
@@ -311,11 +355,11 @@ describe("RentReminderCard", () => {
     const message = mockShowError.mock.calls[0][0] as string;
     expect(message).toContain("The email didn't go out.");
     expect(message).toContain("The text may already have been sent");
-    expect(message).toContain("httpsms.com");
+    expect(message).toContain("Twilio console");
     expect(message).not.toContain("text didn't go out");
   });
 
-  it("never sends the operator to httpsms.com about an email that may have gone out", async () => {
+  it("never sends the operator to the Twilio console about an email that may have gone out", async () => {
     mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
     mockPreview.mockReturnValue({
       data: { ...PREVIEW, sent_channels: [], possibly_sent: [{ channel: "email", attempt: 1 }] },
@@ -326,21 +370,21 @@ describe("RentReminderCard", () => {
       unwrap: () =>
         Promise.resolve([
           { ...FAILED_TEXT, channel: "email", error_code: "send_interrupted" },
-          { ...FAILED_TEXT, status: "sent_to_phone", error_code: null },
+          { ...FAILED_TEXT, status: "sent_to_provider", error_code: null },
         ]),
     });
     renderCard();
     const warning = screen.getByTestId("rent-reminder-possibly-sent");
     expect(warning).toHaveTextContent("The last email may already have reached the tenant");
     expect(warning).toHaveTextContent("Ask the tenant whether the email arrived");
-    expect(warning).not.toHaveTextContent("httpsms.com");
+    expect(warning).not.toHaveTextContent("Twilio console");
     fireEvent.click(screen.getByTestId("rent-reminder-confirm-possibly-sent"));
     fireEvent.click(screen.getByTestId("rent-reminder-send-now"));
     await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
     const message = mockShowError.mock.calls[0][0] as string;
     expect(message).toContain("The email may already have been sent. Ask the tenant whether the email arrived");
-    expect(message).toContain("The text is with your phone.");
-    expect(message).not.toContain("httpsms.com");
+    expect(message).toContain("The text is with Twilio.");
+    expect(message).not.toContain("Twilio console");
   });
 
   it("tells the operator an email the mail server never confirmed may already have been sent", async () => {
@@ -350,7 +394,7 @@ describe("RentReminderCard", () => {
       unwrap: () =>
         Promise.resolve([
           { ...FAILED_TEXT, channel: "email", status: "failed", error_code: "email_outcome_unknown" },
-          { ...FAILED_TEXT, status: "sent_to_phone", error_code: null },
+          { ...FAILED_TEXT, status: "sent_to_provider", error_code: null },
         ]),
     });
     renderCard();
@@ -360,7 +404,7 @@ describe("RentReminderCard", () => {
     expect(message).toContain("The email may already have been sent");
     expect(message).toContain("Ask the tenant whether the email arrived");
     expect(message).not.toContain("email didn't go out");
-    expect(message).not.toContain("httpsms.com");
+    expect(message).not.toContain("Twilio console");
   });
 
   it("won't resend a text that may have gone out until the operator confirms they checked", () => {
@@ -370,11 +414,11 @@ describe("RentReminderCard", () => {
       isLoading: false,
       isError: false,
     });
-    mockSendNow.mockReturnValue({ unwrap: () => Promise.resolve([{ ...FAILED_TEXT, status: "sent_to_phone" }]) });
+    mockSendNow.mockReturnValue({ unwrap: () => Promise.resolve([{ ...FAILED_TEXT, status: "sent_to_provider" }]) });
     renderCard();
     const warning = screen.getByTestId("rent-reminder-possibly-sent");
     expect(warning).toHaveTextContent("The last text may already have reached the tenant");
-    expect(warning).toHaveTextContent("httpsms.com");
+    expect(warning).toHaveTextContent("Twilio console");
     const button = screen.getByTestId("rent-reminder-send-now");
     expect(button).toBeDisabled();
     const describedBy = button.getAttribute("aria-describedby");

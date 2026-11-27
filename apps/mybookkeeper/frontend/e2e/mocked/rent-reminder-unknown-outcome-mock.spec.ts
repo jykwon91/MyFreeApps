@@ -1,6 +1,6 @@
 /**
  * No-backend E2E: a rent reminder nobody confirmed is shown as "may already
- * have been sent", with where to check for its channel (a text's httpSMS log,
+ * have been sent", with where to check for its channel (a text's Twilio log,
  * or for an email the tenant), so the host doesn't resend it blind. One that
  * definitely failed says plainly it wasn't sent. Send now stays off for a
  * reminder that may have gone out until the host confirms they checked, and
@@ -21,7 +21,7 @@ import type { RentReminderSendStatus } from "@mybookkeeper/api-client/types/rent
 import { APPLICANT_DETAIL, APPLICANT_ID, SCREENING_ELIGIBLE, SCREENING_PROVIDERS } from "./fixtures/mockApplicant";
 
 const OVERVIEW = {
-  sms: { available: true, from_number: "+17135550199", encrypted: true, webhook_url: "https://example.test/api/rent-reminders/sms/webhook" },
+  sms: { available: true, allowed: true, from_number: "+17135550199" },
   tenant_has_email: true,
   tenant_has_phone: true,
   plan: {
@@ -76,15 +76,15 @@ const PLAN_CHANNEL_ON: Record<RentReminderChannel, boolean> = {
 const PLAN_CHANNELS: readonly RentReminderChannel[] = (["email", "sms"] as const).filter(
   (channel) => PLAN_CHANNEL_ON[channel],
 );
-// How Send now's new try comes back: a text waits for the phone's report, an
+// How Send now's new try comes back: a text waits for Twilio's report, an
 // email is sent once the mail server takes it.
-const SENT_STATUS = { sms: "sent_to_phone", email: "sent" } as const satisfies Record<
+const SENT_STATUS = { sms: "sent_to_provider", email: "sent" } as const satisfies Record<
   RentReminderChannel,
   RentReminderSendStatus
 >;
-// So the toast says the email was sent and the text is only with the phone.
+// So the toast says the email was sent and the text is only with Twilio.
 const SENT_TOAST =
-  "Reminder sent by email. The text is with your phone, and the history below will show whether it went out.";
+  "Reminder sent by email. The text is with Twilio, and the history below will show whether it went out.";
 
 const TEXT_SENDS = [
   failedText("send-unknown", "2026-11-22", "sms_outcome_unknown"),
@@ -153,15 +153,15 @@ async function showTenant(
   return sendBodies;
 }
 
-test("a text the relay never confirmed says it may already have been sent", async ({ page }) => {
+test("a text the text service never confirmed says it may already have been sent", async ({ page }) => {
   await showTenant(page, PREVIEW);
 
   const rows = page.getByTestId("rent-reminder-history-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("may already have been sent");
-  await expect(rows.nth(0)).toContainText("httpsms.com");
-  await expect(rows.nth(1)).toContainText("couldn't reach the text relay, so it wasn't sent");
-  await expect(page.getByText("The text relay refused it")).toHaveCount(0);
+  await expect(rows.nth(0)).toContainText("Check the Twilio console's messaging logs, or ask the tenant");
+  await expect(rows.nth(1)).toContainText("couldn't reach the text service, so it wasn't sent");
+  await expect(page.getByText("The text service refused it")).toHaveCount(0);
 });
 
 test("Send now waits for the host to confirm they checked a text that may have gone out", async ({ page }) => {
@@ -181,14 +181,14 @@ test("Send now waits for the host to confirm they checked a text that may have g
   await expect(toast(page, SENT_TOAST)).toBeVisible();
 });
 
-test("an email the mail server never confirmed says to ask the tenant, not to check httpSMS", async ({ page }) => {
+test("an email the mail server never confirmed says to ask the tenant, not to check Twilio", async ({ page }) => {
   await showTenant(page, PREVIEW, EMAIL_SENDS);
 
   const rows = page.getByTestId("rent-reminder-history-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("may already have been sent");
   await expect(rows.nth(0)).toContainText("Ask the tenant");
-  await expect(rows.nth(0)).not.toContainText("httpsms.com");
+  await expect(rows.nth(0)).not.toContainText("Twilio");
   await expect(rows.nth(1)).toContainText("The mail server didn't take it");
 });
 
@@ -202,7 +202,7 @@ test("Send now waits for the host to confirm they asked the tenant about an emai
   const warning = page.getByTestId("rent-reminder-possibly-sent");
   await expect(warning).toContainText("The last email may already have reached the tenant");
   await expect(warning).toContainText("Ask the tenant whether the email arrived");
-  await expect(warning).not.toContainText("httpsms.com");
+  await expect(warning).not.toContainText("Twilio");
   const send = page.getByTestId("rent-reminder-send-now");
   await expect(send).toBeDisabled();
   await page.getByTestId("rent-reminder-confirm-possibly-sent").check();

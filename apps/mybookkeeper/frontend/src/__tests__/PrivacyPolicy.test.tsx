@@ -37,6 +37,13 @@ describe("PrivacyPolicy — rendering", () => {
     expect(screen.getByText(/for a spam check/)).toBeInTheDocument();
   });
 
+  it("says the whole reminder text goes to Twilio, and what it holds", () => {
+    renderPrivacyPolicy();
+    expect(screen.getByRole("heading", { name: /twilio \(text messages\)/i })).toBeInTheDocument();
+    expect(screen.getByText(/mobile number\s+and the whole message are sent to Twilio/)).toBeInTheDocument();
+    expect(screen.getByText(/the amount and due date, the landlord's payment\s+instructions and the landlord's first name/)).toBeInTheDocument();
+  });
+
   it("covers tenant data and when deletion is refused", () => {
     renderPrivacyPolicy();
     expect(screen.getByRole("heading", { name: /people you rent to/i })).toBeInTheDocument();

@@ -14,14 +14,16 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
+import { isTextSwitchLocked, showsTextSwitch } from "@mybookkeeper/api-client/utils/rentReminderTextSwitch";
 import { sendTimeLabel } from "@mybookkeeper/api-client/utils/rentReminderZone";
 import { deviceDecimalSeparator, FIELD_PRESETS, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
+import { daysHintBad, REMINDER_SETUP_MESSAGES } from "../../constants/rentReminderSetup";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import TimeField from "../shell/TimeField";
 import { reminderSetupFailure } from "./rentWriteFailure";
+import { smsSwitchNote } from "./smsSwitchNote";
 
 const FREQUENCY_SEGMENTS = [
   { value: "monthly", label: REMINDER_SETUP_MESSAGES.monthly },
@@ -116,17 +118,15 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
         onValueChange={(on) => change("emailEnabled", on)}
         value={values.emailEnabled}
       />
-      <SwitchRow
-        disabled={isBusy || !sms.available}
-        label={REMINDER_SETUP_MESSAGES.sms}
-        note={
-          sms.available
-            ? [smsFrom(sms.from_number ?? "", sms.encrypted), overview.tenant_has_phone ? null : REMINDER_SETUP_MESSAGES.noPhone].filter(Boolean).join(" ")
-            : REMINDER_SETUP_MESSAGES.smsUnavailable
-        }
-        onValueChange={(on) => change("smsEnabled", on)}
-        value={values.smsEnabled}
-      />
+      {showsTextSwitch(overview) ? (
+        <SwitchRow
+          disabled={isBusy || isTextSwitchLocked(sms, values.smsEnabled)}
+          label={REMINDER_SETUP_MESSAGES.sms}
+          note={smsSwitchNote(overview)}
+          onValueChange={(on) => change("smsEnabled", on)}
+          value={values.smsEnabled}
+        />
+      ) : null}
       <FieldError message={hasChannel ? undefined : REMINDER_SETUP_MESSAGES.needChannel} name={REMINDER_SETUP_MESSAGES.sendBy} />
 
       <FormField

@@ -6,8 +6,8 @@ watchdog and the webhook can't each email about the same failed try. A retry
 is a new try and gets its own alert.
 
 A failure we recorded without knowing ("may already have been sent") gets one
-follow-up if the phone later reports the text definitely failed, so the
-operator knows it's safe to send again.
+follow-up if Twilio later reports the text definitely failed, so the operator
+knows it's safe to send again.
 """
 from __future__ import annotations
 
@@ -18,8 +18,11 @@ import uuid
 from app.core.rent_reminder_alert_messages import (
     CHECK_WHETHER_SENT,
     MISSING_CONTACT,
+    NOT_RETRYABLE_ERRORS,
     REMINDER_NAME,
     RETRY,
+    TWILIO_ERROR_DOCS_URL,
+    TWILIO_REFUSED_FIX,
     WHAT_HAPPENED,
 )
 from app.core.rent_reminder_channel import RentReminderChannel
@@ -27,10 +30,11 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_RECIPIENT,
     ERROR_UNEXPECTED,
     MAY_STILL_ARRIVE_ERRORS,
-    PHONE_FAILED_CODE_PREFIX,
-    SMS_RELAY_CODE_PREFIX,
+    SMS_FAILED_CODE_PREFIX,
+    SMS_REFUSED_CODE_PREFIX,
 )
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNEL_SMS
+from app.core.twilio_error_code import is_twilio_error_code
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_send_repo
@@ -44,6 +48,20 @@ logger = logging.getLogger(__name__)
 async def operator_email(db, user_id: uuid.UUID) -> str | None:
     user = await user_repo.get_by_id(db, user_id)
     return user.email if user is not None else None
+
+
+async def operator_name(db, user_id: uuid.UUID) -> str | None:
+    """The operator's name as on their account, to sign the reminder with."""
+    user = await user_repo.get_by_id(db, user_id)
+    return user.name if user is not None else None
+
+
+def _twilio_error(code: str) -> str:
+    """`` (Twilio error 30007, <docs link>)`` when ``code`` ends in Twilio's number, else ``""``."""
+    number = code.removeprefix(SMS_FAILED_CODE_PREFIX).removeprefix(SMS_REFUSED_CODE_PREFIX)
+    if not is_twilio_error_code(number):
+        return ""
+    return f" (Twilio error {number}, {TWILIO_ERROR_DOCS_URL}{number})"
 
 
 def email_html(body: str) -> str:
@@ -66,15 +84,17 @@ def _what_happened(*, channel: RentReminderChannel, code: str) -> str:
     if code == ERROR_NO_RECIPIENT:
         return f"The tenant record has no {MISSING_CONTACT[channel]}."
     # The table before the prefixes: some codes with a fixed spelling start
-    # with ``sms_`` too (``sms_network_error``, ``sms_http_401``) and have
-    # words of their own.
+    # with ``sms_`` too (``sms_network_error``) and have words of their own.
     if code in WHAT_HAPPENED:
         return WHAT_HAPPENED[code]
-    if code.startswith(PHONE_FAILED_CODE_PREFIX):
-        detail = code.removeprefix(PHONE_FAILED_CODE_PREFIX)
-        return f"The phone reported a problem sending the text ({detail}). Check the httpSMS app on the phone."
-    if code.startswith(SMS_RELAY_CODE_PREFIX):
-        return f"httpSMS refused the text ({code.removeprefix(SMS_RELAY_CODE_PREFIX)})."
+    if code.startswith(SMS_FAILED_CODE_PREFIX):
+        return f"Twilio couldn't deliver it{_twilio_error(code)}."
+    if code.startswith(SMS_REFUSED_CODE_PREFIX):
+        refused = f"Twilio refused the text{_twilio_error(code)}."
+        fix = TWILIO_REFUSED_FIX.get(code.removeprefix(SMS_REFUSED_CODE_PREFIX))
+        if fix:
+            return f"{refused} {fix}"
+        return refused
     return f"Reason: {code}."
 
 
@@ -87,8 +107,10 @@ def _alert_text(*, tenant: str, channel: RentReminderChannel, code: str) -> tupl
     else:
         subject = f"{tenant}'s {what} didn't go out"
         next_step = RETRY
-    body = f"{subject}. {_what_happened(channel=channel, code=code)} {next_step}"
-    return subject, body
+    body = f"{subject}. {_what_happened(channel=channel, code=code)}"
+    if code in NOT_RETRYABLE_ERRORS:
+        return subject, body
+    return subject, f"{body} {next_step}"
 
 
 async def alert_operator(
@@ -96,8 +118,8 @@ async def alert_operator(
 ) -> bool:
     """Email the operator about try ``attempt`` of a failed reminder, at most once.
 
-    ``settled_unsure``: the row had been failed as "may have gone out" and the
-    phone has now said it definitely didn't (the row's alert mark was cleared
+    ``settled_unsure``: the row had been failed as "may have gone out" and
+    Twilio has now said it definitely didn't (the row's alert mark was cleared
     for this one follow-up).
     """
     async with unit_of_work() as db:

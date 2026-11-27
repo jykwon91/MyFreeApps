@@ -11,7 +11,7 @@ import uuid
 from platform_shared.core.audit_actor import audit_actor
 
 from app.core.rent_reminder_constants import (
-    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_NO_SMS_CONFIRMATION,
     ERROR_SEND_INTERRUPTED,
     SMS_CONFIRMATION_TIMEOUT_MINUTES,
 )
@@ -29,9 +29,10 @@ def _now() -> _dt.datetime:
 async def run_watchdog(now: _dt.datetime | None = None) -> int:
     """Fail reminders that never got an outcome, and tell the operator.
 
-    ``sent_to_phone`` with no phone confirmation in time means the phone is
-    off, offline, or asleep (``no_phone_confirmation``); a ``queued`` row that
-    old means the worker died mid-send (``send_interrupted``).
+    ``sent_to_provider`` with no confirmation from Twilio in time means its
+    status callbacks aren't reaching us (``no_sms_confirmation``); the text may
+    still have gone out. A ``queued`` row that old means the worker died
+    mid-send (``send_interrupted``).
 
     The sweep runs for no signed-in user, so each row's writes are audited as
     the row's owner.
@@ -43,11 +44,11 @@ async def run_watchdog(now: _dt.datetime | None = None) -> int:
         for row in await rent_reminder_send_repo.list_unconfirmed(db, older_than=cutoff):
             send_id, attempt, status, owner_id = row.id, row.attempt, row.status, row.user_id
             code = (
-                ERROR_NO_PHONE_CONFIRMATION
-                if status == "sent_to_phone"
+                ERROR_NO_SMS_CONFIRMATION
+                if status == "sent_to_provider"
                 else ERROR_SEND_INTERRUPTED
             )
-            # The phone may confirm between the read and this write; then the
+            # Twilio may confirm between the read and this write; then the
             # confirmation stands and nobody is alerted.
             with audit_actor(owner_id):
                 recorded = await rent_reminder_send_repo.mark_failed(

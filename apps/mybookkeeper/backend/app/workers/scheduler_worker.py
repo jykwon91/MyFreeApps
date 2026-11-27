@@ -91,6 +91,7 @@ from app.core.scheduler_worker_constants import (
     HEARTBEAT_INTERVAL_SECONDS,
     HEARTBEAT_PATH,
 )
+from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.db.session import AsyncSessionLocal, engine
 from app.models.integrations.gmail_sync_run import GmailSyncRun
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
@@ -383,6 +384,10 @@ async def run_scheduler(stop: asyncio.Event) -> None:
         plaid_client_id=settings.plaid_client_id,
         plaid_secret=settings.plaid_secret,
         frontend_url=settings.frontend_url,
+    )
+    check_sms_sender_configured(
+        sms_backend=settings.sms_backend,
+        sms_sender_user_id=settings.sms_sender_user_id,
     )
     full_interval = settings.gmail_poll_interval_minutes * 60
     tick = min(REMINDER_TICK_MINUTES * 60, full_interval)

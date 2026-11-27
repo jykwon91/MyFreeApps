@@ -19,11 +19,17 @@ export const RENT_REMINDER_CHANNEL_LABEL: Record<RentReminderChannel, string> = 
 
 /** Who has a text that's been handed off but hasn't been reported on yet
  *  (see `isTextHandedOff`). Each app writes its own sentence around it. */
-export const TEXT_HANDOFF_HOLDER = "your phone";
+export const TEXT_HANDOFF_HOLDER = "Twilio";
+
+/** Under the text switch of a plan that still has texts on when its owner may not send them. */
+export const SMS_NOT_ALLOWED_NOTE = "Texts can't be sent from your account. Turn this off to keep your email reminders going.";
+
+/** What texts are said to come from when the server doesn't say which number. */
+export const SMS_FROM_NUMBER_FALLBACK = "your Twilio number";
 
 export const RENT_REMINDER_STATUS_LABEL: Record<RentReminderSendStatus, string> = {
   queued: "Sending",
-  sent_to_phone: "Sent to phone",
+  sent_to_provider: "With Twilio",
   sent: "Sent",
   delivered: "Delivered",
   failed: "Failed",

@@ -11,7 +11,7 @@ import { possiblySentAdvice } from "@mybookkeeper/api-client/utils/rentReminderP
 import { TENANT_WORDS } from "./rent-reminder-possibly-sent";
 
 /** A try that didn't fail, as the error toast names it after the failures. A
- *  text the phone hasn't reported on yet is with the phone, not gone out. */
+ *  text Twilio hasn't reported on yet is with Twilio, not gone out. */
 function notFailedLine(row: RentReminderSend): string {
   if (isTextHandedOff(row)) return `The text is with ${TEXT_HANDOFF_HOLDER}.`;
   return `The ${rentReminderChannelWord(row.channel)} went out.`;

@@ -12,7 +12,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rent_reminder_channel import RentReminderChannel
-from app.core.rent_reminder_constants import MAX_ERROR_CODE_LENGTH
+from app.core.rent_reminder_constants import (
+    MAX_ERROR_CODE_LENGTH,
+    MAX_PROVIDER_MESSAGE_ID_LENGTH,
+)
 from app.models.rent.rent_reminder_send import RentReminderSend
 
 
@@ -164,8 +167,8 @@ async def list_unconfirmed(
     """Rows still owed an outcome whose deadline has passed.
 
     A ``queued`` row is late once it was claimed before ``older_than`` (the
-    send never completed); a ``sent_to_phone`` row once it was handed to the
-    phone before ``older_than`` with no confirmation since.
+    send never completed); a ``sent_to_provider`` row once Twilio accepted it
+    before ``older_than`` with no status callback confirming it since.
     """
     result = await db.execute(
         select(RentReminderSend)
@@ -176,7 +179,7 @@ async def list_unconfirmed(
                     RentReminderSend.created_at < older_than,
                 ),
                 and_(
-                    RentReminderSend.status == "sent_to_phone",
+                    RentReminderSend.status == "sent_to_provider",
                     RentReminderSend.sent_at < older_than,
                 ),
             ),
@@ -216,6 +219,13 @@ async def _update_if_unchanged(
     return bool(changed)
 
 
+def _with_message_id(values: dict[str, object], provider_message_id: str | None) -> dict[str, object]:
+    """``values`` plus the Message SID, when there is one to store."""
+    if not provider_message_id:
+        return values
+    return {**values, "provider_message_id": provider_message_id[:MAX_PROVIDER_MESSAGE_ID_LENGTH]}
+
+
 async def confirm_if_unchanged(
     db: AsyncSession,
     *,
@@ -224,11 +234,13 @@ async def confirm_if_unchanged(
     seen_status: str,
     seen_error_code: str | None,
     seen_attempt: int,
+    provider_message_id: str | None = None,
 ) -> bool:
-    """Record a phone-side confirmation (``sent`` or ``delivered``).
+    """Record a confirmation from Twilio (``sent`` or ``delivered``).
 
     Clears any error: a confirmation arriving after the watchdog gave up means
-    the text did go out after all.
+    the text did go out after all. ``provider_message_id`` is the Message SID
+    to store when the row doesn't have it yet.
     """
     return await _update_if_unchanged(
         db,
@@ -236,7 +248,10 @@ async def confirm_if_unchanged(
         seen_status=seen_status,
         seen_error_code=seen_error_code,
         seen_attempt=seen_attempt,
-        values={"status": status, "error_code": None, "confirmed_at": _now()},
+        values=_with_message_id(
+            {"status": status, "error_code": None, "confirmed_at": _now()},
+            provider_message_id,
+        ),
     )
 
 
@@ -248,16 +263,20 @@ async def fail_if_unchanged(
     seen_status: str,
     seen_error_code: str | None,
     seen_attempt: int,
+    provider_message_id: str | None = None,
 ) -> bool:
-    """Record a failure the phone reported.
+    """Record a failure Twilio reported.
 
     A row already failed (we gave up without knowing) was alerted about as
     "may already have gone out"; clearing ``operator_alerted_at`` lets the
     follow-up "it definitely didn't" alert go out, once.
+    ``provider_message_id`` is the Message SID to store when the row doesn't
+    have it yet.
     """
-    values: dict[str, object] = {
-        "status": "failed", "error_code": error_code[:MAX_ERROR_CODE_LENGTH],
-    }
+    values = _with_message_id(
+        {"status": "failed", "error_code": error_code[:MAX_ERROR_CODE_LENGTH]},
+        provider_message_id,
+    )
     if seen_status == "failed":
         values["operator_alerted_at"] = None
     return await _update_if_unchanged(
@@ -282,13 +301,14 @@ async def mark_sent(db: AsyncSession, *, row: RentReminderSend, attempt: int) ->
     )
 
 
-async def mark_sent_to_phone(
+async def mark_sent_to_provider(
     db: AsyncSession, *, row: RentReminderSend, attempt: int, provider_message_id: str,
 ) -> bool:
-    """Record that this try's text was handed to httpSMS, if still queued.
+    """Record that Twilio accepted this try's text, if still queued.
 
-    The phone's webhook can beat this write; a row it already confirmed (or
-    failed) is never stepped back to ``sent_to_phone``.
+    Twilio's status callback can beat this write; a row it already confirmed
+    (or failed) is never stepped back to ``sent_to_provider``. Store the
+    hand-off on it with ``record_handoff`` instead.
     """
     return await _update_if_unchanged(
         db,
@@ -297,11 +317,36 @@ async def mark_sent_to_phone(
         seen_error_code=None,
         seen_attempt=attempt,
         values={
-            "status": "sent_to_phone",
-            "provider_message_id": provider_message_id[:64],
+            "status": "sent_to_provider",
+            "provider_message_id": provider_message_id[:MAX_PROVIDER_MESSAGE_ID_LENGTH],
             "sent_at": _now(),
         },
     )
+
+
+async def record_handoff(
+    db: AsyncSession, *, row: RentReminderSend, attempt: int, provider_message_id: str,
+) -> bool:
+    """Store when Twilio accepted this try's text, and its Message SID, leaving the status.
+
+    For a try whose status callback was recorded before ``mark_sent_to_provider``
+    could run: the callback's status stays, and the hand-off isn't lost. Does
+    nothing once the row is on another try or already has its hand-off time.
+    """
+    changed = await update_rows(
+        db,
+        RentReminderSend,
+        RentReminderSend.id == row.id,
+        RentReminderSend.attempt == attempt,
+        RentReminderSend.sent_at.is_(None),
+        values={
+            "provider_message_id": provider_message_id[:MAX_PROVIDER_MESSAGE_ID_LENGTH],
+            "sent_at": _now(),
+        },
+    )
+    if not changed:
+        await db.refresh(row)
+    return bool(changed)
 
 
 async def mark_failed(
@@ -314,7 +359,7 @@ async def mark_failed(
 ) -> bool:
     """Record our own failure verdict on a try that has no outcome yet.
 
-    Used by the sender and the watchdog. If the phone confirmed or failed the
+    Used by the sender and the watchdog. If Twilio confirmed or failed the
     try meanwhile, or it was retried, that news is kept.
     """
     return await _update_if_unchanged(

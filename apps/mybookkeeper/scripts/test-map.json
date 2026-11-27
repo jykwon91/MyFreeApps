@@ -1129,6 +1129,9 @@
         "backend/app/core/rent_reminder_constants.py",
         "backend/app/core/rent_reminder_alert_messages.py",
         "backend/app/core/rent_reminder_request_id.py",
+        "backend/app/core/sms_sender.py",
+        "backend/app/core/sms_sender_boot_guard.py",
+        "backend/app/core/sms_sender_not_configured_error.py",
         "backend/app/workers/scheduler_worker.py",
         "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",
         "backend/alembic/versions/rentremattempt261121_add_rent_reminder_send_attempt.py",
@@ -1140,6 +1143,7 @@
         "api-client/src/utils/rentReminderChannelWords.ts",
         "api-client/src/utils/rentReminderPossiblySent.ts",
         "api-client/src/utils/rentReminderPlanChannels.ts",
+        "api-client/src/utils/rentReminderTextSwitch.ts",
         "api-client/src/utils/isTextHandedOff.ts",
         "api-client/src/constants/rentReminderLabels.ts",
         "api-client/src/utils/rentReminderForm.ts",
@@ -1160,7 +1164,10 @@
         "test_rent_reminder_request_id.py",
         "test_cross_org_isolation_http_2.py",
         "test_rent_reminder_send_audit.py",
-        "test_rent_reminder_channels.py"
+        "test_rent_reminder_channels.py",
+        "test_rent_reminder_sms_permission.py",
+        "test_sms_sender_boot_guard.py",
+        "test_sms_sender_boot_wiring.py"
       ],
       "frontend_tests": [
         "RentReminderCard.test.tsx",

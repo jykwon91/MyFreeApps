@@ -34,6 +34,7 @@ export const REMINDER_MESSAGES = {
   sendAgain: "Send again",
   possiblySentRefused: "The last try may already have reached them, so I didn't send anything. Check first, then send again.",
   noSms: "Text reminders aren't set up on the server, so I can't send.",
+  smsNotAllowed: "Texts can't be sent from your account, so I can't send. Turn texts off in Edit reminders to send by email.",
   history: "History",
   noHistory: "No reminders sent yet.",
   showFewer: "Show fewer",
@@ -93,7 +94,7 @@ export function showAllReminders(count: number): string {
   return `Show all ${count} reminders`;
 }
 
-/** `textLine` says where the text is: with the phone, or gone out. */
+/** `textLine` says where the text is: with Twilio, or gone out. */
 export function sentBoth(textLine: string): string {
   return `I sent the email. ${textLine}`;
 }
@@ -106,7 +107,7 @@ export function emailOnlyWent(reason: string, name: string | null): string {
   return `The email went out, but the text didn't. ${reason}. I can't resend it from here. Text ${name ?? UNNAMED_TENANT} yourself if you need to.`;
 }
 
-/** `textLine` says where the text is: with the phone, or gone out. */
+/** `textLine` says where the text is: with Twilio, or gone out. */
 export function onlyEmailFailed(reason: string, textLine: string): string {
   return `The email didn't go out. ${reason}. ${textLine} I can't resend just the email.`;
 }

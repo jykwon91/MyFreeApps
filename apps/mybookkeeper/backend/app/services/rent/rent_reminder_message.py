@@ -1,10 +1,16 @@
 """Render the reminder a tenant receives. Pure — no DB, no clock.
 
-    Hi Sonu, reminder: rent of $375 is due tomorrow (Sunday). Pay via Zelle jason@example.com.
+    Hi Sonu, reminder: rent of $375 is due tomorrow (Sunday). Pay via Zelle jason@example.com. - Jason, your landlord
 
 The due-date phrase is relative to the day the reminder is *sent* ("today",
 "tomorrow", otherwise "on Sunday, Nov 1"), so a reminder that goes out late
-still reads correctly. The same text is used for email and SMS.
+still reads correctly. The same text is used for email and SMS; texts
+also get ``SMS_OPT_OUT_SUFFIX`` appended when they are sent.
+
+Texts come from a Twilio number the tenant doesn't know, so the message is
+signed with the operator's first name. The sign-off uses a plain hyphen, not a
+dash: one character outside the GSM-7 alphabet makes the whole text UCS-2,
+which carriers bill as 70 characters a segment instead of 160.
 """
 from __future__ import annotations
 
@@ -12,11 +18,20 @@ import datetime as _dt
 from decimal import Decimal
 
 _FALLBACK_GREETING_NAME = "there"
+_SIGN_OFF_ROLE = "your landlord"
 
 
 def first_name(legal_name: str | None) -> str:
     parts = (legal_name or "").split()
     return parts[0] if parts else _FALLBACK_GREETING_NAME
+
+
+def sign_off(sender_name: str | None) -> str:
+    """`` - Jason, your landlord``, or `` - Your landlord`` without a name."""
+    parts = (sender_name or "").split()
+    if not parts:
+        return f" - {_SIGN_OFF_ROLE.capitalize()}"
+    return f" - {parts[0]}, {_SIGN_OFF_ROLE}"
 
 
 def format_amount(amount: Decimal) -> str:
@@ -48,6 +63,7 @@ def render_reminder(
     due_date: _dt.date,
     sent_on: _dt.date,
     payment_instructions: str | None,
+    sender_name: str | None,
 ) -> str:
     message = (
         f"Hi {first_name(tenant_legal_name)}, reminder: rent of "
@@ -56,7 +72,7 @@ def render_reminder(
     instructions = (payment_instructions or "").strip()
     if instructions:
         message += f" Pay via {instructions.rstrip('.')}."
-    return message
+    return message + sign_off(sender_name)
 
 
 def reminder_subject(amount: Decimal, due_date: _dt.date) -> str:

@@ -29,6 +29,7 @@ STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
 from app.core.plaid_boot_guard import check_plaid_configured
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
+from app.core.sms_sender_boot_guard import check_sms_sender_configured
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
@@ -71,6 +72,10 @@ async def _on_startup() -> None:
         plaid_secret=settings.plaid_secret,
         frontend_url=settings.frontend_url,
     )
+    check_sms_sender_configured(
+        sms_backend=settings.sms_backend,
+        sms_sender_user_id=settings.sms_sender_user_id,
+    )
     if settings.run_upload_worker:
         async def _run_worker() -> None:
             try:
@@ -97,6 +102,9 @@ lifespan = create_app_lifespan(
     audit_config=AUDIT_CONFIG,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
+    # Rent-reminder texts are optional (console = texts off), but a Twilio
+    # setup must be complete or the deploy fails.
+    sms_optional=True,
     on_startup=_on_startup,
     on_shutdown=_on_shutdown,
 )

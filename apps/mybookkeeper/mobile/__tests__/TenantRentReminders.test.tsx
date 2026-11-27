@@ -39,8 +39,8 @@ jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({
 
 const originalAdapter = api.defaults.adapter;
 const SEND_BUTTON = "Send now to Dana";
-const TEXT_WITH_PHONE = "The text is with your phone, and I'll show in the history whether it went out.";
-const SENT_EMAIL_TEXT_WITH_PHONE = "I sent the email. The text is with your phone, and I'll show in the history whether it went out.";
+const TEXT_WITH_TWILIO = "The text is with Twilio, and I'll show in the history whether it went out.";
+const SENT_EMAIL_TEXT_WITH_TWILIO = "I sent the email. The text is with Twilio, and I'll show in the history whether it went out.";
 
 interface ServerState {
   role: string;
@@ -62,7 +62,7 @@ function startServer(overrides: Partial<ServerState> = {}): ServerState {
     preview: aReminderPreview(),
     sends: [],
     ledger: aRentLedger({ schedules: [aRentSchedule()] }),
-    sendAnswer: [aReminderSend(), aReminderSend({ id: "send2", channel: "sms", status: "sent_to_phone" })],
+    sendAnswer: [aReminderSend(), aReminderSend({ id: "send2", channel: "sms", status: "sent_to_provider" })],
     sendBodies: [],
     workspaceReads: 0,
     ...overrides,
@@ -140,6 +140,7 @@ describe("what the section shows", () => {
     expect(screen.getByText("Goes out Sat, Nov 2 at 6:00 PM CDT")).toBeTruthy();
     expect(screen.getByText("Hi Dana, rent of $300 is due tomorrow (Sunday).")).toBeTruthy();
     expect(screen.getByText("Goes by email and text.")).toBeTruthy();
+    expect(screen.getByText('Texts also end with "Reply STOP to opt out."')).toBeTruthy();
     expect(screen.getByText(REMINDER_MESSAGES.dontCheckPaid)).toBeTruthy();
     expect(await screen.findByText("Email · $300.00 due Sun, Oct 27")).toBeTruthy();
     expect(screen.getByText("Sent")).toBeTruthy();
@@ -263,6 +264,28 @@ describe("what the section shows", () => {
     expect(await screen.findByText("Something went wrong sending it")).toBeTruthy();
     expect(screen.queryByText(/weird_code/)).toBeNull();
   });
+
+  it("shows a text Twilio has as With Twilio, and what a Twilio error means", async () => {
+    const sends = [
+      aReminderSend({ id: "s1", channel: "sms", status: "sent_to_provider" }),
+      aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_failed: 30032" }),
+    ];
+    await renderReminders(startServer({ sends }));
+
+    expect(await screen.findByText("With Twilio")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Your toll-free number isn't verified yet, so carriers block its texts. Check its verification status in the Twilio console (Twilio error 30032)",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("describes a text from before Twilio without blaming Twilio", async () => {
+    await renderReminders(startServer({ sends: [aReminderSend({ channel: "sms", status: "failed", error_code: "sms_failed: expired" })] }));
+
+    expect(await screen.findByText("The text expired before it went out")).toBeTruthy();
+    expect(screen.queryByText(/Twilio/)).toBeNull();
+  });
 });
 
 describe("Send now", () => {
@@ -288,7 +311,7 @@ describe("Send now", () => {
     await waitFor(() =>
       expect(server.sendBodies).toEqual([{ due_date: "2030-11-03", amount: "300.00", message: "Hi Dana, rent of $300 is due on Sunday, Nov 3.", channels: ["email", "sms"], confirmed_possibly_sent: [] }]),
     );
-    expect(await screen.findByText(SENT_EMAIL_TEXT_WITH_PHONE)).toBeTruthy();
+    expect(await screen.findByText(SENT_EMAIL_TEXT_WITH_TWILIO)).toBeTruthy();
   });
 
   it("sends only the email when the plan's texts are off", async () => {
@@ -311,7 +334,7 @@ describe("Send now", () => {
 
     await sendAndConfirm();
 
-    const message = emailOnlyWent("The phone number couldn't be read", "Dana Reed");
+    const message = emailOnlyWent("The tenant's phone number isn't valid. Fix it on their record", "Dana Reed");
     await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
   });
 
@@ -326,7 +349,7 @@ describe("Send now", () => {
 
     expect(await screen.findByText(REMINDER_MESSAGES.cantSendAgain)).toBeTruthy();
     expect(screen.queryByText(SEND_BUTTON)).toBeNull();
-    expect(screen.getAllByText(emailOnlyWent("The phone number couldn't be read", "Dana Reed")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(emailOnlyWent("The tenant's phone number isn't valid. Fix it on their record", "Dana Reed")).length).toBeGreaterThan(0);
   });
 
   it("won't offer Send again for a due date that went out, even if the reload says otherwise", async () => {
@@ -334,7 +357,7 @@ describe("Send now", () => {
 
     await sendAndConfirm();
 
-    await screen.findByText(SENT_EMAIL_TEXT_WITH_PHONE);
+    await screen.findByText(SENT_EMAIL_TEXT_WITH_TWILIO);
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: true })).toBeTruthy();
   });
@@ -346,7 +369,7 @@ describe("Send now", () => {
 
     await sendAndConfirm();
 
-    const message = neitherWentEach("The mail server didn't take it", "The server couldn't reach the text relay, so it wasn't sent");
+    const message = neitherWentEach("The mail server didn't take it", "The server couldn't reach the text service, so it wasn't sent");
     await waitFor(() => expect(screen.getAllByText(message)).toHaveLength(2));
     await waitFor(() => expect(screen.getByRole("button", { name: SEND_BUTTON, disabled: false })).toBeTruthy());
   });
@@ -357,7 +380,7 @@ describe("Send now", () => {
     await renderReminders(server);
 
     const warning = possiblySentWarning(["sms"], "Dana");
-    expect(warning).toContain("httpsms.com");
+    expect(warning).toContain("Twilio console");
     expect(await screen.findByText(warning)).toBeTruthy();
     await fireEvent.press(await screen.findByText(SEND_BUTTON));
     expect(alert.mock.calls[0][1]).toContain(warning);
@@ -372,7 +395,7 @@ describe("Send now", () => {
     );
   });
 
-  it("asks about an email that may have gone out without sending them to httpsms.com", async () => {
+  it("asks about an email that may have gone out without sending them to the Twilio console", async () => {
     const server = startServer({ preview: aReminderPreview({ possibly_sent: [{ channel: "email", attempt: 1 }] }) });
     await renderReminders(server);
 
@@ -513,26 +536,32 @@ describe("reminder wording", () => {
   });
 
   it("refuses when texts aren't set up, as the server would", () => {
-    const overview = aReminderOverview({ sms: { available: false, from_number: null, encrypted: false, webhook_url: "" } });
+    const overview = aReminderOverview({ sms: { available: false, allowed: true, from_number: null } });
     expect(sendReadiness(overview, plan, "Dana")).toEqual({ canSend: false, notes: [REMINDER_MESSAGES.noSms] });
+  });
+
+  it("refuses a plan with texts on when the account may not send them, as the server would", () => {
+    const overview = aReminderOverview({ sms: { available: true, allowed: false, from_number: null } });
+    expect(sendReadiness(overview, plan, "Dana")).toEqual({ canSend: false, notes: [REMINDER_MESSAGES.smsNotAllowed] });
+    expect(sendReadiness(overview, aReminderPlan({ sms_enabled: false }), "Dana")).toEqual({ canSend: true, notes: [] });
   });
 
   it("describes each way a send can come out", () => {
     const email = aReminderSend();
-    const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_phone" });
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_provider" });
     const failed = { status: "failed" as const, error_code: "email_send_failed" };
     const reason = "The mail server didn't take it";
 
     expect(sendOutcome([email], "Dana")).toEqual({ message: "I sent the email to Dana.", isProblem: false });
-    expect(sendOutcome([text], "Dana")).toEqual({ message: TEXT_WITH_PHONE, isProblem: false });
-    expect(sendOutcome([email, text], "Dana")).toEqual({ message: SENT_EMAIL_TEXT_WITH_PHONE, isProblem: false });
+    expect(sendOutcome([text], "Dana")).toEqual({ message: TEXT_WITH_TWILIO, isProblem: false });
+    expect(sendOutcome([email, text], "Dana")).toEqual({ message: SENT_EMAIL_TEXT_WITH_TWILIO, isProblem: false });
     expect(sendOutcome([{ ...email, ...failed }, text], "Dana")).toEqual({
-      message: `The email didn't go out. ${reason}. ${TEXT_WITH_PHONE} I can't resend just the email.`,
+      message: `The email didn't go out. ${reason}. ${TEXT_WITH_TWILIO} I can't resend just the email.`,
       isProblem: true,
     });
   });
 
-  it("says a text the phone has reported on went out, not that the phone still has it", () => {
+  it("says a text Twilio has reported on went out, not that Twilio still has it", () => {
     const email = aReminderSend();
     const failedEmail = aReminderSend({ status: "failed", error_code: "email_send_failed" });
     for (const status of ["sent", "delivered"] as const) {
@@ -549,11 +578,11 @@ describe("reminder wording", () => {
 
   it("gives each channel's reason when both failed for different ones", () => {
     const email = aReminderSend({ status: "failed", error_code: "email_send_failed" });
-    const text = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_http_422" });
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_network_error" });
 
     expect(sendOutcome([email, text], "Dana")).toEqual({
       message:
-        "Neither the email nor the text went out. Email: The mail server didn't take it. Text: The text relay refused it. You can try again once those are fixed.",
+        "Neither the email nor the text went out. Email: The mail server didn't take it. Text: The server couldn't reach the text service, so it wasn't sent. You can try again once those are fixed.",
       isProblem: true,
     });
   });
@@ -576,7 +605,8 @@ describe("reminder wording", () => {
   it("never says a text that may have gone out didn't, or to try again", () => {
     const email = aReminderSend();
     const unsure = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_outcome_unknown" });
-    const reason = "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again";
+    const reason =
+      "The text service never confirmed it, so it may already have been sent. Check the Twilio console's messaging logs, or ask the tenant, before sending again";
 
     for (const rows of [[unsure], [email, unsure]]) {
       const outcome = sendOutcome(rows, "Dana");
@@ -591,7 +621,7 @@ describe("reminder wording", () => {
   it("says a text may have gone out even when the email failed too", () => {
     const email = aReminderSend({ status: "failed", error_code: "email_send_failed" });
     const unsure = aReminderSend({ id: "s2", channel: "sms", status: "failed", error_code: "sms_outcome_unknown" });
-    const reason = "The text relay never confirmed it, so it may already have been sent. Check the message log on httpsms.com before sending again";
+    const reason = "The text service never confirmed it, so it may already have been sent. Check the Twilio console's messaging logs, or ask the tenant, before sending again";
 
     const outcome = sendOutcome([email, unsure], "Dana");
     expect(outcome).toEqual({
@@ -613,13 +643,13 @@ describe("reminder wording", () => {
     expect(outcome.message).not.toContain("try again");
   });
 
-  it("says a text the phone hasn't reported on is with the phone, beside an email that may have gone out", () => {
-    const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_phone" });
+  it("says a text Twilio hasn't reported on is with Twilio, beside an email that may have gone out", () => {
+    const text = aReminderSend({ id: "s2", channel: "sms", status: "sent_to_provider" });
     const unsure = aReminderSend({ channel: "email", status: "failed", error_code: "email_outcome_unknown" });
     const reason = "The mail server never confirmed it, so it may already have been sent. Ask the tenant whether it arrived before sending again";
 
     expect(sendOutcome([unsure, text], "Dana")).toEqual({
-      message: `I can't tell if the email went out. ${reason}. ${TEXT_WITH_PHONE}`,
+      message: `I can't tell if the email went out. ${reason}. ${TEXT_WITH_TWILIO}`,
       isProblem: true,
     });
   });

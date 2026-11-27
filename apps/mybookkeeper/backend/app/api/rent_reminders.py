@@ -1,22 +1,28 @@
 """HTTP routes for tenant rent reminders.
 
 Route prefix: /rent-reminders. Everything is organization-scoped except the
-httpSMS webhook, which is public and authenticated by the signed JWT httpSMS
-attaches to every delivery report.
+Twilio status callback, which is public and authenticated by the
+``X-Twilio-Signature`` Twilio puts on every request.
 """
 from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, Response
-from platform_shared.services.httpsms_service import HttpSmsWebhookAuthError
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from platform_shared.core.sms_constants import TWILIO_SIGNATURE_HEADER
+from platform_shared.services.twilio_webhook import (
+    TwilioWebhookAuthError,
+    check_twilio_callback_headers,
+)
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, reject_demo_org_write
 from app.core.rate_limit import RateLimiter
-from app.core.rent_reminder_constants import REMINDER_MAY_HAVE_BEEN_SENT_CODE
+from app.core.rent_reminder_constants import (
+    REMINDER_MAY_HAVE_BEEN_SENT_CODE,
+    SMS_WEBHOOK_REQUEST_ID_PARAM,
+)
 from app.core.request_utils import get_client_ip
 from app.schemas.rent.rent_reminder_overview_response import RentReminderOverviewResponse
 from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
@@ -36,7 +42,8 @@ router = APIRouter(prefix="/rent-reminders", tags=["rent-reminders"])
 
 _TENANT_NOT_FOUND = "Tenant not found"
 _PLAN_NOT_FOUND = "This tenant has no rent reminder plan"
-# httpSMS sends a handful of events per text; this only stops floods.
+_INVALID_WEBHOOK_SIGNATURE = "Invalid webhook signature"
+# Twilio sends a handful of status callbacks per text; this only stops floods.
 _webhook_limiter = RateLimiter(max_attempts=120, window_seconds=60)
 _send_now_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 
@@ -75,7 +82,10 @@ async def create_plan(
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
     except rent_reminder_service.PlanAlreadyExistsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except rent_reminder_service.SmsUnavailableError as exc:
+    except (
+        rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -96,7 +106,10 @@ async def update_plan(
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
     except rent_reminder_service.PlanNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_PLAN_NOT_FOUND) from exc
-    except rent_reminder_service.SmsUnavailableError as exc:
+    except (
+        rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -163,6 +176,7 @@ async def send_now(
         raise HTTPException(status_code=404, detail=_PLAN_NOT_FOUND) from exc
     except (
         rent_reminder_service.SmsUnavailableError,
+        rent_reminder_service.SmsNotAllowedError,
         rent_reminder_dispatch_service.NoUpcomingRentError,
         rent_reminder_dispatch_service.TenancyEndedError,
     ) as exc:
@@ -195,18 +209,30 @@ async def list_sends(
 
 
 @router.post("/sms/webhook", status_code=204)
-async def sms_webhook(
-    request: Request,
-    payload: dict[str, Any] = Body(...),
-    authorization: str | None = Header(default=None),
-    x_event_type: str | None = Header(default=None),
-) -> Response:
-    """Delivery reports from httpSMS. Public; authenticated by its signed JWT."""
-    _webhook_limiter.check(f"httpsms-webhook:{get_client_ip(request)}")
+async def sms_webhook(request: Request) -> Response:
+    """Twilio status callbacks (form-encoded). Public; authenticated by Twilio's signature.
+
+    A request without a signature, or with a body Twilio never sends, is
+    refused before the body is read. The signature covers the URL and every
+    form parameter, so the same parameters that were checked are the ones
+    acted on.
+    """
+    _webhook_limiter.check(f"twilio-webhook:{get_client_ip(request)}")
+    signature = request.headers.get(TWILIO_SIGNATURE_HEADER)
     try:
-        rent_reminder_webhook_service.verify(authorization)
-    except HttpSmsWebhookAuthError as exc:
-        logger.warning("Rejected httpSMS webhook: %s", exc)
-        raise HTTPException(status_code=401, detail="Invalid webhook signature") from exc
-    await rent_reminder_webhook_service.handle_event(payload, event_type_header=x_event_type)
+        check_twilio_callback_headers(
+            signature=signature, content_type=request.headers.get("content-type"),
+        )
+        form = await request.form()
+        params = {key: value for key, value in form.items() if isinstance(value, str)}
+        rent_reminder_webhook_service.verify(
+            query_string=request.url.query, params=params, signature=signature,
+        )
+    except TwilioWebhookAuthError as exc:
+        logger.warning("Rejected Twilio status callback: %s", exc)
+        raise HTTPException(status_code=403, detail=_INVALID_WEBHOOK_SIGNATURE) from exc
+    await rent_reminder_webhook_service.handle_event(
+        params,
+        request_id=request.query_params.get(SMS_WEBHOOK_REQUEST_ID_PARAM),
+    )
     return Response(status_code=204)

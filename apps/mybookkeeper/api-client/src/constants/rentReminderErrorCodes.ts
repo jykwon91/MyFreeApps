@@ -4,7 +4,7 @@
  * the operator to check and confirm first.
  */
 export const MAY_STILL_ARRIVE_ERROR_CODES: readonly string[] = [
-  "no_phone_confirmation",
+  "no_sms_confirmation",
   "send_interrupted",
   "sms_outcome_unknown",
   "email_outcome_unknown",
