@@ -19,7 +19,11 @@ registry_images: true
 serve_only_build_arg: false
 env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend
   python3 -m platform_shared.infra.seed_env --app myjobhunter'
-csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# script-src hash = the inline theme-bootstrap <script> in frontend/index.html
+# (LF bytes, as CI builds it; byte-identical in every app but MGA). Editing that
+# script means regenerating the hash — rules/inline-script-csp-hashes.md;
+# test_inline_script_csp_hashes.py checks it.
+csp: "default-src 'self'; script-src 'self' 'sha256-pRmp+e9Kbp/gMfqkTunUSwQiXg5fOIUXX1ZIdhOiwW8=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 # api drains tracked background tasks at shutdown; renders api stop_grace_period.
 drain_on_shutdown: true
 workers:

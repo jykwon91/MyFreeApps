@@ -67,44 +67,24 @@ not a drive-by during a verification task).
 
 ---
 
-## MEDIUM — Inline theme script blocked by CSP in 4 of 6 apps, canonical MBK included
+## LOW — Theme bootstrap script is copy-pasted per app, not rendered
 
 **Logged:** 2026-10-01
-**Scope:** `apps/mybookkeeper` (canonical), `apps/mylanguagetutor`, `apps/mypizzatracker`, `apps/myrecipes` (`app.yaml` `csp` + `frontend/index.html`)
-**Effort:** Small (~1h: four hashes, re-render, one parametrised conformance test)
+**Scope:** every app's `frontend/index.html`
+**Effort:** Small
 
 ### Problem
 
-Every app's `frontend/index.html` has an inline theme-bootstrap `<script>`. It adds
-`dark` to `<html>` before React mounts, so dark-mode users don't see a light flash.
-Under each app's strict `script-src`, the browser runs it only if its SHA-256 hash
-is listed (`rules/inline-script-csp-hashes.md`). Hashing the LF bytes a CI build
-serves:
-
-| App | Script hash | Allowed by `script-src`? |
-|---|---|---|
-| mybookkeeper | `sha256-pRmp+e9Kbp/gMfqkTunUSwQiXg5fOIUXX1ZIdhOiwW8=` | No — lists a stale `sha256-6gP5…` |
-| mylanguagetutor | `sha256-5ZdhFxrnnX1Ovg0nAtuU78NThCLbXwy2T09p3sU1V7k=` | No — no hash at all |
-| mypizzatracker | same as mylanguagetutor | No — no hash at all |
-| myrecipes | same as mylanguagetutor | No — no hash at all |
-| myjobhunter | `sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=` | Yes |
-| mygamingassistant | `sha256-5Zdh…` | Yes (fixed in the MGA Discord Activity PR) |
-
-Wherever those four apps' CSP is served, the browser blocks the script on every
-page load (a CSP violation in the console), and dark-mode users get a light flash until React's
-`useTheme` applies the class. The script's code is the same in all six apps; only
-its surrounding whitespace differs, hence three different hashes.
+The inline theme-bootstrap `<script>` is Tier 2 but lives as a hand-copied block in
+each `index.html`. Five apps now carry byte-identical bytes under one CSP hash
+(`sha256-pRmp…`), and `test_inline_script_csp_hashes.py` fails CI if any app's
+script and `script-src` disagree. Nothing stops the copies drifting apart again,
+though; MGA already differs (it keeps comments, hash `sha256-5Zdh…`).
 
 ### Recommendation
 
-1. Add the hashes above to each app's `script-src`, canonical MBK first per the
-   parity flow, and re-render the Caddyfiles.
-2. Generalise
-   `packages/shared-backend/tests/test_discord_activity_framing.py::test_mga_inline_theme_script_hash_matches_its_csp`
-   into a conformance test over every app with an inline script, so an edit to
-   `index.html` fails CI instead of silently breaking the theme.
-3. Longer term, render the script from `infra/templates/` (theme bootstrap is
-   Tier 2) so every app serves the same bytes under one hash.
+Render the script and its hash from `infra/templates/` so every app serves the
+same bytes and the hash is computed, not maintained.
 
 ---
 
@@ -186,7 +166,7 @@ encodes to `-` and `_`.
 
 **Logged:** 2026-10-01
 **Scope:** every app's `frontend/index.html`
-**Effort:** Small; pair it with the CSP-hash item above, since any byte change needs a new hash
+**Effort:** Small; any byte change needs a new CSP hash in every app's `app.yaml`
 
 ### Problem
 

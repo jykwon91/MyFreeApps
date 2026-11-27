@@ -20,7 +20,11 @@ registry_images: true
 serve_only_build_arg: false
 env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend
   python3 -m platform_shared.infra.seed_env --app mybookkeeper'
-csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io https://cdn.plaid.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io https://*.plaid.com; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com https://www.youtube-nocookie.com https://cdn.plaid.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# script-src hash = the inline theme-bootstrap <script> in frontend/index.html
+# (LF bytes, as CI builds it; byte-identical in every app but MGA). Editing that
+# script means regenerating the hash — rules/inline-script-csp-hashes.md;
+# test_inline_script_csp_hashes.py checks it.
+csp: "default-src 'self'; script-src 'self' 'sha256-pRmp+e9Kbp/gMfqkTunUSwQiXg5fOIUXX1ZIdhOiwW8=' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io https://cdn.plaid.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io https://*.plaid.com; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com https://www.youtube-nocookie.com https://cdn.plaid.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 # cdn.plaid.com (script + frame) and *.plaid.com (connect) are Plaid Link,
 # the bank-connect widget on the Accounts page.
 # api drains tracked background tasks at shutdown; renders api stop_grace_period.
