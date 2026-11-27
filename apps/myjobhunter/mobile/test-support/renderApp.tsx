@@ -19,12 +19,14 @@ import SecurityRoute from "../app/(app)/security/index";
 import SecurityTurnOnRoute from "../app/(app)/security/turn-on";
 import NotFoundRoute from "../app/+not-found";
 import SignInRoute from "../app/sign-in";
+import ForgotPasswordRoute from "../app/forgot-password";
 
 /** The app's own layouts and screens, as expo-router would find them under app/. */
 export const APP_ROUTES = {
   _layout: RootLayout,
   "+not-found": NotFoundRoute,
   "sign-in": SignInRoute,
+  "forgot-password": ForgotPasswordRoute,
   "(app)/_layout": AppLayout,
   "(app)/analyze": AnalyzeRoute,
   "(app)/applications/[id]": ApplicationRoute,

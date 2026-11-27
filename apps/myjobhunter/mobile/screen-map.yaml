@@ -29,8 +29,9 @@ routes:
   # dialog is two sheets on this screen, Upload a file and Write a document.
   /documents:
     screen: (app)/documents
+  # Opened from sign-in's "Forgot your password?". The emailed link opens /reset-password on the website.
   /forgot-password:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on password-reset requests, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("Forgot your password? Reset it on the website").
+    screen: forgot-password
   /login:
     screen: sign-in
   # The website embeds its resume upload here; on the phone the upload is on the Resume screen
@@ -40,7 +41,7 @@ routes:
   /profile:
     screen: (app)/(tabs)/profile
   /register:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on sign-up, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("New here? Create an account on the website").
+    not_on_mobile: MyJobHunter is invite-only. Accounts are created from the link in the invite email, which opens the website; the sign-in screen says so and offers no sign-up.
   /reset-password:
     not_on_mobile: Opened from the link in the password-reset email, which goes to the website.
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its two columns are

@@ -223,6 +223,18 @@ docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
 **Phase 3:** Dramatiq workers, Gmail OAuth, Chrome extension integration
 **Phase 4:** Tavily company research, Claude JD parsing, cover letter generation
 
+## Phone app
+
+- **Phone password reset** is a screen in the mobile app (`mobile/app/forgot-password.tsx`, the shared
+  `ForgotPasswordScreen` from `@platform/mobile/captcha`, mirroring MyBookkeeper), opened from sign-in's
+  "Forgot your password?". The backend gates `POST /auth/forgot-password` with `require_turnstile`, so the screen
+  shows the Turnstile widget in a WebView loaded as the website's origin; the site key and its allowed hostname are
+  the website's (`TURNSTILE_SITE_KEY` in `mobile/src/constants/api.ts`; override with
+  `EXPO_PUBLIC_TURNSTILE_SITE_KEY`, or set it to `""` against a local backend with no secret). The reset link in the
+  email still opens `/reset-password` on the website. MyJobHunter is invite-only, so there is no phone sign-up: the
+  sign-in screen says so (`registration="invite_only"`) and `/register` stays off the phone in `mobile/screen-map.yaml`.
+  react-native-webview is a native module: rebuild the development build after pulling this change.
+
 ## Parity rule
 
 MJH mirrors MBK by default. MBK is the canonical, battle-tested
