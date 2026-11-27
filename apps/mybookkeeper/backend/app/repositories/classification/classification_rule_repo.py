@@ -2,19 +2,32 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import literal, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.vendors import normalize_address, normalize_vendor
+from app.core.payee_keys import payee_rule_key
+from app.core.vendors import normalize_address
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty
 from app.schemas.classification.rule_filing import RuleFiling
 
 
 def _normalize_pattern(match_type: str, pattern: str) -> str:
+    """A vendor rule is stored, and a vendor looked up, by its payee key: the
+    descriptor without its payment reference, so one rule matches every payment."""
     if match_type == "vendor":
-        return normalize_vendor(pattern)
+        return payee_rule_key(pattern)
     return pattern.strip().lower()
+
+
+# Of the rules that match, the highest priority, then the longest pattern: "zelle
+# payment to jason lawn guy" over "zelle payment to jason law". id breaks ties so
+# the same rule wins every time.
+_MOST_SPECIFIC_FIRST = (
+    ClassificationRule.priority.desc(),
+    func.length(ClassificationRule.match_pattern).desc(),
+    ClassificationRule.id,
+)
 
 
 def _normalize_context(match_type: str, context: str | None) -> str | None:
@@ -66,7 +79,7 @@ async def get_matching_rule(
                     ClassificationRule.match_context == norm_ctx,
                     ClassificationRule.is_active.is_(True),
                 )
-                .order_by(ClassificationRule.priority.desc())
+                .order_by(*_MOST_SPECIFIC_FIRST)
                 .limit(1)
             )
             result = await db.execute(stmt)
@@ -83,7 +96,7 @@ async def get_matching_rule(
             ClassificationRule.match_context.is_(None),
             ClassificationRule.is_active.is_(True),
         )
-        .order_by(ClassificationRule.priority.desc())
+        .order_by(*_MOST_SPECIFIC_FIRST)
         .limit(1)
     )
     result = await db.execute(stmt)

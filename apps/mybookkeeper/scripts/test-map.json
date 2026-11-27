@@ -2606,6 +2606,8 @@
         "backend/app/models/classification/classification_rule.py",
         "backend/app/api/classification_rules.py",
         "backend/app/services/classification/rule_actions.py",
+        "backend/app/core/payee_keys.py",
+        "backend/app/core/payment_reference_patterns.py",
         "backend/app/services/classification/payee_rule_error.py",
         "backend/app/repositories/classification/payee_rule_match_repo.py",
         "backend/app/models/classification/classification_rule_split_property.py",
@@ -2631,7 +2633,10 @@
       "backend_tests": [
         "test_vendor_normalization.py",
         "test_logs_carry_no_personal_details.py",
-        "test_payee_rules.py"
+        "test_payee_rules.py",
+        "test_learned_payee_rules.py",
+        "test_payee_rule_key.py",
+        "test_rule_learning_service.py"
       ],
       "frontend_tests": [
         "useClassificationRulesPanelMode.test.ts",
