@@ -8,7 +8,13 @@ import type { SignInScreenProps } from "../types/SignInScreenProps";
 import SignInScreen from "./SignInScreen";
 
 /** Sign-in for an app that can't be used without it, so there's nothing to cancel back to. */
-export default function RequiredSignInScreen({ appName, webBaseUrl, registration }: Omit<SignInScreenProps, "onSignedIn">) {
+export default function RequiredSignInScreen({
+  appName,
+  webBaseUrl,
+  registration,
+  onCreateAccount,
+  onForgotPassword,
+}: Omit<SignInScreenProps, "onSignedIn">) {
   const { state } = useSession();
   const { colors, spacing } = useTheme();
   const { top } = useSafeAreaInsets();
@@ -22,7 +28,13 @@ export default function RequiredSignInScreen({ appName, webBaseUrl, registration
         />
       ) : null}
       <AccountDeletedBanner style={{ marginHorizontal: spacing.lg, marginTop: spacing.md }} />
-      <SignInScreen appName={appName} registration={registration} webBaseUrl={webBaseUrl} />
+      <SignInScreen
+        appName={appName}
+        onCreateAccount={onCreateAccount}
+        onForgotPassword={onForgotPassword}
+        registration={registration}
+        webBaseUrl={webBaseUrl}
+      />
     </View>
   );
 }

@@ -245,10 +245,17 @@ npm test
 EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK=1 npm run doctor
 ```
 
-The phone app signs in through the shared `/auth/mobile/*` routes; registration,
-password resets and email verification stay on the website, which the sign-in
-screen links to. `mobile/screen-map.yaml` gives every web route a phone screen
-or a reason it isn't on the phone -- update it when adding or renaming a page.
+The phone app signs in through the shared `/auth/mobile/*` routes. Email verification
+stays on the website, which the sign-in screen links to. `mobile/screen-map.yaml` gives every
+web route a phone screen or a reason it isn't on the phone -- update it when adding or renaming a page.
+
+**Phone sign-up and password reset** are screens in the mobile app (`app/register.tsx`,
+`app/forgot-password.tsx`, from `@platform/mobile/captcha`, mirroring MyRecipes), opened from sign-in.
+They show the Turnstile widget in a WebView loaded as the website's origin, so the site key and its allowed
+hostname are the website's (`TURNSTILE_SITE_KEY` in `mobile/src/constants/api.ts`; override with
+`EXPO_PUBLIC_TURNSTILE_SITE_KEY`, or set it to `""` against a local backend with no secret).
+The reset link in the email still opens `/reset-password` on the website. react-native-webview
+is a native module: rebuild the development build after pulling this change.
 Security is a phone screen too (the shared `SecurityScreen` from `@platform/mobile`, mirroring
 MyJobHunter): display name, two-step sign-in, data export and Delete account. Its calls are
 `GET|PATCH /users/me`, `/auth/totp/*` and `GET /users/me/export`, all served today.

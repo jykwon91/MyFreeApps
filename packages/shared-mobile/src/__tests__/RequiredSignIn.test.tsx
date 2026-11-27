@@ -2,6 +2,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { SessionContext } from "../auth/SessionContext";
 import RequiredSignInScreen from "../components/RequiredSignInScreen";
 import SessionPendingScreen from "../components/SessionPendingScreen";
+import { SIGN_IN_LINKS } from "../constants/signInLinks";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 
@@ -31,6 +32,24 @@ describe("RequiredSignInScreen", () => {
       lastEmail: null,
     });
     expect(screen.queryByText(ENDED)).toBeNull();
+  });
+
+  it("opens the app's own sign-up and reset screens when it has them", async () => {
+    const onCreateAccount = jest.fn();
+    const onForgotPassword = jest.fn();
+    await renderWith(
+      <RequiredSignInScreen
+        appName="App"
+        onCreateAccount={onCreateAccount}
+        onForgotPassword={onForgotPassword}
+        webBaseUrl="https://x"
+      />,
+      { status: "signedOut", endedByServer: false, lastEmail: null },
+    );
+    await userEvent.press(screen.getByRole("link", { name: SIGN_IN_LINKS.createAccount }));
+    await userEvent.press(screen.getByRole("link", { name: SIGN_IN_LINKS.forgotPassword }));
+    expect(onCreateAccount).toHaveBeenCalledTimes(1);
+    expect(onForgotPassword).toHaveBeenCalledTimes(1);
   });
 });
 
