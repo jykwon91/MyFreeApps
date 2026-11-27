@@ -112,7 +112,6 @@
 "349":["Maraudon","dungeon",42,42,35,1443,35.9,64.6],
 "409":["Molten Core","raid",60,60,50,1428,26.3,24.6],
 "429":["Dire Maul","dungeon",54,54,45,1444,67.2,34.9],
-"469":["Blackwing Lair","raid",60,60,50,1428,33.2,24.9],
 "531":["Ahn'Qiraj Temple","raid",60,60,50,1451,15.3,97.8],
 "533":["Naxxramas","raid",60,60,51,1423,34.3,19.5],
 "2832":["Nightmare Grove","raid",0,0,0,null,null,null]
@@ -160,8 +159,8 @@
 "12471":{"instance":{"mobs":[["Dustwraith",45,45,18.6,209,"rare"]],"more":0}},
 "12535":{"drop":{"world":true,"levels":[48,59],"mobs":[],"more":0,"zones":[]}},
 "12983":{"drop":{"world":true,"levels":[16,26],"mobs":[["Magosh",21,21,0.0,1432,"Ironband's Excavation Site",70.1,66.4,"rare"]],"more":0,"zones":[1432]},"instance":{"mobs":[["Edwin VanCleef",21,21,0.0,36,"boss"]],"more":0}},
-"13047":{"drop":{"world":true,"levels":[52,63],"mobs":[["Azuregos",63,63,3.8,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,3.8,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Ragnaros",63,63,3.8,409,"boss"],["Emeriss",63,63,2.5,2832,"boss"],["Lethon",63,63,2.5,2832,"boss"],["Nefarian",63,63,2.5,469,"boss"],["Onyxia",63,63,2.5,249,"boss"],["Taerar",63,63,2.5,2832,"boss"]],"more":1}},
-"13111":{"drop":{"world":true,"levels":[48,63],"mobs":[["Azuregos",63,63,3.8,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,3.8,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Ragnaros",63,63,3.8,409,"boss"],["Emeriss",63,63,2.5,2832,"boss"],["Lethon",63,63,2.5,2832,"boss"],["Nefarian",63,63,2.5,469,"boss"],["Onyxia",63,63,2.5,249,"boss"],["Taerar",63,63,2.5,2832,"boss"]],"more":1}},
+"13047":{"drop":{"world":true,"levels":[52,63],"mobs":[["Azuregos",63,63,1.2,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,1.2,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Ragnaros",63,63,1.2,409,"boss"],["Emeriss",63,63,0.8,2832,"boss"],["Lethon",63,63,0.8,2832,"boss"],["Onyxia",63,63,0.8,249,"boss"],["Taerar",63,63,0.8,2832,"boss"],["Ysondre",63,63,0.8,2832,"boss"]],"more":1}},
+"13111":{"drop":{"world":true,"levels":[48,63],"mobs":[["Azuregos",63,63,1.2,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,1.2,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Ragnaros",63,63,1.2,409,"boss"],["Emeriss",63,63,0.8,2832,"boss"],["Lethon",63,63,0.8,2832,"boss"],["Onyxia",63,63,0.8,249,"boss"],["Taerar",63,63,0.8,2832,"boss"],["Ysondre",63,63,0.8,2832,"boss"]],"more":1}},
 "14199":{"drop":{"world":true,"levels":[29,41],"mobs":[],"more":0,"zones":[]}},
 "14263":{"drop":{"world":true,"levels":[43,51],"mobs":[["The Reak",49,49,0.4,1425,"Skulk Rock",58.9,43.1,"rare"]],"more":0,"zones":[1425]}},
 "14327":{"drop":{"world":true,"levels":[52,60],"mobs":[],"more":0,"zones":[]}},

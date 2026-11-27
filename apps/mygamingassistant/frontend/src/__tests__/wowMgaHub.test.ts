@@ -3,6 +3,7 @@ import sharedHub from "../../addon/shared/MGAHub.lua?raw";
 import sharedBindings from "../../addon/shared/Bindings.xml?raw";
 import buffsBindings from "../../addon/MGABuffs/Bindings.xml?raw";
 import buffsHub from "../../addon/MGABuffs/MGAHub.lua?raw";
+import dropsHub from "../../addon/MGADrops/MGAHub.lua?raw";
 import dungeonQuestsBindings from "../../addon/MGADungeonQuests/Bindings.xml?raw";
 import dungeonQuestsHub from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
 import explorerBindings from "../../addon/MGAExplorer/Bindings.xml?raw";
@@ -79,6 +80,10 @@ describe("the MGA hub's copies", () => {
 
   it("MGAProfessions ships MGAHub.lua identical to addon/shared (its Bindings.xml adds a binding, checked in wowProfessionsAddon.test.ts)", () => {
     expect(professionsHub).toBe(sharedHub);
+  });
+
+  it("MGADrops ships MGAHub.lua identical to addon/shared and no Bindings.xml (the shared bindings load once, from another addon)", () => {
+    expect(dropsHub).toBe(sharedHub);
   });
 });
 

@@ -173,7 +173,7 @@
 "19620":{"quests":[8147]},
 "20068":{"vendors":[[15126,"Rutherford Twing","Defilers Supply Officer",1417,"Hammerfall",73.4,29.7,"H",0,0]]},
 "20196":{"vendors":[[15126,"Rutherford Twing","Defilers Supply Officer",1417,"Hammerfall",73.4,29.7,"H",0,0]]},
-"20580":{"instance":{"mobs":[["Emeriss",63,63,13.8,2832,"boss"],["Taerar",63,63,13.8,2832,"boss"],["Lethon",63,63,12.9,2832,"boss"],["Ysondre",63,63,12.9,2832,"boss"]],"more":0}},
+"20580":{"instance":{"mobs":[["Emeriss",63,63,4.6,2832,"boss"],["Taerar",63,63,4.6,2832,"boss"],["Lethon",63,63,4.3,2832,"boss"],["Ysondre",63,63,4.3,2832,"boss"]],"more":0}},
 "21412":{"quests":[8689]},
 "21604":{"instance":{"mobs":[["Emperor Vek'nilash",63,63,14.3,531,"boss"]],"more":0}},
 "22436":{"quests":[9054]},

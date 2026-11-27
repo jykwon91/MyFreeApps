@@ -1,4 +1,5 @@
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
+import DropsAddonCard from "@/games/wow-forever/components/dropsAddon/DropsAddonCard";
 import ItemBrowser from "@/games/wow-forever/components/itemBrowser/ItemBrowser";
 import ItemBrowserNote from "@/games/wow-forever/components/itemBrowser/ItemBrowserNote";
 import ItemBrowserSkeleton from "@/games/wow-forever/components/itemBrowser/ItemBrowserSkeleton";
@@ -20,6 +21,7 @@ export default function WowItemsPage() {
         backLabel="Back to WoW Forever"
       />
       <ItemBrowserNote clientBuild={state.status === ITEM_INDEX_STATUS.ready ? state.data.clientBuild : null} />
+      <DropsAddonCard />
       {state.status === ITEM_INDEX_STATUS.error ? (
         <LoadErrorRetry message={ITEM_BROWSER_TEXT.loadError} onRetry={state.retry} retrying={false} />
       ) : null}
