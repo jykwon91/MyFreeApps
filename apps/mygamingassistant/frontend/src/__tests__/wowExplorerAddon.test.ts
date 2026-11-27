@@ -450,7 +450,7 @@ describe("MGA Explorer on the World Map", () => {
       pin.scripts.OnEnter(pin); say(pin.width)
       pin.scripts.OnLeave(pin); say(pin.width)
     `);
-    expect(withoutChat(lines)).toEqual(["12", "16", "12"]);
+    expect(withoutChat(lines)).toEqual(["20", "26", "20"]);
   });
 
   it("a continent map badges every zone with areas left with how many, at the middle of them, and a click guides into that zone", () => {
