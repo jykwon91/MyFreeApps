@@ -13,7 +13,7 @@
  *     page refetches the new figures;
  *   - with no categories it invites adding one;
  *   - both skeletons have their loaded page's shape;
- *   - the cash flow chart draws, and the scope, range and account pickers ask
+ *   - the cash flow chart draws with mortgages & loans as their own total, and the scope, range and account pickers ask
  *     the server for what was picked and keep it in the URL;
  *   - on a phone neither page scrolls sideways.
  */
@@ -60,12 +60,12 @@ function budgetMonth(month: string, groceriesCents: number | null, empty: boolea
 
 function cashFlow(range: string, scope: string, accountId: string | null) {
   const months = [
-    { month: "2026-10", money_in_cents: 500_000, money_out_cents: 320_000, net_cents: 180_000 },
-    { month: "2026-11", money_in_cents: 410_000, money_out_cents: 450_000, net_cents: -40_000 },
+    { month: "2026-10", money_in_cents: 500_000, money_out_cents: 320_000, mortgages_loans_cents: 200_000, net_cents: 180_000 },
+    { month: "2026-11", money_in_cents: 410_000, money_out_cents: 450_000, mortgages_loans_cents: 200_000, net_cents: -40_000 },
   ];
   return {
     range, scope, account_id: accountId, currency: "USD", bank_history_start: "2024-11-27", months,
-    totals: { money_in_cents: 910_000, money_out_cents: 770_000, net_cents: 140_000 },
+    totals: { money_in_cents: 910_000, money_out_cents: 770_000, mortgages_loans_cents: 400_000, net_cents: 140_000 },
   };
 }
 
@@ -210,7 +210,7 @@ test.describe("Cash flow", () => {
     await plantAuth(page);
   });
 
-  test("is in the nav and charts money in and out per month", async ({ page }) => {
+  test("is in the nav and charts money in and out per month, with mortgages & loans on their own line", async ({ page }) => {
     const server = await stubApi(page);
     await page.goto("/");
     await page.getByRole("link", { name: "Cash Flow" }).first().click();
@@ -218,6 +218,7 @@ test.describe("Cash flow", () => {
     await expect(page.getByTestId("cash-flow-chart")).toBeVisible();
     await expect(page.getByTestId("cash-flow-total-in")).toContainText("$9,100.00");
     await expect(page.getByTestId("cash-flow-total-out")).toContainText("$7,700.00");
+    await expect(page.getByTestId("cash-flow-total-loans")).toContainText("$4,000.00");
     await expect(page.getByTestId("cash-flow-total-net")).toContainText("$1,400.00");
     await expect(page.getByTestId("cash-basis-note")).toContainText("From Nov 27, 2024, when your bank history starts");
     expect(server.cashFlowQueries).toEqual(["range=6m&scope=all"]);
@@ -242,7 +243,7 @@ test.describe("Cash flow", () => {
     await page.goto("/cash-flow");
     await expect(page.getByTestId("cash-flow-skeleton")).toBeVisible();
     await expect(page.getByTestId("cash-basis-note-skeleton")).toHaveCount(1);
-    await expect(page.getByTestId("cash-flow-skeleton-tile")).toHaveCount(3);
+    await expect(page.getByTestId("cash-flow-skeleton-tile")).toHaveCount(4);
     await expect(page.getByTestId("cash-flow-skeleton-chart")).toHaveCount(1);
   });
 

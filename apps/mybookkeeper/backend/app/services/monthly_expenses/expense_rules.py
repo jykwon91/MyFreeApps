@@ -10,6 +10,9 @@ money that left).
 
 A loan or mortgage payment is recognised by any of:
   * it is a transfer into one of your loan or mortgage accounts;
+  * it went to a payee you said is a mortgage or a loan — what catches a
+    mortgage paid under your own name ("<Your Name> External F ...") or by a
+    lender's ACH the bank doesn't call a loan payment;
   * its amount is exactly the monthly payment of a mortgage you track — what
     catches a mortgage paid by a plain bank transfer the bank can't pair;
   * the bank called it a loan payment and no matching payment landed on one
@@ -42,6 +45,7 @@ from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentAr
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 from app.repositories.monthly_expenses.monthly_expense_repo import MortgagePaymentParts
 from app.services.monthly_expenses.expense_context import ExpenseContext
+from app.core.payee_keys import payee_key
 from app.services.transactions.self_transfer import names_holder
 
 # Accounts that owe money on a loan. What is charged to them is interest, not
@@ -121,6 +125,9 @@ def expense_label(row: ExpenseRow, context: ExpenseContext) -> str | None:
         if row.to_account_type in _OTHER_LOAN_ACCOUNT_TYPES:
             return LABEL_LOANS
         return None
+    tagged = context.loan_payee_labels.get(payee_key(row.vendor, row.description) or "")
+    if tagged is not None:
+        return tagged
     if row.id in context.card_payments:
         return None
     moves_money = is_transfer or row.external_category in _MONEY_MOVEMENT_CATEGORIES

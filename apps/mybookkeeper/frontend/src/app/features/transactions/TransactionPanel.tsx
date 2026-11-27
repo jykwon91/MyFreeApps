@@ -19,6 +19,7 @@ import { TRANSACTION_DISCARD_COPY, TRANSACTION_EDIT_MESSAGES as MSG } from "@/sh
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import TransactionPersonalTransferSection from "@/app/features/personal-transfer/TransactionPersonalTransferSection";
+import TransactionLoanPayeeSection from "@/app/features/loan-payee/TransactionLoanPayeeSection";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 
@@ -259,6 +260,8 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
       )}
 
       <TransactionPersonalTransferSection transaction={{ ...transaction, status }} onStatusChange={setStatus} />
+
+      <TransactionLoanPayeeSection transaction={{ ...transaction, status }} />
 
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
         <div className="flex items-center gap-2">

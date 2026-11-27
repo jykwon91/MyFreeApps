@@ -4,7 +4,7 @@ import { formatMonthLong } from "@mybookkeeper/api-client/utils/monthText";
 import { formatCurrency } from "@/shared/utils/currency";
 import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
 
-/** The hovered month: in, out, and what was left. */
+/** The hovered month: in, out (and what of it was mortgages & loans), and what was left. */
 export default function CashFlowChartTooltip({ active, payload }: Partial<TooltipContentProps>) {
   const row = payload?.[0]?.payload as CashFlowChartRow | undefined;
   if (!active || row === undefined) return null;
@@ -16,6 +16,8 @@ export default function CashFlowChartTooltip({ active, payload }: Partial<Toolti
       <p className="font-medium mb-1">{formatMonthLong(row.month)}</p>
       <p>{MSG.moneyIn}: {formatCurrency(row.moneyIn)}</p>
       <p>{MSG.moneyOut}: {formatCurrency(row.moneyOut)}</p>
+      <p className="pl-3 text-muted-foreground">{MSG.spending}: {formatCurrency(row.spending)}</p>
+      <p className="pl-3 text-muted-foreground">{MSG.mortgagesLoans}: {formatCurrency(row.mortgagesLoans)}</p>
       <p className="font-semibold">{MSG.net}: {formatCurrency(row.net)}</p>
     </div>
   );

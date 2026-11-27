@@ -14,3 +14,6 @@ class ExpenseContext:
     card_payments: frozenset[uuid.UUID] = frozenset()
     # Account owner -> the name they go by.
     holder_names: Mapping[uuid.UUID, str] = field(default_factory=dict)
+    # Normalized payee -> the heading its payments count under, for payees the
+    # person said are a mortgage or a loan (``loan_payees``).
+    loan_payee_labels: Mapping[str, str] = field(default_factory=dict)

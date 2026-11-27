@@ -23,10 +23,10 @@ vi.mock("recharts", () => ({
 const LOADED: CashFlow = {
   range: "6m", scope: "all", account_id: null, currency: "USD", bank_history_start: "2024-11-27",
   months: [
-    { month: "2026-10", money_in_cents: 500_000, money_out_cents: 320_000, net_cents: 180_000 },
-    { month: "2026-11", money_in_cents: 0, money_out_cents: 10_000, net_cents: -10_000 },
+    { month: "2026-10", money_in_cents: 500_000, money_out_cents: 320_000, mortgages_loans_cents: 200_000, net_cents: 180_000 },
+    { month: "2026-11", money_in_cents: 0, money_out_cents: 10_000, mortgages_loans_cents: 0, net_cents: -10_000 },
   ],
-  totals: { money_in_cents: 500_000, money_out_cents: 330_000, net_cents: 170_000 },
+  totals: { money_in_cents: 500_000, money_out_cents: 330_000, mortgages_loans_cents: 200_000, net_cents: 170_000 },
 };
 
 function renderBody(overrides: Partial<CashFlowBodyProps>) {
@@ -41,7 +41,7 @@ describe("CashFlowBody", () => {
   it("shows a skeleton with the chart's height while loading", () => {
     renderBody({ isLoading: true, data: undefined });
     expect(screen.getByTestId("cash-basis-note-skeleton")).toBeInTheDocument();
-    expect(screen.getAllByTestId("cash-flow-skeleton-tile")).toHaveLength(3);
+    expect(screen.getAllByTestId("cash-flow-skeleton-tile")).toHaveLength(4);
     expect(screen.getByTestId("cash-flow-skeleton-chart")).toBeInTheDocument();
   });
 
@@ -52,14 +52,16 @@ describe("CashFlowBody", () => {
     expect(props.onRetry).toHaveBeenCalled();
   });
 
-  it("totals the range and charts every month with in, out and net", () => {
+  it("totals the range and charts every month with in, out split into spending and loans, and net", () => {
     renderBody({});
     expect(screen.getByTestId("cash-flow-total-in")).toHaveTextContent("$5,000.00");
     expect(screen.getByTestId("cash-flow-total-out")).toHaveTextContent("$3,300.00");
+    expect(screen.getByTestId("cash-flow-total-loans")).toHaveTextContent("$2,000.00");
     expect(screen.getByTestId("cash-flow-total-net")).toHaveTextContent("$1,700.00");
     expect(screen.getByTestId("composed-chart")).toHaveAttribute("data-points", "2");
     expect(screen.getByTestId("bar-moneyIn")).toBeInTheDocument();
-    expect(screen.getByTestId("bar-moneyOut")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-spending")).toBeInTheDocument();
+    expect(screen.getByTestId("bar-mortgagesLoans")).toBeInTheDocument();
     expect(screen.getByTestId("line-net")).toBeInTheDocument();
   });
 
@@ -79,8 +81,8 @@ describe("CashFlowBody", () => {
     renderBody({
       data: {
         ...LOADED,
-        months: LOADED.months.map((m) => ({ ...m, money_in_cents: 0, money_out_cents: 0, net_cents: 0 })),
-        totals: { money_in_cents: 0, money_out_cents: 0, net_cents: 0 },
+        months: LOADED.months.map((m) => ({ ...m, money_in_cents: 0, money_out_cents: 0, mortgages_loans_cents: 0, net_cents: 0 })),
+        totals: { money_in_cents: 0, money_out_cents: 0, mortgages_loans_cents: 0, net_cents: 0 },
       },
     });
     expect(screen.getByText(MSG.empty)).toBeInTheDocument();

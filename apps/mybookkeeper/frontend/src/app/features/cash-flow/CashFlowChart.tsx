@@ -10,7 +10,11 @@ export interface CashFlowChartProps {
   rows: CashFlowChartRow[];
 }
 
-/** In and out as side-by-side bars per month, with the net as a line across them. */
+// Spending and mortgages & loans stack into one money-out bar.
+const MONEY_OUT_STACK = "moneyOut";
+
+/** In and out as side-by-side bars per month, money out split into spending
+ * and mortgages & loans, with the net as a line across them. */
 export default function CashFlowChart({ rows }: CashFlowChartProps) {
   const colors = useChartColors();
   return (
@@ -23,7 +27,15 @@ export default function CashFlowChart({ rows }: CashFlowChartProps) {
           <Tooltip content={<CashFlowChartTooltip />} />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar dataKey="moneyIn" name={MSG.moneyIn} fill={colors.positive} radius={[2, 2, 0, 0]} isAnimationActive={false} />
-          <Bar dataKey="moneyOut" name={MSG.moneyOut} fill={colors.negative} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+          <Bar dataKey="spending" name={MSG.spending} stackId={MONEY_OUT_STACK} fill={colors.negative} isAnimationActive={false} />
+          <Bar
+            dataKey="mortgagesLoans"
+            name={MSG.mortgagesLoans}
+            stackId={MONEY_OUT_STACK}
+            fill={colors.loans}
+            radius={[2, 2, 0, 0]}
+            isAnimationActive={false}
+          />
           <Line
             type="monotone"
             dataKey="net"

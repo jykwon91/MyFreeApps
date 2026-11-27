@@ -4,6 +4,7 @@ import { formatAccountBalance } from "@mybookkeeper/api-client/utils/financialAc
 import FinancialAccountTotalTile from "@/app/features/financial-accounts/FinancialAccountTotalTile";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { CASH_FLOW_TOTALS_GRID_CLASS } from "@/shared/lib/budget-pages";
 import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
 import CashBasisNote from "./CashBasisNote";
 import CashFlowChart from "./CashFlowChart";
@@ -28,9 +29,14 @@ export default function CashFlowBody({ data, isLoading, isError, isRetrying, onR
   return (
     <div className="space-y-6">
       <CashBasisNote bankHistoryStart={data.bank_history_start} />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="cash-flow-totals">
+      <div className={CASH_FLOW_TOTALS_GRID_CLASS} data-testid="cash-flow-totals">
         <FinancialAccountTotalTile label={MSG.moneyIn} value={money(totals.money_in_cents)} testId="cash-flow-total-in" />
         <FinancialAccountTotalTile label={MSG.moneyOut} value={money(totals.money_out_cents)} testId="cash-flow-total-out" />
+        <FinancialAccountTotalTile
+          label={MSG.mortgagesLoans}
+          value={money(totals.mortgages_loans_cents)}
+          testId="cash-flow-total-loans"
+        />
         <FinancialAccountTotalTile label={MSG.net} value={money(totals.net_cents)} testId="cash-flow-total-net" emphasis />
       </div>
       <div className="border rounded-lg p-4">

@@ -65,7 +65,7 @@ async def test_tax_totals(db: AsyncSession, ids) -> None:
 @pytest.mark.asyncio
 async def test_cash_flow(db: AsyncSession, ids) -> None:
     await _pair(db, **ids, transaction_type="income", category="rental_revenue")
-    totals = await cash_flow_repo.totals_by_month(
+    totals = await cash_flow_repo.income_by_month(
         db, organization_id=ids["organization_id"], start=_START, end=_END,
         transaction_scope=None, account_id=None, bank_history_start=None,
     )

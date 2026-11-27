@@ -2854,7 +2854,22 @@
         "frontend/src/shared/lib/monthly-expenses-pages.ts",
         "api-client/src/types/monthly-expenses/",
         "api-client/src/constants/monthlyExpenses.ts",
-        "api-client/src/utils/expenseAccountLabel.ts"
+        "api-client/src/utils/expenseAccountLabel.ts",
+        "backend/app/core/payee_keys.py",
+        "backend/app/core/loan_payee_constants.py",
+        "backend/app/models/transactions/loan_payee.py",
+        "backend/app/repositories/transactions/loan_payee_repo.py",
+        "backend/app/schemas/transactions/loan_payee_kind.py",
+        "backend/app/schemas/transactions/loan_payee_read.py",
+        "backend/app/schemas/transactions/loan_payee_request.py",
+        "backend/app/services/transactions/loan_payee_service.py",
+        "backend/app/api/loan_payees.py",
+        "backend/alembic/versions/loanpayee261127_add_loan_payees.py",
+        "frontend/src/app/features/loan-payee/",
+        "frontend/src/shared/hooks/useChartColors.ts",
+        "api-client/src/store/loanPayeeApi.ts",
+        "api-client/src/types/loan-payee/",
+        "api-client/src/constants/loanPayeeLabels.ts"
       ],
       "backend_tests": [
         "test_month_text.py",
@@ -2866,7 +2881,12 @@
         "test_summary_from_transactions.py",
         "test_monthly_expense_rules.py",
         "test_monthly_expense_service.py",
-        "test_monthly_expenses_api.py"
+        "test_monthly_expenses_api.py",
+        "test_cash_flow_loan_payments.py",
+        "test_loan_payee_service.py",
+        "test_loan_payee_routes.py",
+        "test_personal_transfer_not_counted.py",
+        "test_plaid_transfer_reconciler.py"
       ],
       "frontend_tests": [
         "BudgetBody.test.tsx",
@@ -2876,11 +2896,14 @@
         "cashFlowSearchParams.test.ts",
         "MonthlyExpensesBody.test.tsx",
         "MonthlyExpenseCategoryRow.test.tsx",
-        "monthlyExpensesSearchParams.test.ts"
+        "monthlyExpensesSearchParams.test.ts",
+        "TransactionLoanPayeeSection.test.tsx",
+        "MonthlyChartColours.test.tsx"
       ],
       "e2e_specs": [
         "mocked/budget-cash-flow-mock.spec.ts",
-        "mocked/monthly-expenses-mock.spec.ts"
+        "mocked/monthly-expenses-mock.spec.ts",
+        "mocked/loan-payee-tag-mock.spec.ts"
       ]
     },
     "investments": {
