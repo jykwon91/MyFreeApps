@@ -10,6 +10,8 @@ export interface CashFlow {
   /** The account the figures are narrowed to; null is every account. */
   account_id: string | null;
   currency: string;
+  /** "YYYY-MM-DD": the first day a bank feed covers. From it on only money through an account counts; null is no bank feed, so every entry counts. */
+  bank_history_start: string | null;
   months: CashFlowMonth[];
   totals: CashFlowTotals;
 }

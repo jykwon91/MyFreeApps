@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import CashFlowBody, { type CashFlowBodyProps } from "@/app/features/cash-flow/CashFlowBody";
 import type { CashFlow } from "@mybookkeeper/api-client/types/cash-flow/cash-flow";
 import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
+import { CASH_BASIS_MESSAGES } from "@/shared/lib/cash-basis-messages";
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -20,7 +21,7 @@ vi.mock("recharts", () => ({
 }));
 
 const LOADED: CashFlow = {
-  range: "6m", scope: "all", account_id: null, currency: "USD",
+  range: "6m", scope: "all", account_id: null, currency: "USD", bank_history_start: "2024-11-27",
   months: [
     { month: "2026-10", money_in_cents: 500_000, money_out_cents: 320_000, net_cents: 180_000 },
     { month: "2026-11", money_in_cents: 0, money_out_cents: 10_000, net_cents: -10_000 },
@@ -39,6 +40,7 @@ afterEach(cleanup);
 describe("CashFlowBody", () => {
   it("shows a skeleton with the chart's height while loading", () => {
     renderBody({ isLoading: true, data: undefined });
+    expect(screen.getByTestId("cash-basis-note-skeleton")).toBeInTheDocument();
     expect(screen.getAllByTestId("cash-flow-skeleton-tile")).toHaveLength(3);
     expect(screen.getByTestId("cash-flow-skeleton-chart")).toBeInTheDocument();
   });
@@ -59,6 +61,18 @@ describe("CashFlowBody", () => {
     expect(screen.getByTestId("bar-moneyIn")).toBeInTheDocument();
     expect(screen.getByTestId("bar-moneyOut")).toBeInTheDocument();
     expect(screen.getByTestId("line-net")).toBeInTheDocument();
+  });
+
+  it("says it counts money through the accounts from the bank history start", () => {
+    renderBody({});
+    expect(screen.getByTestId("cash-basis-note")).toHaveTextContent(
+      CASH_BASIS_MESSAGES.fromBankHistory("Nov 27, 2024"),
+    );
+  });
+
+  it("says it counts every entry when no bank is connected", () => {
+    renderBody({ data: { ...LOADED, bank_history_start: null } });
+    expect(screen.getByTestId("cash-basis-note")).toHaveTextContent(CASH_BASIS_MESSAGES.noBankHistory);
   });
 
   it("says so instead of drawing an empty chart", () => {

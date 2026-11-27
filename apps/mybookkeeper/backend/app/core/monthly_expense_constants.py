@@ -24,11 +24,6 @@ MONTHLY_EXPENSE_RANGES: Final[tuple[str, ...]] = tuple(MONTHLY_EXPENSE_RANGE_MON
 DEFAULT_MONTHLY_EXPENSE_RANGE: Final = RANGE_6M
 DEFAULT_MONTHLY_EXPENSE_SCOPE: Final = DEFAULT_CASH_FLOW_SCOPE
 
-# A row typed in by hand or read off an email/document, with no account, is
-# the same payment as a bank-synced row of the same amount and type dated
-# this many days either side of it.
-BANK_TWIN_WINDOW_DAYS: Final = 4
-
 # A loan-payment row leaving checking is a credit-card payment when a payment
 # of the same amount lands on a card within this many days.
 CARD_PAYMENT_MATCH_WINDOW_DAYS: Final = 5

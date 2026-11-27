@@ -22,6 +22,7 @@ from app.models.mortgage.mortgage import Mortgage
 from app.models.transactions.spending_category import SpendingCategory
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
+from app.repositories.cash_flow.cash_basis import cash_basis_filters
 from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentArrival
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 
@@ -48,9 +49,11 @@ async def list_outflows(
     start: _dt.date,
     end: _dt.date,
     transaction_scope: str | None,
+    bank_history_start: _dt.date | None,
 ) -> list[ExpenseRow]:
-    """Every expense and transfer dated ``start``..``end``, with the accounts
-    either side. ``transaction_scope`` None leaves every scope in."""
+    """Every expense and transfer dated ``start``..``end`` on a cash basis
+    (``cash_basis``), with the accounts either side. ``transaction_scope``
+    None leaves every scope in."""
     from_account = aliased(FinancialAccount)
     to_account = aliased(FinancialAccount)
     stmt = (
@@ -79,6 +82,7 @@ async def list_outflows(
         .outerjoin(to_account, to_account.id == Transaction.transfer_to_account_id)
         .where(
             *_live_rows(organization_id, start, end),
+            *cash_basis_filters(bank_history_start),
             Transaction.transaction_type.in_((TRANSACTION_TYPE_EXPENSE, TRANSACTION_TYPE_TRANSFER)),
         )
         .order_by(Transaction.transaction_date, Transaction.id)

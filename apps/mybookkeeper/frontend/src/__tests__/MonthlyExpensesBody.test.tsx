@@ -11,7 +11,7 @@ vi.mock("@/app/features/monthly-expenses/MonthlyExpenseCategoryDetail", () => ({
 }));
 
 const LOADED: MonthlyExpenses = {
-  range: "3m", scope: "all", currency: "USD",
+  range: "3m", scope: "all", currency: "USD", bank_history_start: "2024-11-27",
   months: [
     { month: "2026-08", total_cents: 1_500_00 },
     { month: "2026-09", total_cents: 0 },

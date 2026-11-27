@@ -2,6 +2,7 @@ import type { MonthlyExpenses } from "@mybookkeeper/api-client/types/monthly-exp
 import type { MonthlyExpensesQuery } from "@mybookkeeper/api-client/types/monthly-expenses/monthly-expenses-query";
 import { formatAccountBalance } from "@mybookkeeper/api-client/utils/financialAccountFormat";
 import { formatMonthLong } from "@mybookkeeper/api-client/utils/monthText";
+import CashBasisNote from "@/app/features/cash-flow/CashBasisNote";
 import FinancialAccountTotalTile from "@/app/features/financial-accounts/FinancialAccountTotalTile";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -27,6 +28,7 @@ export default function MonthlyExpensesBody({ data, query, isLoading, isError, i
 
   return (
     <div className="space-y-6">
+      <CashBasisNote bankHistoryStart={data.bank_history_start} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="monthly-expenses-totals">
         <FinancialAccountTotalTile
           label={MSG.averagePerMonth}

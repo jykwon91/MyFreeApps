@@ -1,12 +1,9 @@
 """The monthly expenses rules, as pure functions.
 
-Pinned, for the bank-twin rule, every combination of its keys: an
-account-less row and a bank row of the same type and amount within four days
-are one payment; a different type, a different amount, five days apart, a row
-that has an account, and two bank rows are never merged; each bank row covers
-one other row only. For the spending rules: what each kind of
-loan, card and transfer row counts as; the heading's order of preference; and
-the months and averages.
+Pinned, for the spending rules: what each kind of loan, card and transfer row
+counts as; the heading's order of preference; and the months and averages.
+Which rows reach the rules at all is the cash flow page's rule
+(``test_cash_basis.py``).
 """
 from __future__ import annotations
 
@@ -16,7 +13,7 @@ from decimal import Decimal
 
 from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentArrival
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
-from app.services.monthly_expenses import bank_twins, expense_rules, monthly_expense_breakdown
+from app.services.monthly_expenses import expense_rules, monthly_expense_breakdown
 from app.services.monthly_expenses.counted_expense import CountedExpense
 from app.services.monthly_expenses.expense_context import ExpenseContext
 from app.services.monthly_expenses import monthly_expense_detail
@@ -52,12 +49,6 @@ def _row(amount: str = "50.00", *, day: _dt.date = DAY, **overrides: object) -> 
     return ExpenseRow(**values)  # type: ignore[arg-type]
 
 
-def _emailed(amount: str = "50.00", *, day: _dt.date = DAY, **overrides: object) -> ExpenseRow:
-    values: dict[str, object] = {"external_source": None, "account_id": None, "account_type": None, "account_user_id": None}
-    values.update(overrides)
-    return _row(amount, day=day, **values)
-
-
 def _after(days: int) -> _dt.date:
     return DAY + _dt.timedelta(days=days)
 
@@ -71,33 +62,6 @@ def _label(
 ) -> str | None:
     context = ExpenseContext(mortgage_payments=mortgages, card_payments=cards, holder_names=holders)
     return expense_rules.expense_label(row, context)
-
-
-class TestBankTwins:
-    def test_an_emailed_row_the_bank_also_sent_counts_once(self) -> None:
-        bank = _row(day=_after(4))
-        assert bank_twins.drop_bank_twins([_emailed(), bank]) == [bank]
-
-    def test_rows_that_differ_in_any_key_are_both_kept(self) -> None:
-        cases = [
-            [_emailed(), _row(day=_after(5))],
-            [_emailed(), _row("50.01")],
-            [_emailed(), _row(transaction_type="transfer")],
-            [_emailed(account_id=CHECKING), _row()],
-            [_row(), _row()],
-            [_emailed(), _emailed()],
-        ]
-        for rows in cases:
-            assert bank_twins.drop_bank_twins(rows) == rows
-
-    def test_each_bank_row_covers_one_other_row_only(self) -> None:
-        early, late = _emailed(day=_after(-2)), _emailed(day=_after(1))
-        bank = _row()
-        assert bank_twins.drop_bank_twins([early, late, bank]) == [late, bank]
-
-    def test_two_bank_rows_cover_two_emailed_rows(self) -> None:
-        first, second = _row(), _row(day=_after(1))
-        assert bank_twins.drop_bank_twins([_emailed(), _emailed(day=_after(1)), first, second]) == [first, second]
 
 
 class TestLoansAndCards:

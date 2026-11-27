@@ -28,7 +28,7 @@ const PAYMENTS_PAGE = 10;
 function summary(range: string, scope: string) {
   const months = MONTHS.map((month) => ({ month, total_cents: 1_746_700 }));
   return {
-    range, scope, currency: "USD", months,
+    range, scope, currency: "USD", bank_history_start: "2024-11-27", months,
     total_cents: 10_480_200, average_cents: 1_746_700,
     categories: [
       { label: "Mortgage", total_cents: 6_000_000, average_cents: 1_000_000, share_percent: 57.3 },
@@ -117,6 +117,7 @@ test.describe("Monthly expenses", () => {
     await expect(page.getByTestId("monthly-expense-category").first()).toContainText("57.3% of spending");
     await expect(page.getByTestId("monthly-expenses-month")).toHaveCount(6);
     await expect(page.getByTestId("monthly-expenses-month").first()).toContainText("May 2026");
+    await expect(page.getByTestId("cash-basis-note")).toContainText("From Nov 27, 2024, when your bank history starts");
     expect(server.summaryQueries).toEqual(["range=6m&scope=all"]);
   });
 
@@ -168,6 +169,7 @@ test.describe("Monthly expenses", () => {
     await stubApi(page, { hold: true });
     await page.goto("/monthly-expenses?range=3m");
     await expect(page.getByTestId("monthly-expenses-skeleton")).toBeVisible();
+    await expect(page.getByTestId("cash-basis-note-skeleton")).toHaveCount(1);
     await expect(page.getByTestId("monthly-expenses-skeleton-tile")).toHaveCount(2);
     await expect(page.getByTestId("monthly-expenses-skeleton-category")).not.toHaveCount(0);
     await expect(page.getByTestId("monthly-expenses-skeleton-month")).toHaveCount(3);

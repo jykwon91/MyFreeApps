@@ -39,7 +39,8 @@ def client() -> Iterator[TestClient]:
 
 def test_the_summary_defaults_to_six_months_of_everything(client: TestClient) -> None:
     service = AsyncMock(return_value=MonthlyExpensesResponse(
-        range="6m", scope="all", currency="USD", months=[], total_cents=0, average_cents=0, categories=[],
+        range="6m", scope="all", currency="USD", bank_history_start=None, months=[], total_cents=0, average_cents=0,
+        categories=[],
     ))
     with patch(f"{_SERVICE}.get_monthly_expenses", service):
         assert client.get("/monthly-expenses").status_code == 200

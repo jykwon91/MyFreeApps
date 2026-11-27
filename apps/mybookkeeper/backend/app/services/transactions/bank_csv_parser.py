@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+from app.core.bank_feed_sources import BANK_CSV_EXTERNAL_SOURCE
 from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.models.transactions.transaction import Transaction
 from app.services.transactions.bank_row_classifier import classify_bank_row
@@ -123,7 +124,7 @@ def _build_transaction(
         payment_method=payment_method,
         status="approved",
         is_manual=False,
-        external_source="bank_csv",
+        external_source=BANK_CSV_EXTERNAL_SOURCE,
         external_id=_make_external_id(txn_date, amount, description),
         transaction_scope=transaction_scope,
         spending_category_id=spending_category_id,

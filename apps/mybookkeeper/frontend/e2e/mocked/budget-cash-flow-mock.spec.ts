@@ -64,7 +64,7 @@ function cashFlow(range: string, scope: string, accountId: string | null) {
     { month: "2026-11", money_in_cents: 410_000, money_out_cents: 450_000, net_cents: -40_000 },
   ];
   return {
-    range, scope, account_id: accountId, currency: "USD", months,
+    range, scope, account_id: accountId, currency: "USD", bank_history_start: "2024-11-27", months,
     totals: { money_in_cents: 910_000, money_out_cents: 770_000, net_cents: 140_000 },
   };
 }
@@ -219,6 +219,7 @@ test.describe("Cash flow", () => {
     await expect(page.getByTestId("cash-flow-total-in")).toContainText("$9,100.00");
     await expect(page.getByTestId("cash-flow-total-out")).toContainText("$7,700.00");
     await expect(page.getByTestId("cash-flow-total-net")).toContainText("$1,400.00");
+    await expect(page.getByTestId("cash-basis-note")).toContainText("From Nov 27, 2024, when your bank history starts");
     expect(server.cashFlowQueries).toEqual(["range=6m&scope=all"]);
   });
 
@@ -240,6 +241,7 @@ test.describe("Cash flow", () => {
     await stubApi(page, { hold: true });
     await page.goto("/cash-flow");
     await expect(page.getByTestId("cash-flow-skeleton")).toBeVisible();
+    await expect(page.getByTestId("cash-basis-note-skeleton")).toHaveCount(1);
     await expect(page.getByTestId("cash-flow-skeleton-tile")).toHaveCount(3);
     await expect(page.getByTestId("cash-flow-skeleton-chart")).toHaveCount(1);
   });
