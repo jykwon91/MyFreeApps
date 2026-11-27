@@ -4,7 +4,7 @@ import sharedBindings from "../../addon/shared/Bindings.xml?raw";
 import sharedHub from "../../addon/shared/MGAHub.lua?raw";
 import { PROFESSIONS_ADDON_FILES } from "@/games/wow-forever/data/professionsAddon/professionsAddonFiles";
 import { buildProfessionsAddonData } from "@/games/wow-forever/lib/professionsAddon/buildProfessionsAddonData";
-import { luaValue } from "@/games/wow-forever/lib/professionsAddon/luaValue";
+import { luaValue } from "@/games/wow-forever/lib/addons/luaValue";
 import { npcPlace } from "@/games/wow-forever/lib/professionsAddon/npcPlace";
 import { parseSkillSpan } from "@/games/wow-forever/lib/professionsAddon/parseSkillSpan";
 import { professionsAddonDataLua } from "@/games/wow-forever/lib/professionsAddon/professionsAddonDataLua";

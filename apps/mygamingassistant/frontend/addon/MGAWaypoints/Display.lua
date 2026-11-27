@@ -117,7 +117,8 @@ end
 
 -- World Map pins ------------------------------------------------------------------------
 
-local function mapCanvas()
+-- The World Map's drawing surface (a child scaled with the map), or nil before the map exists. Other MGA addons pin onto it too.
+function M.MapCanvas()
   if not WorldMapFrame then return nil end
   if WorldMapFrame.GetCanvas then return WorldMapFrame:GetCanvas() end
   return WorldMapFrame.ScrollContainer and WorldMapFrame.ScrollContainer.Child
@@ -146,7 +147,7 @@ end
 -- Puts the destination (and the boat or zeppelin stop on the way) on the map being shown.
 function M.DrawMapPins()
   for _, pin in ipairs(mapPins) do pin:Hide() end
-  local canvas = mapCanvas()
+  local canvas = M.MapCanvas()
   local target = M.Target()
   if not (canvas and target and M.Settings().mapPin and WorldMapFrame:IsShown()) then return end
   local mapId = WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()

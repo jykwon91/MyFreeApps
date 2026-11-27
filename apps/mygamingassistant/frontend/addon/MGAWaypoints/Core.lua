@@ -18,7 +18,9 @@ M.ARRIVALS = { 5, 10, 15, 25, 40 }
 M.SCOPES = { "zone", "continent", "all" }
 M.SCOPE_TEXT = { zone = "This zone", continent = "This continent", all = "Everywhere" }
 -- The continent maps' ids, to name a continent in "it is on Kalimdor".
-local CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
+-- The continent maps by continent number (UnitPosition's fourth return). Other MGA addons read it too.
+M.CONTINENT_MAPS = { [0] = 1415, [1] = 1414 }
+local CONTINENT_MAPS = M.CONTINENT_MAPS
 local COMPASS = { "N", "NW", "W", "SW", "S", "SE", "E", "NE" }
 
 -- What the picker lists. `kinds` are Data's place kinds; `own` limits class trainers to your class.

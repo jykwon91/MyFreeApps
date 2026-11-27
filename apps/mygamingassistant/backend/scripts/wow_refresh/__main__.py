@@ -80,6 +80,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         world_map,
         # Reads the World Map's committed services and zones: who trains each profession rank.
         ["scripts.wow_world_map.rank_trainers"],
+        # Reads the World Map's zones.json and areas.json: the areas the Legacy "Explorer" challenge counts
+        # (the MGA Explorer addon's Data.lua is regenerated from it by its vitest snapshot, -u).
+        ["scripts.wow_explore.build"],
         # Reads the World Map's zones.json. Its images are published last, below.
         ["scripts.wow_satellite.build"],
         ["scripts.wow_food.build"],
