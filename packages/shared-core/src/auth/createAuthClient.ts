@@ -5,11 +5,8 @@ import { baseApi } from "../store/baseApi";
 import type { LoginResponse } from "../types/security/login-response";
 import type { LoginResult } from "../types/security/login-result";
 import { requestVerifyToken } from "./requestVerifyToken";
+import { turnstileHeaders } from "./turnstileHeaders";
 import type { AuthClientStore } from "./types/AuthClientStore";
-
-function turnstileHeaders(turnstileToken: string): Record<string, string> {
-  return turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {};
-}
 
 /**
  * The auth calls an app makes, bound to that app's Redux store so an identity

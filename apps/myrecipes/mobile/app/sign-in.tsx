@@ -30,7 +30,13 @@ export default function SignInRoute() {
           ),
         }}
       />
-      <SignInScreen appName="MyRecipes" onSignedIn={close} webBaseUrl={WEB_BASE_URL} />
+      <SignInScreen
+        appName="MyRecipes"
+        onCreateAccount={() => router.push("/register")}
+        onForgotPassword={() => router.push("/forgot-password")}
+        onSignedIn={close}
+        webBaseUrl={WEB_BASE_URL}
+      />
     </>
   );
 }

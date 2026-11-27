@@ -3,6 +3,7 @@ import { Linking } from "react-native";
 import { resendVerificationEmail } from "../auth/mobileAuthApi";
 import { SessionContext } from "../auth/SessionContext";
 import SignInScreen from "../components/SignInScreen";
+import { SIGN_IN_LINKS } from "../constants/signInLinks";
 import type { MobileSession } from "../types/MobileSession";
 import type { RegistrationMode } from "../types/RegistrationMode";
 import type { SessionState } from "../types/SessionState";
@@ -210,6 +211,44 @@ describe("SignInScreen", () => {
     expect(screen.getByText("MyRecipes is invite-only. Use the link in your invite email to create an account.")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Create an account/ })).toBeNull();
     expect(screen.getByRole("link", { name: /Forgot your password/ })).toBeTruthy();
+  });
+
+  describe("when the app has its own sign-up and reset screens", () => {
+    async function renderWithScreens(registration?: RegistrationMode) {
+      const onForgotPassword = jest.fn();
+      const onCreateAccount = jest.fn();
+      await render(
+        <SessionContext.Provider value={fakeSession(jest.fn(), SIGNED_OUT)}>
+          <SignInScreen
+            appName="MyRecipes"
+            onCreateAccount={onCreateAccount}
+            onForgotPassword={onForgotPassword}
+            onSignedIn={jest.fn()}
+            registration={registration}
+            webBaseUrl="https://web.test"
+          />
+        </SessionContext.Provider>,
+      );
+      return { onForgotPassword, onCreateAccount };
+    }
+
+    it("opens them in the app, not the website", async () => {
+      const open = jest.spyOn(Linking, "openURL").mockClear().mockResolvedValue(undefined);
+      const { onForgotPassword, onCreateAccount } = await renderWithScreens();
+      await fireEvent.press(screen.getByRole("link", { name: SIGN_IN_LINKS.forgotPassword }));
+      await fireEvent.press(screen.getByRole("link", { name: SIGN_IN_LINKS.createAccount }));
+      expect(onForgotPassword).toHaveBeenCalledTimes(1);
+      expect(onCreateAccount).toHaveBeenCalledTimes(1);
+      expect(open).not.toHaveBeenCalled();
+      expect(screen.queryByRole("link", { name: /on the website/ })).toBeNull();
+    });
+
+    it("still explains an invite-only app instead of offering sign-up", async () => {
+      await renderWithScreens("invite_only");
+      expect(screen.getByText("MyRecipes is invite-only. Use the link in your invite email to create an account.")).toBeTruthy();
+      expect(screen.queryByRole("link", { name: /Create an account/ })).toBeNull();
+      expect(screen.getByRole("link", { name: SIGN_IN_LINKS.forgotPassword })).toBeTruthy();
+    });
   });
 
   it("says so when the phone can't open the website", async () => {

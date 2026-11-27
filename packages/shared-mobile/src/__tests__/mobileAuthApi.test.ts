@@ -6,7 +6,9 @@ import {
   requestDeleteAccount,
   requestLogin,
   requestLogout,
+  requestPasswordReset,
   requestRefresh,
+  requestRegister,
   resendVerificationEmail,
 } from "../auth/mobileAuthApi";
 
@@ -172,5 +174,72 @@ describe("resendVerificationEmail", () => {
   it("fails rather than claiming it sent with no connection", async () => {
     api.defaults.adapter = offline;
     await expect(resendVerificationEmail("a@example.com")).resolves.toBe("failed");
+  });
+});
+
+describe("requestRegister", () => {
+  const details = { email: "a@example.com", password: "long enough pass", name: "  ", nameField: "display_name" } as const;
+
+  it("posts the account with the captcha token and the sign-in timeout, leaving a blank name out", async () => {
+    let sent: InternalAxiosRequestConfig | undefined;
+    api.defaults.adapter = async (config) => {
+      sent = config;
+      return { status: 201, data: {}, statusText: "", headers: {}, config };
+    };
+    await expect(requestRegister(details, "tok")).resolves.toEqual({ outcome: "registered" });
+    expect(sent?.url).toBe("/auth/register");
+    expect(JSON.parse(String(sent?.data))).toEqual({ email: "a@example.com", password: "long enough pass" });
+    expect(sent?.headers["X-Turnstile-Token"]).toBe("tok");
+    expect(sent?.timeout).toBe(15000);
+  });
+
+  it("sends no captcha header without a token", async () => {
+    let sent: InternalAxiosRequestConfig | undefined;
+    api.defaults.adapter = async (config) => {
+      sent = config;
+      return { status: 201, data: {}, statusText: "", headers: {}, config };
+    };
+    await requestRegister({ ...details, name: "Bo", nameField: "name" }, "");
+    expect(sent?.headers["X-Turnstile-Token"]).toBeUndefined();
+    expect(JSON.parse(String(sent?.data))).toEqual(expect.objectContaining({ name: "Bo" }));
+  });
+
+  it.each([
+    [400, { detail: "REGISTER_USER_ALREADY_EXISTS" }, { outcome: "failed", failure: "email_taken" }],
+    [400, { detail: { code: "REGISTER_INVALID_PASSWORD", reason: "Too common." } }, { outcome: "weakPassword", reason: "Too common." }],
+    [400, { detail: "captcha_expired_please_retry" }, { outcome: "failed", failure: "captcha_expired" }],
+    [400, { detail: "Captcha token required" }, { outcome: "failed", failure: "captcha_rejected" }],
+    [503, { detail: "captcha_service_unavailable" }, { outcome: "failed", failure: "captcha_unavailable" }],
+    [429, {}, { outcome: "failed", failure: "rate_limited" }],
+    [500, {}, { outcome: "failed", failure: "unreachable" }],
+    [422, { detail: [{ loc: ["body", "email"] }] }, { outcome: "failed", failure: "invalid_email" }],
+    [400, { detail: "NEW_CODE" }, { outcome: "failed", failure: "unexpected" }],
+  ])("maps %i %j", async (status, data, expected) => {
+    api.defaults.adapter = answering(status, data);
+    await expect(requestRegister(details, "tok")).resolves.toEqual(expected);
+  });
+
+  it("calls no connection unreachable", async () => {
+    api.defaults.adapter = offline;
+    await expect(requestRegister(details, "tok")).resolves.toEqual({ outcome: "failed", failure: "unreachable" });
+  });
+});
+
+describe("requestPasswordReset", () => {
+  it("posts the email with the captcha token", async () => {
+    let sent: InternalAxiosRequestConfig | undefined;
+    api.defaults.adapter = async (config) => {
+      sent = config;
+      return { status: 202, data: null, statusText: "", headers: {}, config };
+    };
+    await expect(requestPasswordReset("a@example.com", "tok")).resolves.toEqual({ outcome: "sent" });
+    expect(sent?.url).toBe("/auth/forgot-password");
+    expect(JSON.parse(String(sent?.data))).toEqual({ email: "a@example.com" });
+    expect(sent?.headers["X-Turnstile-Token"]).toBe("tok");
+  });
+
+  it("explains a refused captcha", async () => {
+    api.defaults.adapter = answering(400, { detail: "captcha_verification_failed" });
+    await expect(requestPasswordReset("a@example.com", "tok")).resolves.toEqual({ outcome: "failed", failure: "captcha_rejected" });
   });
 });

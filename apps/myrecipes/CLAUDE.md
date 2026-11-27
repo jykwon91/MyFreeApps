@@ -105,6 +105,14 @@ npm test --workspace=@myrecipes/api-client
 `main.py` with a per-IP register throttle (`check_register_rate_limit`) +
 Turnstile (`require_turnstile`, a no-op when the secret is empty in dev/CI).
 
+**Phone sign-up and password reset** are screens in the mobile app (`app/register.tsx`,
+`app/forgot-password.tsx`, from `@platform/mobile/captcha`), opened from sign-in. They show the
+Turnstile widget in a WebView loaded as the website's origin, so the site key and its allowed
+hostname are the website's (`TURNSTILE_SITE_KEY` in `mobile/src/constants/api.ts`; override with
+`EXPO_PUBLIC_TURNSTILE_SITE_KEY`, or set it to `""` against a local backend with no secret).
+The reset link in the email still opens `/reset-password` on the website. react-native-webview
+is a native module: rebuild the development build after pulling this change.
+
 **Layered:** Routes -> Services -> Repositories; never import ORM/DB in route
 handlers or services (services call repos). Mappers convert ORM -> Pydantic.
 

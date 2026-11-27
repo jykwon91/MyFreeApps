@@ -5,8 +5,9 @@ routes:
   # shows in place on /discover rather than as a route of its own.
   /discover:
     screen: (tabs)/discover
+  # Opened from sign-in's "Forgot your password?". The emailed link opens /reset-password on the website.
   /forgot-password:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on password-reset requests, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("Forgot your password? Reset it on the website").
+    screen: forgot-password
   /login:
     screen: sign-in
   # The owner's cook log and its "I made it" dialog (a sheet) are on the recipe screen, as on the website.
@@ -24,8 +25,9 @@ routes:
     screen: recipes/import
   /recipes/new:
     screen: recipes/new
+  # Opened from sign-in's "New here? Create an account". Both show the captcha in a WebView.
   /register:
-    not_on_mobile: The backend requires a Cloudflare Turnstile captcha on sign-up, a browser widget the phone cannot show. Done on the website; the sign-in screen links there ("New here? Create an account on the website").
+    screen: register
   /reset-password:
     not_on_mobile: Opened from the link in the password-reset email, which goes to the website.
   # In Settings, when signed in. Its Turn on dialog is a screen of its own, security/turn-on; the Turn off
