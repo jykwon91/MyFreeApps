@@ -18,3 +18,5 @@ apps/*/backend/scripts/*-spans/_raw/*.js text eol=lf
 apps/mygamingassistant/frontend/addon/**/*.xml text eol=lf
 # Bash refuses CRLF scripts ($'\r': command not found), so the agent helpers stay LF.
 scripts/agent/*.sh text eol=lf
+# Inline <script> CSP hashes cover these exact bytes (test_inline_script_csp_hashes.py).
+apps/*/frontend/index.html text eol=lf
