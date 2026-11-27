@@ -74,6 +74,15 @@ describe("the vendor rules list", () => {
     await screen.findByRole("button", { name: "home depot, Maintenance, Used 3 times, Elm House" });
   });
 
+  it("names every property a rule splits across", async () => {
+    startClassificationRulesServer({
+      rules: [aRule({ split_property_ids: ["p1", "p2"] })],
+      properties: [aProperty(), aProperty({ id: "p2", name: "Oak House" })],
+    });
+    await show(<VendorRulesScreen />);
+    await screen.findByRole("button", { name: "home depot, Maintenance, Used 3 times, Split evenly: Elm House, Oak House" });
+  });
+
   it("shows skeleton rows while the rules load", async () => {
     startClassificationRulesServer({ rules }).holdReads = true;
     await show(<VendorRulesScreen />);
@@ -144,6 +153,16 @@ describe("a rule's own screen", () => {
     expect(await screen.findByText("Elm House")).toBeTruthy();
     expect(screen.getByText("invoice")).toBeTruthy();
     expect(screen.getByText("Used 3 times")).toBeTruthy();
+  });
+
+  it("says a split rule splits evenly across its properties, not that it has none", async () => {
+    startClassificationRulesServer({
+      rules: [aRule({ split_property_ids: ["p1", "p2"] })],
+      properties: [aProperty(), aProperty({ id: "p2", name: "Oak House" })],
+    });
+    await show(<VendorRuleDetailScreen id="r1" />);
+    expect(await screen.findByText("Split evenly: Elm House, Oak House")).toBeTruthy();
+    expect(screen.queryByText(VENDOR_RULE_MESSAGES.noProperty)).toBeNull();
   });
 
   it("shows when the rule was added", async () => {

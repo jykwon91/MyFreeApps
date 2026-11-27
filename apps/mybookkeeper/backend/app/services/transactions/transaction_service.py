@@ -19,6 +19,7 @@ from app.schemas.transactions.transaction_list_page import TransactionListPage
 from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.classification import rule_learning_service
 from app.services.transactions.capital_improvement import placed_in_service_date_for
+from app.services.transactions.filed_by_person import mark_filed_by_person
 from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
 from app.services.transactions.personal_transfer_status import assert_status_editable
 from app.services.transactions.property_split_service import keep_split_consistent
@@ -206,6 +207,7 @@ async def update_transaction(
         old_category = txn.category
         old_schedule_e_line = txn.schedule_e_line
         old_property_id = txn.property_id
+        old_scope = txn.transaction_scope
         old_tax_inputs = tax_total_inputs(txn)
         for field in updates:
             if field not in UPDATABLE_FIELDS:
@@ -238,6 +240,8 @@ async def update_transaction(
         # queries (and so flushes) the row.
         apply_scope_rules(txn)
         keep_split_consistent(txn)
+        if (txn.category, txn.transaction_scope, txn.property_id) != (old_category, old_scope, old_property_id):
+            mark_filed_by_person(txn)
         # A personal row's tax category and property mean nothing, so a
         # correction to one must not become a rule for the vendor's other rows.
         learns_rules = txn.transaction_scope != TRANSACTION_SCOPE_PERSONAL

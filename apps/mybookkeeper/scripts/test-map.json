@@ -2603,7 +2603,19 @@
         "backend/app/repositories/classification/classification_rule_repo.py",
         "backend/app/models/classification/classification_rule.py",
         "backend/app/api/classification_rules.py",
+        "backend/app/services/classification/rule_actions.py",
+        "backend/app/services/classification/payee_rule_error.py",
+        "backend/app/repositories/classification/payee_rule_match_repo.py",
+        "backend/app/models/classification/classification_rule_split_property.py",
+        "backend/app/services/transactions/filed_by_person.py",
+        "backend/app/core/payee_rule_constants.py",
+        "backend/app/schemas/classification/",
         "api-client/src/store/classificationRulesApi.ts",
+        "frontend/src/app/features/classification-rules/",
+        "frontend/src/shared/lib/payee-rule-messages.ts",
+        "frontend/src/shared/utils/payee-rule-from-transaction.ts",
+        "frontend/src/shared/utils/can-file-payee-like-this.ts",
+        "frontend/src/shared/utils/rule-filing-facts.ts",
         "frontend/src/app/features/transactions/ClassificationRulesPanel.tsx",
         "frontend/src/shared/lib/classification-rule-messages.ts",
         "api-client/src/types/classification-rule/",
@@ -2616,14 +2628,19 @@
       ],
       "backend_tests": [
         "test_vendor_normalization.py",
-        "test_logs_carry_no_personal_details.py"
+        "test_logs_carry_no_personal_details.py",
+        "test_payee_rules.py"
       ],
       "frontend_tests": [
         "useClassificationRulesPanelMode.test.ts",
-        "ClassificationRulesPanel.test.tsx"
+        "ClassificationRulesPanel.test.tsx",
+        "TransactionPayeeRule.test.tsx",
+        "payeeRuleFromTransaction.test.ts"
       ],
       "e2e_specs": [
-        "classification-rules.spec.ts"
+        "classification-rules.spec.ts",
+        "mocked/classification-rules-panel-mock.spec.ts",
+        "mocked/payee-rule-mock.spec.ts"
       ]
     },
     "version": {

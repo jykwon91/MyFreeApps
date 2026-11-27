@@ -68,7 +68,7 @@ export default function VendorRulesScreen() {
         contentInsetAdjustmentBehavior="automatic"
         keyExtractor={(rule) => rule.id}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <VendorRuleRow onPress={() => router.push(`/vendor-rules/${item.id}`)} propertyName={listPropertyName(item.property_id, propertyNames)} rule={item} />}
+        renderItem={({ item }) => <VendorRuleRow onPress={() => router.push(`/vendor-rules/${item.id}`)} propertyName={listPropertyName(item, propertyNames)} rule={item} />}
         renderSectionHeader={({ section }) => (
           <Text
             accessibilityRole="header"

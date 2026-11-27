@@ -14,3 +14,4 @@ class PlaidApplyCounts:
     linked_existing: int = 0
     copies_merged: int = 0
     attributed_as_rent: int = 0
+    filed_by_rule: int = 0

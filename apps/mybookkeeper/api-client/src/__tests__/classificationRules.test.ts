@@ -11,6 +11,8 @@ const rule = (id: string, match_type: string): ClassificationRule => ({
   category: "maintenance",
   property_id: null,
   activity_id: null,
+  transaction_scope: null,
+  split_property_ids: [],
   source: "manual",
   priority: 0,
   times_applied: 0,

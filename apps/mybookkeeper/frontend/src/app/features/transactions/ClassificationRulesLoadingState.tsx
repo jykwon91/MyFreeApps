@@ -7,7 +7,7 @@ export interface ClassificationRulesLoadingStateProps {
 
 const ROWS = Array.from({ length: CLASSIFICATION_RULES_SKELETON_ROW_COUNT }, (_, i) => i);
 
-/** Mirrors ClassificationRulesList: same columns, the delete column only when the list shows it. */
+/** Mirrors ClassificationRulesList: same columns, the actions column only when the list shows it. */
 export default function ClassificationRulesLoadingState({ canDelete }: ClassificationRulesLoadingStateProps) {
   return (
     <LoadingRegion label="Loading rules…" data-testid="classification-rules-skeleton">
@@ -17,7 +17,7 @@ export default function ClassificationRulesLoadingState({ canDelete }: Classific
             <th className="px-5 py-2.5 font-medium">Pattern</th>
             <th className="px-3 py-2.5 font-medium">Category</th>
             <th className="px-3 py-2.5 font-medium text-right">Used</th>
-            {canDelete ? <th className="px-3 py-2.5 w-14" /> : null}
+            {canDelete && <th className="px-3 py-2.5 w-24" />}
           </tr>
         </thead>
         <tbody>
@@ -33,11 +33,11 @@ export default function ClassificationRulesLoadingState({ canDelete }: Classific
               <td className="px-3 py-2.5 text-right">
                 <Skeleton className="h-4 w-6 ml-auto" />
               </td>
-              {canDelete ? (
+              {canDelete && (
                 <td className="px-3 py-2.5">
-                  <Skeleton className="h-11 w-11" />
+                  <Skeleton className="h-11 w-11 ml-auto" />
                 </td>
-              ) : null}
+              )}
             </tr>
           ))}
         </tbody>

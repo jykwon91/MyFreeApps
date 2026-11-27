@@ -22,6 +22,8 @@ added and withdrawn in the same batch ends up withdrawn.
   service's fee) is paired after each batch (``plaid_transfer_reconciler``).
 * **Modified** rows update only what the bank owns — date, amount, name. How
   the person filed the row is theirs and is never overwritten.
+* **Payee rules** the person set up file each new row as it is stored
+  (``rule_actions``). Rows already on file are never refiled by a sync.
 * **Removed** rows are soft-deleted, through the same path every delete uses.
 * **Income from a tenant** is then filed as their rent, or queued for rent
   review (``plaid_rent_attribution``) — every synced income row not yet read,
@@ -50,6 +52,7 @@ from app.repositories.transactions import plaid_transaction_repo, transaction_re
 from app.schemas.plaid.plaid_apply_counts import PlaidApplyCounts
 from app.schemas.plaid.plaid_sync_batch import PlaidSyncBatch
 from app.schemas.plaid.wire.plaid_wire_transaction import PlaidWireTransaction
+from app.services.classification import rule_actions, rule_engine
 from app.services.net_worth import net_worth_service
 from app.services.plaid import plaid_copy_reconciler, plaid_rent_attribution, plaid_transfer_reconciler
 from app.services.transactions.bank_row_classifier import classify_bank_row
@@ -176,11 +179,15 @@ async def _apply_added(
     if account.default_transaction_scope == TRANSACTION_SCOPE_PERSONAL and classification.transaction_type == _EXPENSE:
         name = plaid_transaction_mapper.spending_category_name_for(txn.personal_finance_category)
         spending_category_id = spending_category_ids.get(name) if name else None
-    await transaction_repo.create(db, plaid_transaction_mapper.new_transaction(
+    row = plaid_transaction_mapper.new_transaction(
         txn, account=account, classification=classification,
         spending_category_id=spending_category_id,
-    ))
+    )
+    await transaction_repo.create(db, row)
     counts.added += 1
+    rule = await rule_engine.find_vendor_rule(db, item.organization_id, row.vendor)
+    if rule is not None and await rule_actions.file_by_rule(db, row, rule):
+        counts.filed_by_rule += 1
 
 
 async def _find_other_leg(

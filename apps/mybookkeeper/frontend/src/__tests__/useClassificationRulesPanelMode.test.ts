@@ -12,6 +12,8 @@ function makeRule(override?: Partial<ClassificationRule>): ClassificationRule {
     category: "repairs",
     property_id: null,
     activity_id: null,
+    transaction_scope: null,
+    split_property_ids: [],
     source: "user",
     priority: 1,
     times_applied: 3,

@@ -21,6 +21,7 @@ from app.repositories.properties import property_repo
 from app.repositories.tax import tax_return_repo
 from app.repositories.transactions import property_split_repo
 from app.schemas.transactions.transaction_property_split_request import TransactionPropertySplitRequest
+from app.services.transactions.filed_by_person import mark_filed_by_person
 from app.services.transactions.property_split_error import PropertySplitError
 from app.services.transactions.property_split_math import even_shares, rescaled_shares, validate_shares
 
@@ -68,6 +69,7 @@ async def set_split(
         if txn is None or txn.deleted_at is not None:
             return None
         await apply_split(db, txn, requested_shares(txn.amount, request))
+        mark_filed_by_person(txn)
         return txn
 
 
@@ -79,6 +81,7 @@ async def remove_split(ctx: RequestContext, transaction_id: uuid.UUID) -> Transa
             return None
         if txn.property_splits:
             property_split_repo.clear_shares(txn)
+            mark_filed_by_person(txn)
             if tax_total_inputs(txn) is not None:
                 await tax_return_repo.flag_unfiled_for_recompute(db, txn.organization_id)
         return txn

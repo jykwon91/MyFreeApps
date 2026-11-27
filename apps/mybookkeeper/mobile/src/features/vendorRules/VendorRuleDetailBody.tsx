@@ -9,7 +9,7 @@ import { DELETE_VENDOR_RULE_BODY, deleteVendorRuleTitle, VENDOR_RULE_MESSAGES as
 import { askOnce } from "../../lib/askOnce";
 import { categoryLabel } from "../transactions/transactionDisplay";
 import TransactionFact from "../transactions/TransactionFact";
-import { propertyFactText, timesUsedText } from "./vendorRuleDisplay";
+import { propertyFactText, rulePropertyIds, timesUsedText } from "./vendorRuleDisplay";
 import { useVendorRuleActions } from "./useVendorRuleActions";
 
 interface VendorRuleDetailBodyProps {
@@ -41,8 +41,8 @@ export default function VendorRuleDetailBody({ rule, propertyNames, propertyStat
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{matchTypeLabel(rule.match_type)}</Text>
       </View>
       <TransactionFact label={MESSAGES.category} value={categoryLabel(rule.category)} />
-      <TransactionFact label={MESSAGES.property} value={propertyFactText(rule.property_id, propertyState, propertyNames)} />
-      {rule.property_id !== null && propertyState === "failed" ? (
+      <TransactionFact label={MESSAGES.property} value={propertyFactText(rule, propertyState, propertyNames)} />
+      {rulePropertyIds(rule).length > 0 && propertyState === "failed" ? (
         <LoadingButton onPress={onRetryProperties} variant="secondary">
           {MESSAGES.tryAgain}
         </LoadingButton>

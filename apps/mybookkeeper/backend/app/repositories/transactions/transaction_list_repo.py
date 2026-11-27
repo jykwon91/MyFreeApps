@@ -394,7 +394,8 @@ async def find_by_vendor_for_retroactive(
     """Find non-deleted transactions for retroactive rule application.
 
     Personal rows are left out: classification rules carry tax categories and
-    properties, and personal spending is never filed under either.
+    properties, and personal spending is never filed under either. So are rows
+    a person filed: a rule never undoes someone's own choice.
     """
     stmt = (
         select(Transaction)
@@ -402,6 +403,7 @@ async def find_by_vendor_for_retroactive(
             Transaction.organization_id == organization_id,
             Transaction.vendor.isnot(None),
             Transaction.deleted_at.is_(None),
+            Transaction.filed_by_person_at.is_(None),
             Transaction.id != exclude_id,
             Transaction.transaction_scope != TRANSACTION_SCOPE_PERSONAL,
         )

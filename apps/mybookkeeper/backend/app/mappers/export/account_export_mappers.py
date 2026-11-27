@@ -4,6 +4,7 @@ from typing import Final
 from app.mappers.export.column_transforms import INTEGRATION_GMAIL_LABEL, decrypted_as
 from app.mappers.export.table_export_mapper import TableExportMapper
 from app.models.classification.classification_rule import ClassificationRule
+from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.integrations.integration import Integration
 from app.models.organization.activity import Activity
@@ -118,12 +119,23 @@ CLASSIFICATION_RULES_EXPORT: Final = TableExportMapper(
         "sub_category",
         "property_id",
         "activity_id",
+        "transaction_scope",
         "source",
         "priority",
         "times_applied",
         "is_active",
         "created_at",
         "updated_at",
+    ),
+)
+
+CLASSIFICATION_RULE_SPLIT_PROPERTIES_EXPORT: Final = TableExportMapper(
+    ClassificationRuleSplitProperty,
+    (
+        "id",
+        "rule_id",
+        "property_id",
+        "position",
     ),
 )
 
@@ -165,6 +177,7 @@ ACCOUNT_EXPORT_MAPPERS: Final[tuple[TableExportMapper, ...]] = (
     TAXPAYER_PROFILES_EXPORT,
     ACTIVITIES_EXPORT,
     CLASSIFICATION_RULES_EXPORT,
+    CLASSIFICATION_RULE_SPLIT_PROPERTIES_EXPORT,
     INTEGRATIONS_EXPORT,
     EXTRACTION_PROMPTS_EXPORT,
 )

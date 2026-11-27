@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.vendors import normalize_address, normalize_vendor
 from app.models.classification.classification_rule import ClassificationRule
+from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty
+from app.schemas.classification.rule_filing import RuleFiling
 
 
 def _normalize_pattern(match_type: str, pattern: str) -> str:
@@ -100,7 +102,14 @@ async def upsert_rule(
     property_id: uuid.UUID | None = None,
     activity_id: uuid.UUID | None = None,
     keep_assignment_when_unset: bool = False,
+    filing: RuleFiling | None = None,
 ) -> ClassificationRule:
+    """Create the rule, or update the one with the same match.
+
+    ``filing`` (a rule the person set up) also sets the scope and the split;
+    without it (a rule learned from a correction) those stay as they are,
+    except that learning a property ends a split.
+    """
     normalized = _normalize_pattern(match_type, pattern)
     norm_ctx = _normalize_context(match_type, context)
 
@@ -113,6 +122,11 @@ async def upsert_rule(
             existing.activity_id = activity_id
         existing.source = source
         existing.updated_at = datetime.now(timezone.utc)
+        if filing is not None:
+            existing.transaction_scope = filing.transaction_scope
+            await replace_split_properties(db, existing, filing.split_property_ids)
+        elif existing.property_id is not None and existing.split_properties:
+            await replace_split_properties(db, existing, [])
         await db.flush()
         return existing
 
@@ -126,10 +140,42 @@ async def upsert_rule(
         activity_id=activity_id,
         created_by=created_by,
         source=source,
+        transaction_scope=filing.transaction_scope if filing else None,
+        # Set, so reading it after the flush doesn't need a lazy load.
+        split_properties=[],
     )
     db.add(rule)
     await db.flush()
+    if filing is not None and filing.split_property_ids:
+        await replace_split_properties(db, rule, filing.split_property_ids)
     return rule
+
+
+async def replace_split_properties(
+    db: AsyncSession, rule: ClassificationRule, property_ids: Sequence[uuid.UUID],
+) -> None:
+    """Make these, in this order, the properties the rule splits across."""
+    # Deleted before the new ones go in: a flush inserts first, and a kept
+    # property would hit uq_rule_split_property.
+    rule.split_properties.clear()
+    await db.flush()
+    rule.split_properties.extend(
+        ClassificationRuleSplitProperty(property_id=property_id, position=position)
+        for position, property_id in enumerate(property_ids)
+    )
+    await db.flush()
+
+
+async def get_rule(
+    db: AsyncSession, rule_id: uuid.UUID, organization_id: uuid.UUID,
+) -> ClassificationRule | None:
+    result = await db.execute(
+        select(ClassificationRule).where(
+            ClassificationRule.id == rule_id,
+            ClassificationRule.organization_id == organization_id,
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 async def _find_exact_rule(

@@ -5,6 +5,7 @@ import ClassificationRulesPanel from "@/app/features/transactions/Classification
 import { showError, showSuccess } from "@platform/ui";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { CLASSIFICATION_RULE_MESSAGES } from "@/shared/lib/classification-rule-messages";
+import { PAYEE_RULE_MESSAGES } from "@/shared/lib/payee-rule-messages";
 import { WRITE_RATE_LIMITED_MESSAGE } from "@mybookkeeper/api-client/constants/writeFailureMessages";
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
@@ -17,6 +18,8 @@ const rule: ClassificationRule = {
   category: "repairs",
   property_id: null,
   activity_id: null,
+  transaction_scope: null,
+  split_property_ids: [],
   source: "user_correction",
   priority: 0,
   times_applied: 3,
@@ -26,6 +29,9 @@ const rule: ClassificationRule = {
 
 const refetch = vi.fn();
 const deleteRule = vi.fn();
+const countPastMatches = vi.fn();
+const applyRuleToPast = vi.fn();
+let properties: { id: string; name: string }[] = [];
 
 type ListState = { data: ClassificationRule[] | undefined; isLoading: boolean; isError: boolean; isFetching: boolean };
 let listState: ListState;
@@ -33,9 +39,11 @@ let listState: ListState;
 vi.mock("@mybookkeeper/api-client/store/classificationRulesApi", () => ({
   useListClassificationRulesQuery: vi.fn(() => ({ ...listState, refetch })),
   useDeleteClassificationRuleMutation: vi.fn(() => [deleteRule]),
+  useLazyGetRulePastMatchesQuery: vi.fn(() => [countPastMatches]),
+  useApplyRuleToPastMutation: vi.fn(() => [applyRuleToPast, { isLoading: false }]),
 }));
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
-  useGetPropertiesQuery: vi.fn(() => ({ data: [] })),
+  useGetPropertiesQuery: vi.fn(() => ({ data: properties })),
 }));
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useIsOrgAdmin: vi.fn(() => true) }));
 vi.mock("@platform/ui", async (importOriginal) => ({
@@ -58,6 +66,7 @@ beforeEach(() => {
   listState = { data: [rule], isLoading: false, isError: false, isFetching: false };
   vi.mocked(useIsOrgAdmin).mockReturnValue(true);
   deleteRule.mockReturnValue({ unwrap: () => Promise.resolve() });
+  properties = [];
 });
 
 describe("ClassificationRulesPanel delete flow", () => {
@@ -208,5 +217,77 @@ describe("ClassificationRulesPanel list states", () => {
     const skeleton = screen.getByTestId("classification-rules-skeleton");
     expect(skeleton.querySelectorAll("thead th")).toHaveLength(columns);
     expect(skeleton.querySelectorAll("tbody tr:first-child td")).toHaveLength(columns);
+  });
+});
+
+describe("ClassificationRulesPanel payee rules", () => {
+  const HOUSES = [
+    { id: "p-6732", name: "6732 Peerless" },
+    { id: "p-6734", name: "6734 Peerless" },
+    { id: "p-6738", name: "6738 Peerless" },
+  ];
+  const payeeRule: ClassificationRule = {
+    ...rule,
+    id: "rule-2",
+    match_type: "vendor",
+    match_pattern: "zelle payment to jason law",
+    category: "maintenance",
+    transaction_scope: "rental",
+    split_property_ids: HOUSES.map((h) => h.id),
+  };
+  const applyLabel = PAYEE_RULE_MESSAGES.applyToPastLabel(payeeRule.match_pattern);
+
+  beforeEach(() => {
+    properties = HOUSES;
+    listState = { data: [payeeRule, rule], isLoading: false, isError: false, isFetching: false };
+  });
+
+  it("shows a payee rule's scope and the properties it splits across", () => {
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+    expect(screen.getByText("| Rental")).toBeInTheDocument();
+    expect(screen.getByText("| Split evenly: 6732 Peerless, 6734 Peerless, 6738 Peerless")).toBeInTheDocument();
+  });
+
+  it("offers Apply to past on payee rules only", () => {
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+    expect(screen.getByRole("button", { name: applyLabel })).toHaveClass("h-11", "w-11");
+    expect(screen.queryByRole("button", { name: PAYEE_RULE_MESSAGES.applyToPastLabel("Home Depot") })).not.toBeInTheDocument();
+  });
+
+  it("confirms the count, then files the past payments", async () => {
+    countPastMatches.mockReturnValue({ unwrap: () => Promise.resolve({ count: 15 }) });
+    applyRuleToPast.mockReturnValue({ unwrap: () => Promise.resolve({ applied: 15 }) });
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: applyLabel }));
+    expect(await screen.findByText(PAYEE_RULE_MESSAGES.pastDescription(15, payeeRule.match_pattern))).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: PAYEE_RULE_MESSAGES.pastConfirm(15) }));
+
+    expect(applyRuleToPast).toHaveBeenCalledWith("rule-2");
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(PAYEE_RULE_MESSAGES.applied(15, payeeRule.match_pattern)));
+    await waitFor(() => expect(screen.queryByText(PAYEE_RULE_MESSAGES.pastTitle)).not.toBeInTheDocument());
+  });
+
+  it("says when there's nothing in the past to file, without asking", async () => {
+    countPastMatches.mockReturnValue({ unwrap: () => Promise.resolve({ count: 0 }) });
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: applyLabel }));
+
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(PAYEE_RULE_MESSAGES.nothingToApply(payeeRule.match_pattern)));
+    expect(screen.queryByText(PAYEE_RULE_MESSAGES.pastTitle)).not.toBeInTheDocument();
+    expect(applyRuleToPast).not.toHaveBeenCalled();
+  });
+
+  it("keeps the question open and says so when filing fails", async () => {
+    countPastMatches.mockReturnValue({ unwrap: () => Promise.resolve({ count: 2 }) });
+    applyRuleToPast.mockReturnValue({ unwrap: () => Promise.reject({ status: 500 }) });
+    render(<ClassificationRulesPanel onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: applyLabel }));
+    await userEvent.click(await screen.findByRole("button", { name: PAYEE_RULE_MESSAGES.pastConfirm(2) }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(PAYEE_RULE_MESSAGES.couldntApply));
+    expect(screen.getByText(PAYEE_RULE_MESSAGES.pastTitle)).toBeInTheDocument();
   });
 });

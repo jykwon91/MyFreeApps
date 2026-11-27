@@ -106,6 +106,7 @@ from app.models.rent.rent_charge import RentCharge  # noqa: F401
 from app.models.rent.rent_reminder_plan import RentReminderPlan  # noqa: F401
 from app.models.rent.rent_reminder_send import RentReminderSend  # noqa: F401
 from app.models.classification.classification_rule import ClassificationRule  # noqa: F401
+from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty  # noqa: F401
 from app.models.system.system_event import SystemEvent  # noqa: F401
 from app.models.system.audit_log import AuditLog  # noqa: F401
 from app.models.system.auth_event import AuthEvent  # noqa: F401

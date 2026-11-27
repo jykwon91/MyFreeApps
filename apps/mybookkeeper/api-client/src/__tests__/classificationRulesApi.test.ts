@@ -50,4 +50,36 @@ describe("classificationRulesApi", () => {
     ]);
     sub.unsubscribe();
   });
+
+  it("creates a payee rule and refetches the list", async () => {
+    const store = makeStore();
+    const sub = store.dispatch(classificationRulesApi.endpoints.listClassificationRules.initiate());
+    await sub;
+    const body = {
+      match_type: "vendor" as const,
+      match_pattern: "Zelle payment to Jason Law",
+      category: "maintenance",
+      transaction_scope: "rental" as const,
+      split_property_ids: ["p1", "p2", "p3"],
+    };
+    await store.dispatch(classificationRulesApi.endpoints.createClassificationRule.initiate(body));
+    await tick();
+    expect(sent.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "get /classification-rules",
+      "post /classification-rules",
+      "get /classification-rules",
+    ]);
+    expect(JSON.parse(sent[1].data as string)).toEqual(body);
+    sub.unsubscribe();
+  });
+
+  it("counts a rule's past matches fresh each time, and applies it to the past", async () => {
+    const store = makeStore();
+    await store.dispatch(classificationRulesApi.endpoints.getRulePastMatches.initiate("r1", { forceRefetch: true }));
+    await store.dispatch(classificationRulesApi.endpoints.applyRuleToPast.initiate("r1"));
+    expect(sent.map((c) => `${c.method} ${c.url}`)).toEqual([
+      "get /classification-rules/r1/past-matches",
+      "post /classification-rules/r1/apply-to-past",
+    ]);
+  });
 });
