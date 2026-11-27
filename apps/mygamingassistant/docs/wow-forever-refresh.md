@@ -169,7 +169,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py tests/test_wow_satellite_generator.py tests/test_wow_item_pages_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py tests/test_wow_satellite_generator.py tests/test_wow_item_pages_generator.py tests/test_wow_explore_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:
@@ -178,6 +178,10 @@ From `apps/mygamingassistant/frontend`:
 npx vitest run src/games/wow-forever
 npx tsc --noEmit
 ```
+
+The addons' generated `Data.lua` files (MGA Waypoints, Professions, Explorer, …) are
+`toMatchFileSnapshot` tests: when the data under them moved, rewrite them with
+`npx vitest run src/__tests__/wow<Addon>Addon.test.ts -u` and commit them with the data.
 
 A failing route test usually means a recipe's skill values moved. Fix the
 hand-picked route in `data/professions/crafting/*Route.ts`; don't loosen the test.

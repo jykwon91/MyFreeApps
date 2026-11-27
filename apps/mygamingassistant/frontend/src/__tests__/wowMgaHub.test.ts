@@ -5,6 +5,8 @@ import buffsBindings from "../../addon/MGABuffs/Bindings.xml?raw";
 import buffsHub from "../../addon/MGABuffs/MGAHub.lua?raw";
 import dungeonQuestsBindings from "../../addon/MGADungeonQuests/Bindings.xml?raw";
 import dungeonQuestsHub from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
+import explorerBindings from "../../addon/MGAExplorer/Bindings.xml?raw";
+import explorerHub from "../../addon/MGAExplorer/MGAHub.lua?raw";
 import lootBindings from "../../addon/MGALoot/Bindings.xml?raw";
 import lootHub from "../../addon/MGALoot/MGAHub.lua?raw";
 import pricesBindings from "../../addon/MGAPrices/Bindings.xml?raw";
@@ -63,6 +65,7 @@ describe("the MGA hub's copies", () => {
   const copies = {
     "MGABuffs": [buffsHub, buffsBindings],
     "MGADungeonQuests": [dungeonQuestsHub, dungeonQuestsBindings],
+    "MGAExplorer": [explorerHub, explorerBindings],
     "MGALoot": [lootHub, lootBindings],
     "MGAPrices": [pricesHub, pricesBindings],
     "MGAPvPLog": [pvpLogHub, pvpLogBindings],

@@ -1,4 +1,4 @@
-import { luaValue } from "@/games/wow-forever/lib/professionsAddon/luaValue";
+import { luaValue } from "@/games/wow-forever/lib/addons/luaValue";
 import type { AddonProfession } from "@/games/wow-forever/types/professionsAddon/addonProfession";
 
 /**

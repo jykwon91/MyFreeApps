@@ -1,4 +1,5 @@
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
+import ExplorerAddonCard from "@/games/wow-forever/components/explorerAddon/ExplorerAddonCard";
 import LegacyNote from "@/games/wow-forever/components/legacy/LegacyNote";
 import LegacyPlannerView from "@/games/wow-forever/components/legacy/LegacyPlannerView";
 import LegacySkeleton from "@/games/wow-forever/components/legacy/LegacySkeleton";
@@ -20,6 +21,7 @@ export default function WowLegacyPage() {
         backLabel="Back to WoW Forever"
       />
       <LegacyNote />
+      <ExplorerAddonCard />
       {state.status === LEGACY_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load the Legacy planner." onRetry={state.retry} retrying={false} />
       ) : null}

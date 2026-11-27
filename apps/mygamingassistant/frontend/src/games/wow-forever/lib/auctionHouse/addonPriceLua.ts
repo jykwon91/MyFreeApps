@@ -3,7 +3,7 @@ import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import type { QuestItemObjective } from "@/games/wow-forever/lib/auctionHouse/loadQuestItemObjectives";
 import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import { pricedRouteRows } from "@/games/wow-forever/lib/auctionHouse/pricedRouteRows";
-import { luaValue } from "@/games/wow-forever/lib/professionsAddon/luaValue";
+import { luaValue } from "@/games/wow-forever/lib/addons/luaValue";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
