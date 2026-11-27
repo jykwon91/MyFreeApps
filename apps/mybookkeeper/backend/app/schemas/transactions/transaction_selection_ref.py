@@ -11,3 +11,5 @@ class TransactionSelectionRef(BaseModel):
     id: uuid.UUID
     property_id: uuid.UUID | None
     status: str
+    # Split across properties: no property_id of its own, but assigned all the same.
+    is_split: bool = False

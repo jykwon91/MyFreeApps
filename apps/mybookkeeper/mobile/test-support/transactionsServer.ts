@@ -13,6 +13,7 @@ import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/u
 import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
 import { inListOrder } from "./transactionListOrder";
 import { withTransactionListQuery } from "./withTransactionListQuery";
 import { answerDocumentList } from "./documentPages";
@@ -21,6 +22,7 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
   return {
     id: "t1",
     property_id: "p1",
+    property_splits: [],
     transaction_date: "2026-03-14",
     tax_year: 2026,
     vendor: "Home Depot",
@@ -314,7 +316,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       );
     if (config.url === "/transactions/selection") {
       if (server.failSelectionWith !== null) return respond({ detail: "nope" }, server.failSelectionWith);
-      return respond(matching().map(({ id, property_id, status }) => ({ id, property_id, status })));
+      return respond(matching().map(toSelectionRef));
     }
     if (config.url === "/transactions/categories") {
       if (server.failCategoriesWith !== null) return respond({ detail: "nope" }, server.failCategoriesWith);

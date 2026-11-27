@@ -21,6 +21,8 @@ const createTransaction = vi.fn(() => ({ unwrap: createUnwrap }));
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useUpdateTransactionMutation: () => [updateTransaction, { isLoading: false }],
   useDeleteTransactionMutation: () => [vi.fn(), { isLoading: false }],
+  useSetPropertySplitMutation: () => [vi.fn(), { isLoading: false }],
+  useRemovePropertySplitMutation: () => [vi.fn(), { isLoading: false }],
   useCreateTransactionMutation: () => [createTransaction, { isLoading: false }],
 }));
 
@@ -47,6 +49,7 @@ const PENDING = {
   transaction_type: "expense",
   category: "contract_work",
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   payment_method: null,
   channel: null,

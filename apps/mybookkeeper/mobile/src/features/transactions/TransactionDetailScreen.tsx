@@ -16,12 +16,13 @@ import SheetEmptyAction from "../shell/SheetEmptyAction";
 import { useAfterSheetCloses } from "../shell/useAfterSheetCloses";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { selectableProperties } from "./transactionEditValues";
-import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
+import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, transactionPropertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
 import TransactionFact from "./TransactionFact";
 import TransactionTaxFacts from "./TransactionTaxFacts";
 import { deleteFailureMessage } from "./transactionMessages";
 import TransactionTenantLink from "./TransactionTenantLink";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import { isSplit } from "@mybookkeeper/api-client/utils/propertySplit";
 import { useApproveTransaction } from "./useApproveTransaction";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
 
@@ -140,7 +141,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
 
         <TransactionFact label="Date" value={spokenDate(transaction.transaction_date)} />
         <TransactionFact label="Category" value={categoryLabel(transaction.category)} />
-        <TransactionFact label="Property" value={propertyLabel(transaction.property_id, properties)} />
+        <TransactionFact label="Property" value={transactionPropertyLabel(transaction, properties)} />
         <TransactionTaxFacts transaction={transaction} />
         {transaction.transaction_type === "income" ? <TransactionTenantLink canWrite={canWrite} transaction={transaction} /> : null}
         {transaction.description ? <TransactionFact label="Description" value={transaction.description} /> : null}
@@ -181,7 +182,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
             <LoadingButton
               isLoading={isApproving}
               loadingText="Approving…"
-              onPress={() => (transaction.property_id ? approve() : setIsPropertySheetOpen(true))}
+              onPress={() => (transaction.property_id || isSplit(transaction) ? approve() : setIsPropertySheetOpen(true))}
               style={{ flex: 2 }}
             >
               Approve

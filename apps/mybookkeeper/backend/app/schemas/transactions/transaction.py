@@ -7,6 +7,7 @@ from pydantic import BaseModel, field_validator, model_validator
 
 from app.core.transaction_amount_constants import AMOUNT_NOT_POSITIVE
 from app.schemas.transactions.transaction_amount import validate_transaction_amount
+from app.schemas.transactions.transaction_property_split_read import TransactionPropertySplitRead
 
 
 def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
@@ -128,6 +129,10 @@ class TransactionRead(BaseModel):
     source_file_name: str | None = None
 
     linked_document_ids: list[uuid.UUID] = []
+
+    # Set when the transaction is split across properties (property_id is then
+    # null): each property's share, largest first, adding up to the amount.
+    property_splits: list[TransactionPropertySplitRead] = []
 
     model_config = {"from_attributes": True}
 

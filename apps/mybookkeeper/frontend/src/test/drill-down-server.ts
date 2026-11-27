@@ -57,6 +57,7 @@ export function aDrillDownTransaction(index: number, overrides: Partial<Transact
     payer_name: null,
     transaction_scope: "rental",
     spending_category_id: null,
+    property_splits: [],
     ...overrides,
   };
 }

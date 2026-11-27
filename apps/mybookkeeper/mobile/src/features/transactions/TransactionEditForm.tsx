@@ -5,6 +5,7 @@ import { TAX_YEAR_CHOICE } from "@mybookkeeper/api-client/constants/taxYearChang
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { otherTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
+import { isSplit } from "@mybookkeeper/api-client/utils/propertySplit";
 import { Banner, deviceDecimalSeparator, FIELD_PRESETS, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SegmentedControl, SwitchRow, useConfirmLeave, useFieldChain, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -24,7 +25,8 @@ import { useVendorChoices } from "../vendors/useVendorChoices";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
 import { savedVendorChoices, savedVendorLabel } from "./savedVendor";
 import { choiceLabel, fromChoice } from "./transactionCreateValues";
-import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
+import { PROPERTY_SPLIT_LABELS } from "@mybookkeeper/api-client/constants/propertySplitLabels";
+import { categoryLabel, isReviewable, keepsSplit, propertyLabel } from "./transactionDisplay";
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, taxYearError, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
 import { isCancelledRequest } from "@platform/core/utils/isCancelledRequest";
@@ -112,6 +114,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
     }
   }
 
+  const stillSplit = keepsSplit(original, values.propertyId);
+  const splitLabel = isSplit(original) ? PROPERTY_SPLIT_LABELS.splitAcross(original.property_splits.length) : null;
   const sheets: Record<TransactionEditSheet, TransactionSheetConfig> = {
     category: {
       options: categoryChoices(values.type, values.category).map((category) => ({ value: category, label: categoryLabel(category) })),
@@ -125,7 +129,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
       // Until the properties are here, "No property" would be the only row, and picking it would drop the one this row has.
       options: loadedProperties
         ? [
-            { value: NONE_OPTION_VALUE, label: "No property" },
+            { value: NONE_OPTION_VALUE, label: splitLabel ?? "No property" },
             ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
           ]
         : [],
@@ -161,7 +165,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
       ? `I'll remember this for ${vendor} and fix other ${vendor} transactions that had the old category.`
       : undefined;
   const propertyHint =
-    changes.property_id && vendor && original.address ? `I'll move other ${vendor} transactions at this address too.` : undefined;
+    changes.property_id && vendor && original.address
+      ? `I'll move other ${vendor} transactions at this address too.`
+      : splitLabel ? PROPERTY_SPLIT_LABELS.propertyHint : undefined;
 
   return (
     <>
@@ -198,7 +204,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         />
         <SegmentedControl accessibilityLabel="Type" onChange={changeType} segments={TRANSACTION_TYPES} value={values.type} />
         <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.category)} valueLabel={categoryLabel(values.category)} />
-        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} valueLabel={propertyLabel(values.propertyId, properties)} />
+        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} valueLabel={stillSplit && splitLabel ? splitLabel : propertyLabel(values.propertyId, properties)} />
         <FormField
           {...fields.target("description")}
           label="Description"
@@ -227,9 +233,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
         {reviewable ? (
           <>
-            {values.propertyId ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Choose a property to approve.</Text>}
+            {values.propertyId || stillSplit ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Choose a property to approve.</Text>}
             <LoadingButton
-              disabled={!values.propertyId || locked}
+              disabled={!(values.propertyId || stillSplit) || locked}
               isLoading={savingAction === TRANSACTION_SAVE_ACTION.approve}
               loadingText="Saving…"
               onPress={() => save(true)}

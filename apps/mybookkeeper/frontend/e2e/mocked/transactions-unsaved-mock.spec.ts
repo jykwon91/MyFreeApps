@@ -36,6 +36,7 @@ const TXN = {
   category: "contract_work",
   tags: [],
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   payment_method: null,
   channel: null,

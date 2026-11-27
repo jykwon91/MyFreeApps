@@ -4,5 +4,7 @@ import type { TransactionStatus } from "./TransactionStatus";
 export interface TransactionSelectionRef {
   id: string;
   property_id: string | null;
+  /** Split across properties: assigned, though `property_id` is null. */
+  is_split: boolean;
   status: TransactionStatus;
 }

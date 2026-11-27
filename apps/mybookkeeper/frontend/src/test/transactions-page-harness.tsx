@@ -74,6 +74,7 @@ function aTransaction(n: number, prefix: string): Transaction {
     payer_name: null,
     transaction_scope: "rental",
     spending_category_id: null,
+    property_splits: [],
   };
 }
 
@@ -125,7 +126,7 @@ function pageFor(query: URLSearchParams): TransactionListPage {
 }
 
 export function selectionFor(query: URLSearchParams): TransactionSelectionRef[] {
-  return matchingRows(query).map(({ id, property_id, status }) => ({ id, property_id, status }));
+  return matchingRows(query).map(({ id, property_id, status }) => ({ id, property_id, is_split: false, status }));
 }
 
 function isIdsBody(body: unknown): body is { ids: string[] } {

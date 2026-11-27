@@ -20,6 +20,8 @@ import type { TransactionPanelHandle } from "@/shared/types/transaction/transact
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import TransactionPersonalTransferSection from "@/app/features/personal-transfer/TransactionPersonalTransferSection";
 import TransactionLoanPayeeSection from "@/app/features/loan-payee/TransactionLoanPayeeSection";
+import TransactionPropertySplitSection from "@/app/features/transactions/TransactionPropertySplitSection";
+import type { TransactionPropertySplit } from "@mybookkeeper/api-client/types/transaction/TransactionPropertySplit";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 
@@ -81,6 +83,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   const taxYearQuestion = useTaxYearQuestion(transaction);
   // `transaction` is the row as it was opened; marking a personal transfer changes the status in place.
   const [status, setStatus] = useState<TransactionStatus>(transaction.status);
+  const [splits, setSplits] = useState<TransactionPropertySplit[]>(transaction.property_splits);
 
   const dupOther = duplicatePair
     ? duplicatePair.transaction_a.id === transaction.id
@@ -90,9 +93,15 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
 
   const defaults = useMemo(() => buildDefaults(transaction), [transaction]);
 
-  const { register, handleSubmit, watch, setValue, formState: { dirtyFields, isDirty, errors } } = useForm<TransactionFormValues>({
+  const { register, handleSubmit, watch, setValue, resetField, formState: { dirtyFields, isDirty, errors } } = useForm<TransactionFormValues>({
     defaultValues: defaults,
   });
+
+  // A split row has no property of its own, so the form's property starts blank again; picking one ends the split.
+  function handleSplitsChange(next: TransactionPropertySplit[]) {
+    setSplits(next);
+    if (next.length > 0 && !dirtyFields.property_id) resetField("property_id", { defaultValue: "", keepDirty: true });
+  }
 
   function notifyVendorLearned(result: Record<string, unknown>, data: TransactionFormValues) {
     const retroactiveCount = (result.retroactive_count as number) ?? 0;
@@ -242,6 +251,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         errors={errors}
         onSubmit={handleSubmit(onSave)}
         dupOther={dupOther}
+        splitWays={splits.length}
         onKeepDuplicate={onKeepDuplicate}
         onDismissDuplicate={onDismissDuplicate}
       />
@@ -258,6 +268,13 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
           />
         </div>
       )}
+
+      <TransactionPropertySplitSection
+        transaction={{ ...transaction, status }}
+        properties={properties}
+        splits={splits}
+        onSplitsChange={handleSplitsChange}
+      />
 
       <TransactionPersonalTransferSection transaction={{ ...transaction, status }} onStatusChange={setStatus} />
 

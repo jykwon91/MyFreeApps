@@ -71,6 +71,7 @@ from app.models.transactions.booking_statement import BookingStatement  # noqa: 
 from app.models.transactions.reconciliation_source import ReconciliationSource  # noqa: F401
 from app.models.transactions.reconciliation_match import ReconciliationMatch  # noqa: F401
 from app.models.transactions.transaction_document import TransactionDocument  # noqa: F401
+from app.models.transactions.transaction_property_split import TransactionPropertySplit  # noqa: F401
 from app.models.tax.tax_return import TaxReturn  # noqa: F401
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration  # noqa: F401
 from app.models.tax.tax_advisor_suggestion import TaxAdvisorSuggestion  # noqa: F401

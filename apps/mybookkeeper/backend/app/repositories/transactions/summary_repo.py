@@ -1,4 +1,9 @@
-"""Summary repository — transaction-based financial aggregations."""
+"""Summary repository — transaction-based financial aggregations.
+
+Every query reads money through ``property_allocation``: a transaction split
+across properties counts each share for its own property, so the property
+filter and the per-property groupings see shares, and totals stay the same.
+"""
 import uuid
 from collections.abc import Sequence
 from datetime import date, datetime
@@ -10,6 +15,11 @@ from app.core.spending_category_enums import TRANSACTION_SCOPE_PERSONAL
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.repositories.transactions.counted_filters import counted_transaction_filters
+from app.repositories.transactions.property_allocation import (
+    ALLOCATED_AMOUNT,
+    ALLOCATED_PROPERTY_ID,
+    allocated,
+)
 
 
 def _build_txn_filters(
@@ -36,7 +46,7 @@ def _build_txn_filters(
     if end_date is not None:
         filters.append(Transaction.transaction_date <= end_date)
     if property_ids:
-        filters.append(Transaction.property_id.in_(property_ids))
+        filters.append(ALLOCATED_PROPERTY_ID.in_(property_ids))
     if tax_year is not None:
         filters.append(Transaction.tax_year == tax_year)
     if tax_relevant_only:
@@ -60,8 +70,7 @@ async def distinct_transaction_years(
     """
     filters = _build_txn_filters(organization_id)
     result = await db.execute(
-        select(extract("year", Transaction.transaction_date).label("year"))
-        .select_from(Transaction)
+        allocated(select(extract("year", Transaction.transaction_date).label("year")).select_from(Transaction))
         .where(and_(*filters))
         .group_by("year")
         .order_by("year")
@@ -90,11 +99,11 @@ async def txn_sum_by_category(
         exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
-        select(
+        allocated(select(
             Transaction.category.label("tag"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
+        .select_from(Transaction))
         .where(and_(*filters))
         .group_by(Transaction.category)
     )
@@ -118,16 +127,16 @@ async def txn_sum_by_property_and_category(
         exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Property.name.label("property_name"),
             Transaction.category.label("tag"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
-        .outerjoin(Property, Transaction.property_id == Property.id)
+        .select_from(Transaction))
+        .outerjoin(Property, ALLOCATED_PROPERTY_ID == Property.id)
         .where(and_(*filters))
-        .group_by(Transaction.property_id, Property.name, Transaction.category)
+        .group_by(ALLOCATED_PROPERTY_ID, Property.name, Transaction.category)
     )
     return result.all()
 
@@ -141,15 +150,16 @@ async def txn_sum_by_attributed_property_and_category(
 ) -> Sequence[Row]:
     """Approved transaction totals per (property_id, category), only for rows with a property."""
     filters = _build_txn_filters(organization_id, start_date=start_date, end_date=end_date)
-    filters.append(Transaction.property_id.is_not(None))
+    filters.append(ALLOCATED_PROPERTY_ID.is_not(None))
     result = await db.execute(
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Transaction.category,
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
+        .select_from(Transaction))
         .where(and_(*filters))
-        .group_by(Transaction.property_id, Transaction.category)
+        .group_by(ALLOCATED_PROPERTY_ID, Transaction.category)
     )
     return result.all()
 
@@ -166,13 +176,13 @@ async def txn_sum_by_month_and_category(
         organization_id, start_date=start_date, end_date=end_date, property_ids=property_ids,
     )
     result = await db.execute(
-        select(
+        allocated(select(
             extract("year", Transaction.transaction_date).label("year"),
             extract("month", Transaction.transaction_date).label("month"),
             Transaction.category.label("tag"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
+        .select_from(Transaction))
         .where(and_(*filters))
         .group_by("year", "month", Transaction.category)
         .order_by("year", "month")
@@ -194,18 +204,18 @@ async def txn_sum_by_property_month_and_category(
         exclude_capital_improvements=exclude_capital_improvements,
     )
     result = await db.execute(
-        select(
-            Transaction.property_id,
+        allocated(select(
+            ALLOCATED_PROPERTY_ID.label("property_id"),
             Property.name.label("property_name"),
             extract("year", Transaction.transaction_date).label("year"),
             extract("month", Transaction.transaction_date).label("month"),
             Transaction.category.label("tag"),
-            func.sum(Transaction.amount).label("total"),
+            func.sum(ALLOCATED_AMOUNT).label("total"),
         )
-        .select_from(Transaction)
-        .outerjoin(Property, Transaction.property_id == Property.id)
+        .select_from(Transaction))
+        .outerjoin(Property, ALLOCATED_PROPERTY_ID == Property.id)
         .where(and_(*filters))
-        .group_by(Transaction.property_id, Property.name, "year", "month", Transaction.category)
-        .order_by(Transaction.property_id, "year", "month")
+        .group_by(ALLOCATED_PROPERTY_ID, Property.name, "year", "month", Transaction.category)
+        .order_by(ALLOCATED_PROPERTY_ID, "year", "month")
     )
     return result.all()

@@ -21,6 +21,8 @@ const updateTransaction = vi.fn(() => ({ unwrap: updateUnwrap }));
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useUpdateTransactionMutation: () => [updateTransaction, { isLoading: false }],
   useDeleteTransactionMutation: () => [vi.fn(), { isLoading: false }],
+  useSetPropertySplitMutation: () => [vi.fn(), { isLoading: false }],
+  useRemovePropertySplitMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", async () => {
@@ -45,6 +47,7 @@ const BASE_TXN = {
   transaction_type: "expense",
   category: "maintenance",
   property_id: null,
+  property_splits: [],
   tax_relevant: false,
   is_capital_improvement: false,
   payment_method: null,

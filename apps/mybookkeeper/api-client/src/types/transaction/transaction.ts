@@ -1,4 +1,5 @@
 import type { SubCategory } from "./SubCategory";
+import type { TransactionPropertySplit } from "./TransactionPropertySplit";
 import type { TransactionScope } from "./TransactionScope";
 import type { TransactionStatus } from "./TransactionStatus";
 import type { TransactionType } from "./TransactionType";
@@ -65,4 +66,9 @@ export interface Transaction {
   transaction_scope: TransactionScope;
   /** Personal spending category, set when transaction_scope is 'personal'. */
   spending_category_id: string | null;
+  /**
+   * The properties sharing this transaction, largest share first. Empty unless it is split across
+   * two or more properties, in which case `property_id` is null and the shares add up to `amount`.
+   */
+  property_splits: TransactionPropertySplit[];
 }

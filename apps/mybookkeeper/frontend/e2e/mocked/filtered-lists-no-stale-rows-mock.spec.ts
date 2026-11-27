@@ -96,6 +96,7 @@ const ROWS = Array.from({ length: TOTAL }, (_, i) => ({
   category: "repairs",
   tags: [],
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   payment_method: null,
   channel: null,

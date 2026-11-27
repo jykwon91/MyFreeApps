@@ -19,6 +19,8 @@ let isSaving = false;
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useUpdateTransactionMutation: () => [updateTransaction, { isLoading: isSaving }],
   useDeleteTransactionMutation: () => [deleteTransaction, { isLoading: false }],
+  useSetPropertySplitMutation: () => [vi.fn(), { isLoading: false }],
+  useRemovePropertySplitMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 vi.mock("@mybookkeeper/api-client/hooks/useDrillDownPages", () => ({
@@ -62,6 +64,7 @@ const TXN = {
   transaction_type: "expense",
   category: "contract_work",
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   payment_method: null,
   channel: null,

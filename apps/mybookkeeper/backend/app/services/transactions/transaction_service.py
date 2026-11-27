@@ -21,6 +21,7 @@ from app.services.classification import rule_learning_service
 from app.services.transactions.capital_improvement import placed_in_service_date_for
 from app.services.transactions.metered_usage_check import assert_metered_usage_consistent
 from app.services.transactions.personal_transfer_status import assert_status_editable
+from app.services.transactions.property_split_service import keep_split_consistent
 from app.services.transactions.reference_ownership import assert_references_owned
 from app.services.transactions.scope_rules import apply_scope_rules, scope_overrides
 from app.services.transactions.transfer_rules import transfer_overrides
@@ -117,7 +118,10 @@ async def list_selection_refs(ctx: RequestContext, filters: TransactionFilters) 
     """Every row the filters match, as little as "select all" needs to tick it."""
     async with AsyncSessionLocal() as db:
         rows = await transaction_repo.list_selection_refs(db, ctx.organization_id, **filters.filter_args())
-    return [TransactionSelectionRef(id=row.id, property_id=row.property_id, status=row.status) for row in rows]
+    return [
+        TransactionSelectionRef(id=row.id, property_id=row.property_id, status=row.status, is_split=row.is_split)
+        for row in rows
+    ]
 
 
 async def list_categories(ctx: RequestContext, filters: TransactionFilters) -> list[str]:
@@ -233,6 +237,7 @@ async def update_transaction(
         # After the category's Schedule E line is worked out, before anything
         # queries (and so flushes) the row.
         apply_scope_rules(txn)
+        keep_split_consistent(txn)
         # A personal row's tax category and property mean nothing, so a
         # correction to one must not become a rule for the vendor's other rows.
         learns_rules = txn.transaction_scope != TRANSACTION_SCOPE_PERSONAL

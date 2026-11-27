@@ -15,6 +15,7 @@ import type { Transaction } from "../types/transaction/transaction";
 import type { TransactionListPage } from "../types/transaction/TransactionListPage";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
 import type { TransactionPageParams } from "../types/transaction/TransactionPageParams";
+import type { TransactionPropertySplitRequest } from "../types/transaction/TransactionPropertySplitRequest";
 import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
 import type { TransactionReviewCount } from "../types/transaction/TransactionReviewCount";
 import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
@@ -111,6 +112,15 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       // a category or property correction makes the server learn a classification rule.
       invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "ClassificationRule", "TaxReturn"],
     }),
+    // A split moves per-property and Schedule E totals, never the row's own category or vendor.
+    setPropertySplit: builder.mutation<Transaction, { id: string; data: TransactionPropertySplitRequest }>({
+      query: ({ id, data }) => ({ url: `/transactions/${id}/property-splits`, method: "PUT", data }),
+      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
+    }),
+    removePropertySplit: builder.mutation<Transaction, string>({
+      query: (id) => ({ url: `/transactions/${id}/property-splits`, method: "DELETE" }),
+      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
+    }),
     deleteTransaction: builder.mutation<void, string>({
       query: (id) => ({ url: `/transactions/${id}`, method: "DELETE" }),
       // Deleting a payment drops its pending rent receipt.
@@ -173,6 +183,8 @@ export const {
   useCreateTransactionMutation,
   useUpdateTransactionMutation,
   useDeleteTransactionMutation,
+  useSetPropertySplitMutation,
+  useRemovePropertySplitMutation,
   useBulkApproveTransactionsMutation,
   useBulkDeleteTransactionsMutation,
   useBulkSetCapitalImprovementMutation,

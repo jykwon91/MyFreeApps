@@ -223,7 +223,7 @@ describe("Transactions paging", () => {
     // Of the two ticked rows only Row 2 matches the Pending filter.
     server.selectionResponse = (query) =>
       new Promise((resolve) => {
-        release = () => resolve(query.getAll("statuses").length ? [{ id: "Row-2", property_id: null, status: "pending" }] : selectionFor(query));
+        release = () => resolve(query.getAll("statuses").length ? [{ id: "Row-2", property_id: null, is_split: false, status: "pending" }] : selectionFor(query));
       });
 
     await user.click(screen.getByRole("button", { name: "Filter status" }));

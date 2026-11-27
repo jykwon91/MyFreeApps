@@ -3,12 +3,17 @@ import { isBulkApprovable } from "../src/features/transactions/bulkApprovable";
 import { savedVendorChoices, savedVendorLabel } from "../src/features/transactions/savedVendor";
 import { blankCreateValues, choiceLabel, createAmountError, createPayload } from "../src/features/transactions/transactionCreateValues";
 import { nextToReview } from "../src/features/transactions/nextToReview";
-import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
+import { displayAmount, isMoneyIn, keepsSplit, rowAccessibilityLabel, rowPropertyName, shortDate, spokenAmount, spokenMoney, transactionPropertyLabel } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, taxYearError, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
 import { approveFailureMessage, bulkDeleteConfirmBody, createFailureMessage, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, deleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aSavedVendor, aTransaction } from "../test-support/transactionsServer";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
+import type { TransactionPropertySplit } from "@mybookkeeper/api-client/types/transaction/TransactionPropertySplit";
+
+const HALVES: TransactionPropertySplit[] = [{ property_id: "p1", amount: "50.00" }, { property_id: "p2", amount: "50.00" }];
 
 describe("amounts", () => {
   it("signs money in and money out", () => {
@@ -373,11 +378,40 @@ describe("adding by hand", () => {
 
 describe("bulk approve", () => {
   it("follows the website: waiting for review, and a property", () => {
-    expect(isBulkApprovable(aTransaction({ status: "pending" }))).toBe(true);
-    expect(isBulkApprovable(aTransaction({ status: "unverified" }))).toBe(true);
-    expect(isBulkApprovable(aTransaction({ status: "pending", property_id: null }))).toBe(false);
-    expect(isBulkApprovable(aTransaction({ status: "approved" }))).toBe(false);
-    expect(isBulkApprovable(aTransaction({ status: "duplicate" }))).toBe(false);
+    const ref = (overrides: Partial<Transaction>) => toSelectionRef(aTransaction(overrides));
+    expect(isBulkApprovable(ref({ status: "pending" }))).toBe(true);
+    expect(isBulkApprovable(ref({ status: "unverified" }))).toBe(true);
+    expect(isBulkApprovable(ref({ status: "pending", property_id: null }))).toBe(false);
+    expect(isBulkApprovable(ref({ status: "approved" }))).toBe(false);
+    expect(isBulkApprovable(ref({ status: "duplicate" }))).toBe(false);
+  });
+
+  it("counts a split across properties as having a property", () => {
+    const split = aTransaction({ status: "pending", property_id: null, property_splits: HALVES });
+    expect(isBulkApprovable(toSelectionRef(split))).toBe(true);
+  });
+});
+
+describe("split across properties", () => {
+  const properties = [aProperty({ id: "p1", name: "6732 Peerless" }), aProperty({ id: "p2", name: "6734 Peerless" })];
+  const split = aTransaction({ property_id: null, property_splits: HALVES });
+
+  it("reads Split N ways on a row, and the property's name otherwise", () => {
+    const nameOf = (id: string) => properties.find((property) => property.id === id)?.name ?? null;
+    expect(rowPropertyName(split, nameOf)).toBe("Split 2 ways");
+    expect(rowPropertyName(aTransaction({ property_id: "p2" }), nameOf)).toBe("6734 Peerless");
+    expect(rowPropertyName(aTransaction({ property_id: null }), nameOf)).toBeNull();
+  });
+
+  it("lists each share on the detail", () => {
+    expect(transactionPropertyLabel(split, properties)).toBe("Split 2 ways: 6732 Peerless $50.00, 6734 Peerless $50.00");
+    expect(transactionPropertyLabel(aTransaction({ property_id: "p1" }), properties)).toBe("6732 Peerless");
+  });
+
+  it("stays split while editing until a property is picked", () => {
+    expect(keepsSplit(split, null)).toBe(true);
+    expect(keepsSplit(split, "p1")).toBe(false);
+    expect(keepsSplit(aTransaction({ property_id: null }), null)).toBe(false);
   });
 
   it("words the delete question and its failures", () => {

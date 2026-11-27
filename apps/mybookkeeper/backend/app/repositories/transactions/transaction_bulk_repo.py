@@ -12,6 +12,7 @@ from app.models.extraction.extraction import Extraction
 from app.repositories.leases import pending_rent_receipt_repo
 from app.repositories.tax import tax_return_repo
 from app.repositories.transactions import attribution_repo
+from app.repositories.transactions.property_allocation import has_property
 
 
 def _live_org_transactions_for_update_stmt(
@@ -108,7 +109,7 @@ async def soft_delete_transactions(db: AsyncSession, transactions: list[Transact
 async def bulk_approve(
     db: AsyncSession, transaction_ids: list[uuid.UUID], organization_id: uuid.UUID
 ) -> int:
-    """Approve the reviewable, property-assigned transactions among the ids.
+    """Approve the reviewable, property-assigned (or split) transactions among the ids.
 
     Changes go through the ORM (not a bulk UPDATE) so the audit listener sees each row,
     exactly as it does for a single approve.
@@ -116,7 +117,7 @@ async def bulk_approve(
     rows = (await db.execute(live_transactions_for_update_stmt(
         transaction_ids,
         organization_id,
-        Transaction.property_id.isnot(None),
+        has_property(),
         Transaction.status.in_(REVIEWABLE_STATUSES),
     ))).scalars().all()
     for txn in rows:

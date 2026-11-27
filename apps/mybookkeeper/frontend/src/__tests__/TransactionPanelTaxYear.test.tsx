@@ -20,6 +20,8 @@ const updateTransaction = vi.fn((_args: { id: string; data: Partial<Transaction>
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useUpdateTransactionMutation: () => [updateTransaction, { isLoading: false }],
   useDeleteTransactionMutation: () => [vi.fn(), { isLoading: false }],
+  useSetPropertySplitMutation: () => [vi.fn(), { isLoading: false }],
+  useRemovePropertySplitMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
@@ -51,6 +53,7 @@ const DECEMBER_RENT = {
   transaction_type: "income",
   category: "rental_revenue",
   property_id: null,
+  property_splits: [],
   tax_relevant: true,
   is_capital_improvement: false,
   payment_method: null,

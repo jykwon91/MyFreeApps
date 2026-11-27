@@ -377,6 +377,16 @@ class Transaction(Base):
     vendor_rolodex_entry = relationship("Vendor", lazy="noload")
     linked_documents = relationship("TransactionDocument", back_populates="transaction", lazy="noload")
     spending_category = relationship("SpendingCategory", lazy="noload")
+    # Loaded with every transaction (one extra IN query per batch): a split
+    # row read without its shares would look like a row with no property.
+    # Largest share first, which is where an even split's odd cent sits.
+    property_splits = relationship(
+        "TransactionPropertySplit",
+        back_populates="transaction",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="(TransactionPropertySplit.amount.desc(), TransactionPropertySplit.id)",
+    )
 
     @hybrid_property
     def source_document_id(self) -> object:
@@ -410,6 +420,15 @@ from app.core.vendors import normalize_vendor as _normalize
 def _set_normalized_vendor(target: Transaction, *_args, **_kwargs) -> None:
     if target.vendor is not None and not target.normalized_vendor:
         target.normalized_vendor = _normalize(target.vendor)
+
+
+@_sa_event.listens_for(Transaction, "init")
+def _start_with_no_shares(target: Transaction, _args, kwargs) -> None:
+    # A new row has no shares. Set that now: after a flush, an untouched
+    # collection would be loaded on first read, which an async session can't
+    # do implicitly (MissingGreenlet when the row is serialized).
+    if "property_splits" not in kwargs:
+        target.property_splits = []
 
 
 @_sa_event.listens_for(Transaction.vendor, "set")
