@@ -19,9 +19,12 @@ const REACHABLE = new Set(
   ),
 );
 
-// A route with a parameter is opened from its list, and sign-in is before the app.
+// Sign-in, and the sign-up and reset screens it opens, are before the app.
+const SIGNED_OUT_SCREENS = new Set(["sign-in", "register", "forgot-password"]);
+
+// A route with a parameter is opened from its list.
 const entries = Object.entries(SCREEN_MAP.routes).flatMap(([route, { screen }]) =>
-  screen && !route.includes(":") && screen !== "sign-in" ? [[route, screen] as const] : [],
+  screen && !route.includes(":") && !SIGNED_OUT_SCREENS.has(screen) ? [[route, screen] as const] : [],
 );
 
 describe("screen-map.yaml against the All screen", () => {
