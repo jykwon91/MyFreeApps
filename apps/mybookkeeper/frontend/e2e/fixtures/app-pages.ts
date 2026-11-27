@@ -30,6 +30,7 @@ export const APP_PAGES = [
   "/receipts",
   "/reconciliation",
   "/reply-templates",
+  "/savings",
   "/security",
   "/spending-categories",
   "/tax",

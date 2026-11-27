@@ -25,6 +25,8 @@ routes:
     not_on_mobile: New in this release, built on the accounts screen that is web-only for now; the phone screen follows with it.
   /budget:
     not_on_mobile: New in this release, built on the bank-synced transactions that are web-only for now; the phone screen follows with the accounts screen.
+  /savings:
+    not_on_mobile: New in this release, daily researched ideas built on the web-only accounts and spending; the phone screen follows with the accounts screen.
   /investments:
     not_on_mobile: New in this release, the holdings of the web-only investment accounts; the phone screen follows with the accounts screen.
   /cash-flow:

@@ -95,8 +95,56 @@ async def create_with_backoff(
 ) -> "Message":
     """Call ``client.messages.create(**kwargs)`` with throttle + backoff.
 
+    See ``_send_with_backoff`` for the arguments.
+    """
+    return await _send_with_backoff(
+        lambda: client.messages.create(**kwargs),
+        on_rate_limit=on_rate_limit,
+        max_attempts=max_attempts,
+        max_wait_seconds=max_wait_seconds,
+    )
+
+
+async def stream_with_backoff(
+    client: Any,
+    *,
+    on_rate_limit: OnRateLimit | None = None,
+    max_attempts: int = 5,
+    max_wait_seconds: float | None = None,
+    **kwargs: Any,
+) -> Any:
+    """Stream ``client.beta.messages.stream(**kwargs)`` to its final message, with throttle + backoff.
+
+    Streaming is what the SDK requires for long requests (a large
+    ``max_tokens`` or a long server-tool turn), and the beta surface is what
+    carries ``betas=[...]`` and ``fallbacks``. Returns the ``BetaMessage``
+    from ``get_final_message()``; a failure, including an error event in the
+    middle of the stream, is retried or raised exactly as in
+    ``create_with_backoff``.
+    """
+    async def send() -> Any:
+        async with client.beta.messages.stream(**kwargs) as stream:
+            return await stream.get_final_message()
+
+    return await _send_with_backoff(
+        send,
+        on_rate_limit=on_rate_limit,
+        max_attempts=max_attempts,
+        max_wait_seconds=max_wait_seconds,
+    )
+
+
+async def _send_with_backoff(
+    send: Callable[[], Awaitable[Any]],
+    *,
+    on_rate_limit: OnRateLimit | None,
+    max_attempts: int,
+    max_wait_seconds: float | None,
+) -> Any:
+    """Run ``send()`` behind the shared throttle, retrying 429s.
+
     Args:
-        client: An ``anthropic.AsyncAnthropic`` instance.
+        send: Makes one request and returns its message.
         on_rate_limit: Optional async hook invoked on every 429 (after
             the WARNING log, before the sleep). Hook failures are logged
             and swallowed so observability never breaks the backoff.
@@ -107,7 +155,6 @@ async def create_with_backoff(
             is unbounded. When the throttle has longer left than this,
             ``RateLimitPausedError`` is raised and no request is sent; a
             429 whose wait would overrun it re-raises at once.
-        **kwargs: Forwarded verbatim to ``client.messages.create``.
     """
     import anthropic
 
@@ -126,7 +173,7 @@ async def create_with_backoff(
 
     for attempt in range(max_attempts):
         try:
-            result = await client.messages.create(**kwargs)
+            result = await send()
             throttle.consecutive_429s = 0
             return result
         except anthropic.RateLimitError as e:

@@ -84,6 +84,8 @@ from app.models.rent.rent_charge import RentCharge
 from app.models.rent.rent_reminder_plan import RentReminderPlan
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
+from app.models.savings.savings_idea import SavingsIdea
+from app.models.savings.savings_research_setting import SavingsResearchSetting
 from app.models.tax.cost_basis_lot import CostBasisLot
 from app.models.tax.estimated_tax_payment import EstimatedTaxPayment
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration
@@ -214,6 +216,8 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(SpendingCategory, Scope.WORKSPACE),
     Source(SpendingBudget, Scope.WORKSPACE),
     Source(LoanPayee, Scope.WORKSPACE),
+    Source(SavingsIdea, Scope.WORKSPACE_MEMBER),
+    Source(SavingsResearchSetting, Scope.WORKSPACE_MEMBER),
     # Welcome manuals
     Source(WelcomeManual, Scope.WORKSPACE),
     Source(WelcomeManualRoom, Scope.CHILD, WelcomeManual, "manual_id"),

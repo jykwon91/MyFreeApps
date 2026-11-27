@@ -11,10 +11,9 @@ enough for printable QR codes.
 """
 from __future__ import annotations
 
-import re
 import secrets
-import string
-import unicodedata
+
+from app.core.slug_utils import slugify
 
 # Lowercase ASCII alphanumerics. We intentionally avoid characters humans
 # easily confuse when reading aloud (``0`` vs ``O``, ``l`` vs ``1``) so the
@@ -26,29 +25,10 @@ SUFFIX_LENGTH = 6
 TITLE_MAX_LENGTH = 200
 SLUG_MAX_LENGTH = 220  # title (200) + dash + 6-char suffix + slack
 
-_NON_ALPHANUM_RE = re.compile(r"[^a-z0-9]+")
-_LEADING_TRAILING_DASH_RE = re.compile(r"^-+|-+$")
-
 
 def _slugify_title(title: str) -> str:
-    """Produce the human-readable prefix of a slug.
-
-    Strips diacritics (``María`` → ``Maria``), lowercases, replaces every
-    non-alphanumeric run with a single ``-``, trims leading / trailing
-    dashes, then caps to keep the final URL within HTTP path limits.
-    """
-    decomposed = unicodedata.normalize("NFKD", title)
-    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
-    lowered = ascii_only.lower()
-    hyphenated = _NON_ALPHANUM_RE.sub("-", lowered)
-    trimmed = _LEADING_TRAILING_DASH_RE.sub("", hyphenated)
-    if not trimmed:
-        # Pathological titles (e.g. all emoji) collapse to empty after ASCII
-        # encoding. Fall back to ``listing`` so the slug remains valid.
-        trimmed = "listing"
-    if len(trimmed) > TITLE_MAX_LENGTH:
-        trimmed = trimmed[:TITLE_MAX_LENGTH].rstrip("-")
-    return trimmed
+    """The human-readable prefix of a slug; an all-emoji title becomes ``listing``."""
+    return slugify(title, max_length=TITLE_MAX_LENGTH, fallback="listing")
 
 
 def _random_suffix() -> str:
@@ -87,7 +67,3 @@ __all__ = [
     "SLUG_MAX_LENGTH",
     "TITLE_MAX_LENGTH",
 ]
-# ``string`` is referenced by the type checker via the alphabet construction;
-# explicit re-export keeps the import non-stale even if the alphabet is later
-# rebuilt from ``string.ascii_lowercase``.
-_ = string

@@ -76,6 +76,7 @@ from app.api import (
     rent_receipts,
     rent_reminders,
     reply_templates,
+    savings,
     screening,
     signed_lease_attachments,
     signed_leases,
@@ -282,6 +283,7 @@ app.include_router(insurance_market.router)
 app.include_router(mortgages.router)
 app.include_router(financial_accounts.router)
 app.include_router(net_worth.router)
+app.include_router(savings.router)
 app.include_router(budgets.router)
 app.include_router(holdings.router)
 app.include_router(cash_flow.router)

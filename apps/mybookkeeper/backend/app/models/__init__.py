@@ -56,6 +56,9 @@ from app.models.net_worth.balance_snapshot import BalanceSnapshot  # noqa: F401
 from app.models.investments.security import Security  # noqa: F401
 from app.models.investments.holding import Holding  # noqa: F401
 from app.models.budgets.spending_budget import SpendingBudget  # noqa: F401
+from app.models.savings.savings_research_setting import SavingsResearchSetting  # noqa: F401
+from app.models.savings.savings_research_run import SavingsResearchRun  # noqa: F401
+from app.models.savings.savings_idea import SavingsIdea  # noqa: F401
 from app.models.transactions.spending_category import SpendingCategory  # noqa: F401
 from app.models.vendors.vendor import Vendor  # noqa: F401
 from app.models.documents.document import Document  # noqa: F401

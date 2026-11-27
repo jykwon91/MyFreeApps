@@ -3041,6 +3041,52 @@
       "e2e_specs": [
         "personal-transfers.spec.ts"
       ]
+    },
+    "savings": {
+      "source_paths": [
+        "backend/app/core/savings_enums.py",
+        "backend/app/core/savings_constants.py",
+        "backend/app/core/slug_utils.py",
+        "backend/app/core/address_utils.py",
+        "backend/app/models/savings/",
+        "backend/app/repositories/savings/",
+        "backend/app/services/savings/",
+        "backend/app/schemas/savings/",
+        "backend/app/mappers/savings_idea_mapper.py",
+        "backend/app/mappers/savings_response_mapper.py",
+        "backend/app/mappers/export/savings_export_mappers.py",
+        "backend/app/api/savings.py",
+        "backend/app/workers/savings_research_task.py",
+        "backend/alembic/versions/savings261127_savings_research.py",
+        "frontend/src/app/pages/Savings.tsx",
+        "frontend/src/app/features/savings/",
+        "frontend/src/shared/lib/savings-messages.ts",
+        "api-client/src/store/savingsApi.ts",
+        "api-client/src/types/savings/",
+        "api-client/src/constants/savings.ts",
+        "frontend/src/shared/lib/savings-pages.ts",
+        "api-client/src/utils/savingsFormat.ts",
+        "api-client/src/utils/refusedRequestDetail.ts"
+      ],
+      "backend_tests": [
+        "test_savings_idea_mapper.py",
+        "test_savings_summary_builder.py",
+        "test_savings_summary_loader.py",
+        "test_savings_repos.py",
+        "test_savings_research_service.py",
+        "test_savings_api.py",
+        "test_savings_research_task.py",
+        "test_listing_slug.py",
+        "test_account_export_completeness.py",
+        "test_account_deletion_foreign_keys.py"
+      ],
+      "frontend_tests": [
+        "SavingsBody.test.tsx",
+        "SavingsIdeaCard.test.tsx"
+      ],
+      "e2e_specs": [
+        "mocked/savings-mock.spec.ts"
+      ]
     }
   },
   "shared_paths": [

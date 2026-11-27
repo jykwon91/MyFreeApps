@@ -35,6 +35,7 @@ describe("PrivacyPolicy — rendering", () => {
     expect(screen.getByText(/Lease templates you upload/)).toBeInTheDocument();
     expect(screen.getByText(/Your tax data/)).toBeInTheDocument();
     expect(screen.getByText(/for a spam check/)).toBeInTheDocument();
+    expect(screen.getByText(/A summary of your spending, if you turn on daily savings research/)).toBeInTheDocument();
   });
 
   it("covers tenant data and when deletion is refused", () => {

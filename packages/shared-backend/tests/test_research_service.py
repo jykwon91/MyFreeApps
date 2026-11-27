@@ -21,6 +21,8 @@ from platform_shared.extraction import (
     ExtractionError,
     ExtractionNotConfiguredError,
     ExtractionParseError,
+    ExtractionTruncatedError,
+    ResearchRefusedError,
     ResearchService,
     WebSource,
 )
@@ -99,12 +101,22 @@ def _message(
     in_tok: int = 100,
     out_tok: int = 20,
     model: str = "claude-opus-5",
+    searches: int = 0,
+    fetches: int = 0,
+    refusal_category: str | None = None,
+    cache_read: int = 0,
+    cache_write: int = 0,
 ) -> MagicMock:
     msg = MagicMock()
     msg.content = blocks
     msg.stop_reason = stop_reason
     msg.usage.input_tokens = in_tok
     msg.usage.output_tokens = out_tok
+    msg.usage.cache_read_input_tokens = cache_read
+    msg.usage.cache_creation_input_tokens = cache_write
+    msg.usage.server_tool_use.web_search_requests = searches
+    msg.usage.server_tool_use.web_fetch_requests = fetches
+    msg.stop_details.category = refusal_category
     msg.model = model
     return msg
 
@@ -113,11 +125,35 @@ def _service() -> ResearchService:
     return ResearchService(api_key="sk-ant-fake", model="claude-opus-5")
 
 
-def _patched(*messages: MagicMock):
-    """Patch the SDK so successive ``messages.create`` awaits return ``messages``."""
+def _stream_of(outcome: MagicMock | BaseException) -> MagicMock:
+    """One ``beta.messages.stream(...)`` context: yields a stream whose final
+    message is ``outcome``, or raises it on entry (how an HTTP error surfaces)."""
+    stream = MagicMock()
+    stream.get_final_message = AsyncMock(return_value=outcome)
+    cm = MagicMock()
+    if isinstance(outcome, BaseException):
+        cm.__aenter__ = AsyncMock(side_effect=outcome)
+    else:
+        cm.__aenter__ = AsyncMock(return_value=stream)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return cm
+
+
+def _client(*outcomes: MagicMock | BaseException) -> MagicMock:
     client = MagicMock()
-    client.messages.create = AsyncMock(side_effect=list(messages))
+    client.beta.messages.stream = MagicMock(side_effect=[_stream_of(o) for o in outcomes])
+    return client
+
+
+def _patched(*messages: MagicMock):
+    """Patch the SDK so successive streamed requests end in ``messages``."""
+    client = _client(*messages)
     return patch("anthropic.AsyncAnthropic", return_value=client), client
+
+
+def _sent(client: MagicMock, call: int = -1) -> dict:
+    """The kwargs of one streamed request."""
+    return client.beta.messages.stream.call_args_list[call].kwargs
 
 
 class TestGuards:
@@ -152,7 +188,7 @@ class TestRequestShape:
         with ctx:
             await _service().search("sys", "mexican flan", json_schema=SCHEMA, max_searches=4)
 
-        kwargs = client.messages.create.await_args.kwargs
+        kwargs = _sent(client)
         assert kwargs["tools"] == [
             {"type": "web_search_20260209", "name": "web_search", "max_uses": 4}
         ]
@@ -169,16 +205,14 @@ class TestRequestShape:
         ctx, client = _patched(_message([_text_block("{}")]))
         with ctx:
             await _service().search("sys", "q", blocked_domains=["spam.example"])
-        assert client.messages.create.await_args.kwargs["tools"][0][
-            "blocked_domains"
-        ] == ["spam.example"]
+        assert _sent(client)["tools"][0]["blocked_domains"] == ["spam.example"]
 
     async def test_read_page_declares_fetch_and_search(self) -> None:
         ctx, client = _patched(_message([_text_block("{}")]))
         with ctx:
             await _service().read_page("sys", "read https://ex.com/flan")
 
-        tools = client.messages.create.await_args.kwargs["tools"]
+        tools = _sent(client)["tools"]
         assert [t["type"] for t in tools] == [
             "web_fetch_20260209",
             "web_search_20260209",
@@ -190,8 +224,19 @@ class TestRequestShape:
         ctx, client = _patched(_message([_text_block("{}")]))
         with ctx:
             await _service().search("sys", "q", effort="low")
-        output_config = client.messages.create.await_args.kwargs["output_config"]
+        output_config = _sent(client)["output_config"]
         assert output_config == {"effort": "low"}
+
+
+class TestUsage:
+    async def test_prompt_cache_reads_and_writes_count_as_input(self) -> None:
+        """``usage.input_tokens`` excludes cached input; the result adds it back and says how much."""
+        ctx, _ = _patched(_message([_text_block("{}")], in_tok=50, out_tok=20, cache_read=900, cache_write=300))
+        with ctx:
+            result = await _service().search("sys", "q")
+        assert result.input_tokens == 1250
+        assert (result.cache_read_input_tokens, result.cache_creation_input_tokens) == (900, 300)
+        assert result.total_tokens == 1270
 
 
 class TestPauseTurn:
@@ -212,7 +257,7 @@ class TestPauseTurn:
         with ctx:
             result = await _service().search("sys", "q")
 
-        assert client.messages.create.await_count == 2
+        assert client.beta.messages.stream.call_count == 2
         assert result.data == {"ok": True}
         assert [s.url for s in result.sources] == ["https://a.com", "https://b.com"]
         # Usage sums across round-trips — one call, one bill.
@@ -220,7 +265,7 @@ class TestPauseTurn:
         assert result.server_tool_uses == 1
 
         # The resume carries the paused assistant content back verbatim.
-        resumed = client.messages.create.await_args_list[1].kwargs["messages"]
+        resumed = _sent(client, 1)["messages"]
         assert resumed[-1] == {"role": "assistant", "content": first.content}
 
     async def test_stops_after_resume_cap(self) -> None:
@@ -233,7 +278,7 @@ class TestPauseTurn:
         with ctx:
             result = await _service().search("sys", "q")
 
-        assert client.messages.create.await_count == 7  # 1 + 6 resumes
+        assert client.beta.messages.stream.call_count == 7  # 1 + 6 resumes
         assert result.data == {"ok": True}
 
 
@@ -321,8 +366,7 @@ class TestErrorWrapping:
         exc = anthropic.APIStatusError(
             "overloaded", response=response, body={"error": {"type": "overloaded_error"}}
         )
-        client = MagicMock()
-        client.messages.create = AsyncMock(side_effect=exc)
+        client = _client(exc)
         with patch("anthropic.AsyncAnthropic", return_value=client):
             with pytest.raises(ExtractionError) as caught:
                 await _service().search("sys", "q")
@@ -334,8 +378,7 @@ class TestErrorWrapping:
     async def test_connection_error_becomes_extraction_error(self) -> None:
         request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
         exc = anthropic.APIConnectionError(request=request)
-        client = MagicMock()
-        client.messages.create = AsyncMock(side_effect=exc)
+        client = _client(exc)
         with patch("anthropic.AsyncAnthropic", return_value=client):
             with pytest.raises(ExtractionError) as caught:
                 await _service().search("sys", "q")
@@ -354,3 +397,101 @@ class TestClientReuse:
             await svc.search("sys", "one")
             await svc.search("sys", "two")
         assert constructor.call_count == 1
+
+
+class TestResearch:
+    """``research``: both tools, opt-in fallbacks, and the accounting callers store."""
+
+    async def test_declares_both_tools_and_opts_into_fallbacks(self) -> None:
+        ctx, client = _patched(_message([_text_block('{"ok": true}')]))
+        with ctx:
+            await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10, fallbacks=True,
+            )
+
+        kwargs = _sent(client)
+        assert kwargs["tools"] == [
+            {"type": "web_search_20260209", "name": "web_search", "max_uses": 15},
+            {
+                "type": "web_fetch_20260209",
+                "name": "web_fetch",
+                "max_uses": 10,
+                "citations": {"enabled": False},
+            },
+        ]
+        assert not any(t["type"].startswith("code_execution") for t in kwargs["tools"])
+        assert kwargs["betas"] == ["server-side-fallback-2026-07-01"]
+        assert kwargs["fallbacks"] == "default"
+        assert kwargs["output_config"] == {
+            "effort": "high",
+            "format": {"type": "json_schema", "schema": SCHEMA},
+        }
+
+    async def test_search_without_fallbacks_sends_no_beta(self) -> None:
+        ctx, client = _patched(_message([_text_block("{}")]))
+        with ctx:
+            await _service().search("sys", "q")
+        assert "betas" not in _sent(client)
+        assert "fallbacks" not in _sent(client)
+
+    async def test_counts_billed_searches_and_fetches_across_round_trips(self) -> None:
+        first = _message([_server_tool_use_block()], stop_reason="pause_turn", searches=4, fetches=1)
+        second = _message([_text_block("{}")], searches=2, fetches=3)
+        ctx, _ = _patched(first, second)
+        with ctx:
+            result = await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10,
+            )
+        assert result.web_search_requests == 6
+        assert result.web_fetch_requests == 4
+
+    async def test_collects_server_tool_error_codes(self) -> None:
+        msg = _message([
+            _search_error_block("max_uses_exceeded"),
+            _search_error_block("too_many_requests"),
+            _search_result_block(("https://a.com", "A")),
+            _text_block("{}"),
+        ])
+        ctx, _ = _patched(msg)
+        with ctx:
+            result = await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10,
+            )
+        assert result.tool_error_codes == [
+            "web_search_tool_result:max_uses_exceeded",
+            "web_search_tool_result:too_many_requests",
+        ]
+        assert [s.url for s in result.sources] == ["https://a.com"]
+
+    async def test_refusal_raises_with_its_category(self) -> None:
+        msg = _message([_text_block("")], stop_reason="refusal", refusal_category="general_harms")
+        ctx, _ = _patched(msg)
+        with ctx, pytest.raises(ResearchRefusedError) as caught:
+            await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10, fallbacks=True,
+            )
+        assert caught.value.category == "general_harms"
+        assert caught.value.error_type == "refusal"
+        assert caught.value.is_transient is False
+
+    async def test_cut_off_reply_is_never_parsed(self) -> None:
+        msg = _message([_text_block('{"ideas": [{"title": "a"}')], stop_reason="max_tokens")
+        ctx, _ = _patched(msg)
+        with ctx, pytest.raises(ExtractionTruncatedError):
+            await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10,
+            )
+
+    async def test_rate_limit_is_retried_on_the_stream(self) -> None:
+        request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+        response = httpx.Response(429, request=request, headers={"retry-after": "0"})
+        limited = anthropic.RateLimitError(
+            "slow down", response=response, body={"error": {"type": "rate_limit_error"}},
+        )
+        client = _client(limited, _message([_text_block('{"ok": true}')]))
+        with patch("anthropic.AsyncAnthropic", return_value=client):
+            result = await _service().research(
+                "sys", "q", json_schema=SCHEMA, max_searches=15, max_fetches=10,
+            )
+        assert result.data == {"ok": True}
+        assert client.beta.messages.stream.call_count == 2
