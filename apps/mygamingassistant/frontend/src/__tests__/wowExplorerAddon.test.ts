@@ -441,6 +441,18 @@ describe("MGA Explorer on the World Map", () => {
     expect(withoutChat(lines)).toEqual(["Agamand Mills", "explore", "11", "0", "11", "0"]);
   });
 
+  it("hovering a pin grows it and names the area; leaving shrinks it back", () => {
+    const lines = run(`${MAP_HELPERS}
+      M.Refresh()
+      showMap(${TIRISFAL})
+      local pin = MGAExplorerMapPin1
+      say(pin.width)
+      pin.scripts.OnEnter(pin); say(pin.width)
+      pin.scripts.OnLeave(pin); say(pin.width)
+    `);
+    expect(withoutChat(lines)).toEqual(["12", "16", "12"]);
+  });
+
   it("a continent map badges every zone with areas left with how many, at the middle of them, and a click guides into that zone", () => {
     const lines = run(`${MAP_HELPERS}
       exploreZone(${ELWYNN})

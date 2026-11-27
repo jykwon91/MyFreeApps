@@ -38,7 +38,11 @@ function methods:GetText() return self.text end
 function methods:SetChecked(on) self.checked = on and true or false end
 function methods:GetChecked() return self.checked end
 function methods:SetPoint(...) self.point = { ... } end
-function methods:SetSize(w, h) self.width, self.height = w, h end
+-- Strict like the client: a nil or non-number size is an error, not a silent no-op.
+function methods:SetSize(w, h)
+  if type(w) ~= "number" or type(h) ~= "number" then error("bad argument #1 to 'SetSize' (Usage: self:SetSize(x, y))", 2) end
+  self.width, self.height = w, h
+end
 function methods:SetWidth(w) self.width = w end
 function methods:GetWidth() return self.width or 140 end
 function methods:GetHeight() return self.height or 100 end
