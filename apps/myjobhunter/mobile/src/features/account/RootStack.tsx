@@ -14,6 +14,8 @@ export default function RootStack() {
       </Stack.Protected>
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="sign-in" />
+        {/* Opened from sign-in, so it pushes over it and goes back to it. */}
+        <Stack.Screen name="forgot-password" options={{ headerShown: true, title: "", headerBackTitle: "Sign in" }} />
       </Stack.Protected>
     </Stack>
   );
