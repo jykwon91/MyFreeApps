@@ -11,7 +11,9 @@ from app.core.tags import (
     transaction_type_for_category,
 )
 from app.core.tax_total_inputs import tax_total_inputs
-from app.core.vendors import normalize_address, normalize_vendor
+from app.core.payee_keys import payee_rule_key
+from app.core.vendors import normalize_address
+from app.models.classification.classification_rule import ClassificationRule
 from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
 from app.repositories.classification import classification_rule_repo
@@ -46,20 +48,22 @@ async def learn_from_correction(
     if TRANSFER_CATEGORY in {new_category, old_category}:
         return 0
 
-    await classification_rule_repo.upsert_rule(
-        db,
-        organization_id=organization_id,
-        match_type="vendor",
-        pattern=transaction.vendor,
-        category=new_category,
-        created_by=user_id,
-        source="user_correction",
-        property_id=transaction.property_id,
-        activity_id=transaction.activity_id,
-        # This corrects a category. A row with no property says nothing about
-        # where the vendor's other rows belong.
-        keep_assignment_when_unset=True,
-    )
+    existing = await _matching_rule(db, organization_id, transaction.vendor)
+    if not _already_says(existing, transaction.vendor, new_category, transaction.property_id):
+        await classification_rule_repo.upsert_rule(
+            db,
+            organization_id=organization_id,
+            match_type="vendor",
+            pattern=transaction.vendor,
+            category=new_category,
+            created_by=user_id,
+            source=_source_for(existing, transaction.vendor),
+            property_id=transaction.property_id,
+            activity_id=transaction.activity_id,
+            # This corrects a category. A row with no property says nothing about
+            # where the vendor's other rows belong.
+            keep_assignment_when_unset=True,
+        )
 
     retroactive_count = await _retroactive_category_fix(
         db,
@@ -109,18 +113,20 @@ async def learn_from_property_correction(
     if transaction.category == TRANSFER_CATEGORY:
         return 0
 
-    await classification_rule_repo.upsert_rule(
-        db,
-        organization_id=organization_id,
-        match_type="vendor",
-        pattern=transaction.vendor,
-        category=transaction.category,
-        created_by=user_id,
-        source="user_correction",
-        context=transaction.address,
-        property_id=transaction.property_id,
-        activity_id=transaction.activity_id,
-    )
+    existing = await _matching_rule(db, organization_id, transaction.vendor, transaction.address)
+    if not _already_says(existing, transaction.vendor, transaction.category, transaction.property_id):
+        await classification_rule_repo.upsert_rule(
+            db,
+            organization_id=organization_id,
+            match_type="vendor",
+            pattern=transaction.vendor,
+            category=transaction.category,
+            created_by=user_id,
+            source=_source_for(existing, transaction.vendor),
+            context=transaction.address,
+            property_id=transaction.property_id,
+            activity_id=transaction.activity_id,
+        )
 
     retroactive_count = await _retroactive_property_fix(
         db,
@@ -154,6 +160,38 @@ async def learn_from_property_correction(
     return retroactive_count
 
 
+async def _matching_rule(
+    db: AsyncSession, organization_id: uuid.UUID, vendor: str, address: str | None = None,
+) -> ClassificationRule | None:
+    """The rule this payee (at this address, when given) already matches."""
+    rule = await classification_rule_repo.get_matching_rule(db, organization_id, "vendor", vendor, context=address)
+    if rule is None or rule.match_context != (normalize_address(address) or None):
+        return None
+    return rule
+
+
+def _is_this_payee(rule: ClassificationRule | None, vendor: str) -> bool:
+    """Whether the rule is keyed on exactly this payee, so the correction updates it."""
+    return rule is not None and rule.match_pattern == payee_rule_key(vendor)
+
+
+def _already_says(
+    rule: ClassificationRule | None, vendor: str, category: str, property_id: uuid.UUID | None,
+) -> bool:
+    """Whether a broader rule ("zelle payment to jason law" for "zelle payment to jason
+    lawn guy") already files this payee the way the correction does, so a near-duplicate
+    would add nothing. A correction that disagrees gets its own rule on the payee, and the
+    longer pattern wins when both match."""
+    if rule is None or _is_this_payee(rule, vendor):
+        return False
+    return rule.category == category and property_id in (None, rule.property_id)
+
+
+def _source_for(rule: ClassificationRule | None, vendor: str) -> str:
+    """A rule the person made stays theirs when a correction updates it."""
+    return rule.source if rule is not None and _is_this_payee(rule, vendor) else "user_correction"
+
+
 async def _retroactive_category_fix(
     db: AsyncSession,
     organization_id: uuid.UUID,
@@ -163,8 +201,8 @@ async def _retroactive_category_fix(
     new_activity_id: uuid.UUID | None,
     exclude_id: uuid.UUID,
 ) -> int:
-    """Update other transactions from the same vendor with the old category."""
-    normalized = normalize_vendor(vendor)
+    """Update other transactions to the same payee (``payee_rule_key``) with the old category."""
+    normalized = payee_rule_key(vendor)
     if not normalized:
         return 0
 
@@ -177,7 +215,7 @@ async def _retroactive_category_fix(
     updated = 0
     totals_moved = False
     for txn in candidates:
-        if normalize_vendor(txn.vendor) == normalized:
+        if payee_rule_key(txn.vendor) == normalized:
             old_tax_inputs = tax_total_inputs(txn)
             txn.schedule_e_line = schedule_e_line_after_category_change(
                 txn.schedule_e_line, txn.category, new_category,
@@ -201,8 +239,8 @@ async def _retroactive_property_fix(
     new_property_id: uuid.UUID | None,
     exclude_id: uuid.UUID,
 ) -> int:
-    """Update other transactions from the same vendor+address with a different property_id."""
-    normalized_vendor = normalize_vendor(vendor)
+    """Update other transactions to the same payee+address with a different property_id."""
+    normalized_vendor = payee_rule_key(vendor)
     normalized_addr = normalize_address(address)
     if not normalized_vendor or not normalized_addr:
         return 0
@@ -215,7 +253,7 @@ async def _retroactive_property_fix(
     totals_moved = False
     for txn in candidates:
         if (
-            normalize_vendor(txn.vendor) == normalized_vendor
+            payee_rule_key(txn.vendor) == normalized_vendor
             and normalize_address(txn.address) == normalized_addr
             and txn.property_id != new_property_id
         ):

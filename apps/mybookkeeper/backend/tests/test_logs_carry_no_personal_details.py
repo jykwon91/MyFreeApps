@@ -115,6 +115,7 @@ async def test_document_processing_log_names_the_document_not_its_file(caplog: p
 async def test_learned_property_rule_log_names_the_transaction(caplog: pytest.LogCaptureFixture) -> None:
     txn = MagicMock(id=uuid.uuid4(), vendor="Jane Doe Plumbing", address="12 Elm St", property_id=uuid.uuid4())
     with (
+        patch.object(rule_learning_service.classification_rule_repo, "get_matching_rule", AsyncMock(return_value=None)),
         patch.object(rule_learning_service.classification_rule_repo, "upsert_rule", AsyncMock()),
         patch.object(rule_learning_service, "_retroactive_property_fix", AsyncMock(return_value=2)),
         patch.object(rule_learning_service, "record_event", AsyncMock()),
