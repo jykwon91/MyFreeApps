@@ -44,6 +44,7 @@ import FinancialAccounts from "@/app/pages/FinancialAccounts";
 import NetWorth from "@/app/pages/NetWorth";
 import Budget from "@/app/pages/Budget";
 import CashFlow from "@/app/pages/CashFlow";
+import PersonalFinances from "@/app/pages/PersonalFinances";
 import MonthlyExpenses from "@/app/pages/MonthlyExpenses";
 import Investments from "@/app/pages/Investments";
 import PlaidOAuthReturn from "@/app/pages/PlaidOAuthReturn";
@@ -158,6 +159,7 @@ export default function App() {
               <Route path="investments" element={<Investments />} />
               <Route path="budget" element={<Budget />} />
               <Route path="cash-flow" element={<CashFlow />} />
+              <Route path="personal-finances" element={<PersonalFinances />} />
               <Route path="monthly-expenses" element={<MonthlyExpenses />} />
               <Route path="plaid-oauth" element={<PlaidOAuthReturn />} />
               <Route path="spending-categories" element={<SpendingCategories />} />
