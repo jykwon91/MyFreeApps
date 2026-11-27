@@ -41,6 +41,11 @@ RENT_REMINDER_EMAIL_STATUSES: tuple[str, ...] = ("queued", "sent", "failed")
 # Statuses the watchdog still owes an outcome for.
 RENT_REMINDER_PENDING_STATUSES: tuple[str, ...] = ("queued", "sent_to_provider")
 
+# Text statuses that mean the reminder reached Twilio, so the tenant may be
+# replying to it. A ``queued`` text never left; failed texts are judged by
+# their error code (``REPLY_MATCH_FAILED_ERRORS``).
+RENT_REMINDER_REPLYABLE_STATUSES: tuple[str, ...] = ("sent_to_provider", "sent", "delivered")
+
 
 RENT_REMINDER_FREQUENCIES_SQL = sql_in_list(RENT_REMINDER_FREQUENCIES)
 RENT_REMINDER_CHANNELS_SQL = sql_in_list(RENT_REMINDER_CHANNELS)

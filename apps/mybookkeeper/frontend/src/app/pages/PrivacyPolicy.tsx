@@ -75,7 +75,8 @@ export default function PrivacyPolicy() {
               enter about them: inquiries sent through your public form (including name, email, phone
               and the message), applicant details such as legal name, date of birth and employer,
               screening results, leases and signed lease documents, tenant payments, and the messages
-              you send. Sensitive applicant details are encrypted at rest.
+              you send. Sensitive applicant details are encrypted at rest. If a tenant replies to a
+              rent reminder text, we email the reply to you and don&apos;t store it.
             </p>
 
             <h3 className="font-semibold mt-4 mb-2">The phone app</h3>
@@ -151,6 +152,11 @@ export default function PrivacyPolicy() {
               <li>
                 <strong>Active accounts</strong> — your data is retained as long as your account
                 exists
+              </li>
+              <li>
+                <strong>Reminder text lookup codes</strong> — the code made from the number a
+                reminder text went to is kept with that reminder until you delete your account, and
+                is only used to match tenants&apos; replies to texts from the last 120 days
               </li>
               <li>
                 <strong>Deleted accounts</strong> — your data is permanently deleted immediately when
@@ -292,6 +298,14 @@ export default function PrivacyPolicy() {
                     Text messages
                   </Link>{" "}
                   in the Terms of Service for how to opt in and out.
+                </p>
+                <p className="mt-2">
+                  If a tenant texts back within 120 days, Twilio passes the reply to us and we email
+                  it to the landlord whose reminder text went to that number. We don&apos;t keep the
+                  reply, and we never download pictures sent with it; Twilio keeps its own record of
+                  the message. To tell whose reply it is, we keep a code made from each phone number
+                  a reminder text went to, using a secret key, so the code doesn&apos;t show the
+                  number.
                 </p>
               </div>
 

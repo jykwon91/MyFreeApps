@@ -40,5 +40,26 @@ TWILIO_STATUS_FAILED: Final = "failed"
 # sorted form parameters, keyed by the account's auth token).
 TWILIO_SIGNATURE_HEADER: Final = "X-Twilio-Signature"
 
-# Twilio posts status callbacks as a form; a body of any other type isn't one.
+# Twilio posts its webhooks (status callbacks and incoming messages) as a form;
+# a body of any other type isn't one.
 TWILIO_CALLBACK_MEDIA_TYPE: Final = "application/x-www-form-urlencoded"
+
+# The answer to an incoming-message webhook that sends nothing back. Twilio texts
+# the body of a ``text/plain`` answer to the sender, and logs an error for one it
+# can't read as TwiML, so "no reply" has to be this. It is exactly what the SDK
+# renders for an empty ``MessagingResponse()``.
+TWILIO_EMPTY_TWIML: Final = '<?xml version="1.0" encoding="UTF-8"?><Response />'
+TWILIO_TWIML_MEDIA_TYPE: Final = "text/xml"
+
+# Most pictures or files one incoming message can carry (``NumMedia``).
+TWILIO_MAX_MEDIA: Final = 10
+
+# Twilio's default opt-out keywords, matched against the whole message in any
+# case. A reply that is one of these blocks every later text from that number
+# to the sender (sends fail with error 21610) until they text a START keyword.
+TWILIO_STOP_KEYWORDS: Final = frozenset(
+    {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "REVOKE", "OPTOUT"},
+)
+# Keywords that lift the block. Long codes also take YES, toll-free numbers
+# (what MyFreeApps texts from) only these two, so YES is left out.
+TWILIO_START_KEYWORDS: Final = frozenset({"START", "UNSTOP"})

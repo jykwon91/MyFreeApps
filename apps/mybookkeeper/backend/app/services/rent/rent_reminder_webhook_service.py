@@ -46,10 +46,8 @@ from platform_shared.core.sms_constants import (
     TWILIO_STATUS_SENT,
     TWILIO_STATUS_UNDELIVERED,
 )
-from platform_shared.services.twilio_webhook import (
-    TwilioStatusEvent,
-    parse_twilio_status_callback,
-)
+from platform_shared.services.twilio_status_event import TwilioStatusEvent
+from platform_shared.services.twilio_webhook import parse_twilio_status_callback
 
 from app.core.rent_reminder_constants import (
     ERROR_NO_SMS_CONFIRMATION,

@@ -2,10 +2,9 @@ import base64
 import hmac
 
 from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes
 
-from platform_shared.core.security import FernetSuite, create_pii_suite
+from platform_shared.core.blind_index import blind_index
+from platform_shared.core.security import FernetSuite, create_pii_suite, derive_key
 
 from app.core.config import settings
 
@@ -15,22 +14,22 @@ HKDF_SALT = b"mybookkeeper-v1"
 # other. MUST stay byte-identical to what's baked into existing production
 # PII columns; changing it would silently make every PII row unreadable.
 _MBK_PII_INFO = b"mybookkeeper-pii-encryption"
+# Key family for phone-number lookup codes (``rent_reminder_sends.
+# recipient_phone_hash``). Changing it, or ENCRYPTION_KEY, makes every stored
+# code stop matching: tenants' replies then go unforwarded (never misrouted)
+# until each tenant's next reminder text stores a fresh one.
+_MBK_PHONE_LOOKUP_INFO = b"mybookkeeper-phone-lookup-v1"
 
 
 def _derive_fernet(salt: bytes | None, info: bytes = b"mybookkeeper-token-encryption") -> Fernet:
-    hkdf = HKDF(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        info=info,
-    )
-    key = hkdf.derive(settings.encryption_key.encode())
+    key = derive_key(settings.encryption_key, salt=salt, info=info)
     return Fernet(base64.urlsafe_b64encode(key))
 
 
-_fernet = None
-_fernet_legacy = None
+_fernet: Fernet | None = None
+_fernet_legacy: Fernet | None = None
 _pii_suite: FernetSuite | None = None
+_phone_lookup_key: bytes | None = None
 
 
 def get_fernet() -> Fernet:
@@ -91,6 +90,21 @@ def decrypt_pii(ciphertext: str) -> str:
     Same `(str) -> str` signature as before — call sites are unchanged.
     """
     return _get_pii_suite().decrypt(ciphertext)
+
+
+def phone_lookup_hash(e164: str) -> str:
+    """The keyed one-way code for a phone number, given exactly as E.164.
+
+    Stored beside each reminder text so a tenant's reply can be matched to the
+    texts sent to its number without decrypting anyone's phone number. Callers
+    must pass the E.164 form, or the same number gives different codes.
+    """
+    global _phone_lookup_key
+    if _phone_lookup_key is None:
+        _phone_lookup_key = derive_key(
+            settings.encryption_key, salt=HKDF_SALT, info=_MBK_PHONE_LOOKUP_INFO,
+        )
+    return blind_index(_phone_lookup_key, e164)
 
 
 def admin_api_key_matches(provided: str, configured: str) -> bool:

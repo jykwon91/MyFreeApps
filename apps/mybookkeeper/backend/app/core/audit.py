@@ -57,6 +57,10 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # Rent-reminder send log — the rendered reminder names the tenant, and is
     # encrypted at rest via EncryptedString.
     "message_body",
+    # Keyed lookup code of the number a reminder text went to. Anyone holding
+    # the key can test a guessed number against it, so it stays out of
+    # audit_logs like the number itself.
+    "recipient_phone_hash",
     # Insurance domain PII — policy numbers are PII-adjacent (can identify
     # individuals with insurers), encrypted at rest via EncryptedString.
     "policy_number",

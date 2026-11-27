@@ -150,7 +150,13 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     "rent_schedules": {},
     "rent_charges": {},
     "rent_reminder_plans": {},
-    "rent_reminder_sends": {"key_version": _KEY_VERSION},
+    "rent_reminder_sends": {
+        "key_version": _KEY_VERSION,
+        "recipient_phone_hash": (
+            "Keyed lookup code of the number a reminder text went to, used only to "
+            "match the tenant's replies; the number itself is in applicants.contact_phone."
+        ),
+    },
     "payer_alias": {},
     "personal_transfer_senders": {},
     "rent_attribution_review_queue": {},

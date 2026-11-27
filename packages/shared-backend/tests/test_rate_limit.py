@@ -98,6 +98,42 @@ class TestRateLimiter:
         assert exc_info.value.status_code == 429
         assert exc_info.value.detail == RATE_LIMIT_GENERIC_DETAIL
 
+    def test_try_acquire_answers_instead_of_raising(self) -> None:
+        limiter = RateLimiter(max_attempts=2, window_seconds=60)
+        assert limiter.try_acquire("ip1")
+        assert limiter.try_acquire("ip1")
+        assert not limiter.try_acquire("ip1")
+        assert limiter.try_acquire("ip2")
+
+    def test_try_acquire_and_check_share_one_budget(self) -> None:
+        limiter = RateLimiter(max_attempts=1, window_seconds=60)
+        assert limiter.try_acquire("ip1")
+        with pytest.raises(HTTPException):
+            limiter.check("ip1")
+
+    def test_a_refused_try_acquire_records_nothing(self) -> None:
+        """Refused tries don't extend the wait: the slot frees a window after the one taken."""
+        limiter = RateLimiter(max_attempts=1, window_seconds=60)
+        clock = MagicMock(return_value=1000.0)
+        with patch("platform_shared.core.rate_limit.time.monotonic", clock):
+            assert limiter.try_acquire("ip1")
+            clock.return_value = 1050.0
+            assert not limiter.try_acquire("ip1")
+            clock.return_value = 1061.0
+            assert limiter.try_acquire("ip1")
+
+    def test_stale_keys_are_dropped_once_there_are_many(self) -> None:
+        """Keys a window old are forgotten, so one-off keys can't grow memory forever."""
+        limiter = RateLimiter(max_attempts=5, window_seconds=60)
+        clock = MagicMock(return_value=1000.0)
+        with patch("platform_shared.core.rate_limit.time.monotonic", clock):
+            for n in range(101):
+                assert limiter.try_acquire(f"ip{n}")
+            assert len(limiter._buckets) == 101
+            clock.return_value = 1061.0
+            limiter.check("late")
+        assert list(limiter._buckets) == ["late"]
+
     def test_independent_keys(self) -> None:
         limiter = RateLimiter(max_attempts=2, window_seconds=60)
         limiter.check("ip1")

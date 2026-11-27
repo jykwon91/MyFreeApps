@@ -29,8 +29,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Mapping, Optional
 
-logger = logging.getLogger(__name__)
-
 from fastapi import HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +41,8 @@ from platform_shared.services.turnstile_service import (
     TURNSTILE_PROVIDER_UNAVAILABLE_CODE,
     verify_turnstile_token,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -108,8 +108,12 @@ class RateLimiter:
         with self._lock:
             self._buckets.clear()
 
-    def check(self, key: str) -> None:
-        """Record an attempt and raise 429 if over limit."""
+    def try_acquire(self, key: str) -> bool:
+        """Record an attempt if ``key`` is under its limit. False (nothing recorded) when it isn't.
+
+        For limits that must not answer 429, such as capping work done for one
+        sender while still acknowledging the request.
+        """
         now = time.monotonic()
         with self._lock:
             bucket = self._buckets.get(key)
@@ -118,10 +122,7 @@ class RateLimiter:
                 self._buckets[key] = bucket
             self._cleanup_bucket(bucket, now)
             if len(bucket.timestamps) >= self._config.max_attempts:
-                raise HTTPException(
-                    status_code=429,
-                    detail=RATE_LIMIT_GENERIC_DETAIL,
-                )
+                return False
             bucket.timestamps.append(now)
 
             # Periodic cleanup of stale keys to bound memory.
@@ -132,6 +133,15 @@ class RateLimiter:
                 ]
                 for k in stale_keys:
                     del self._buckets[k]
+            return True
+
+    def check(self, key: str) -> None:
+        """Record an attempt and raise 429 if over limit."""
+        if not self.try_acquire(key):
+            raise HTTPException(
+                status_code=429,
+                detail=RATE_LIMIT_GENERIC_DETAIL,
+            )
 
 
 def check_user_rate_limit(user_id: uuid.UUID, *limiters: RateLimiter) -> None:

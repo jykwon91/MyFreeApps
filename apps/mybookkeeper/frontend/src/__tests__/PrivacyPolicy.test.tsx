@@ -44,6 +44,17 @@ describe("PrivacyPolicy — rendering", () => {
     expect(screen.getByText(/the amount and due date, the landlord's payment\s+instructions and the landlord's first name/)).toBeInTheDocument();
   });
 
+  it("says tenants' replies are emailed to the landlord, and what is kept", () => {
+    renderPrivacyPolicy();
+    expect(
+      screen.getByText(/we email\s+it to the landlord whose reminder text went to that number/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/We don't keep the\s+reply, and we never download pictures/)).toBeInTheDocument();
+    expect(screen.getByText(/we email the reply to you and don't store it/)).toBeInTheDocument();
+    expect(screen.getByText("Reminder text lookup codes")).toBeInTheDocument();
+    expect(screen.getByText(/only used to match tenants' replies to texts from the last 120 days/)).toBeInTheDocument();
+  });
+
   it("covers tenant data and when deletion is refused", () => {
     renderPrivacyPolicy();
     expect(screen.getByRole("heading", { name: /people you rent to/i })).toBeInTheDocument();

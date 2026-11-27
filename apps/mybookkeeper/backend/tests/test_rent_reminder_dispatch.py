@@ -42,6 +42,7 @@ from app.core.rent_reminder_constants import (
 )
 from app.core.config import settings
 from app.core.rent_reminder_enums import RENT_REMINDER_CHANNELS
+from app.core.security import phone_lookup_hash
 from app.models.applicants.applicant import Applicant
 from app.models.rent.rent_charge import RentCharge
 from app.models.rent.rent_reminder_plan import RentReminderPlan
@@ -50,6 +51,7 @@ from app.models.rent.rent_schedule import RentSchedule
 from app.repositories.rent import rent_reminder_send_repo
 from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
 from app.schemas.rent.rent_reminder_possibly_sent import RentReminderPossiblySent
+from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.services.rent.rent_reminder_sms_permission import may_send_texts
 from app.services.rent import (
     rent_ledger_service,
@@ -63,6 +65,7 @@ from app.services.rent import (
     rent_schedule_service,
 )
 from app.services.rent.rent_reminder_outbound import ReminderOutbound
+from app.services.rent.rent_reminder_recipients import ReminderRecipients
 from app.services.system import email_service, sms_service
 
 ORG = uuid.uuid4()
@@ -966,6 +969,7 @@ async def _send_now(applicant_id: uuid.UUID, **changes):
         **{**shown, **changes},
     )
 
+
 async def _text_with_unknown_outcome(db: AsyncSession, wired) -> uuid.UUID:
     """A text send-now tried, which Twilio may have taken but never confirmed."""
     applicant_id = await _tenant(db)
@@ -1365,6 +1369,72 @@ class TestSendNow:
         assert preview.sent_channels == []
 
 
+class TestReplyLookupCode:
+    """Each text's row keeps the lookup code of the number it texted, so the
+    tenant's reply can be matched to it (``rent_reminder_reply_service``)."""
+
+    @pytest.mark.asyncio
+    async def test_a_scheduled_text_keeps_the_code_and_its_email_none(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 2
+        codes = {row.channel: row.recipient_phone_hash for row in await _sends(db)}
+        assert codes == {"email": None, "sms": phone_lookup_hash("+17135550100")}
+
+    @pytest.mark.asyncio
+    async def test_send_now_keeps_it_too_and_never_returns_it(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+
+        await _send_now(applicant_id)
+        codes = {row.channel: row.recipient_phone_hash for row in await _sends(db)}
+        assert codes == {"email": None, "sms": phone_lookup_hash("+17135550100")}
+        assert "recipient_phone_hash" not in RentReminderSendResponse.model_fields
+
+    @pytest.mark.asyncio
+    async def test_a_retry_keeps_the_code_of_the_number_it_texts(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """The tenant's number changed between the failed try and the retry."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+        wired["sms"].side_effect = [SmsSendError("down", provider_code="network_error"), SID_2]
+        [first] = await _send_now(applicant_id)
+        assert (first.status, first.error_code) == ("failed", "sms_network_error")
+        [row] = await _sends(db)
+        assert row.recipient_phone_hash == phone_lookup_hash("+17135550100")
+
+        applicant = await db.get(Applicant, applicant_id)
+        applicant.contact_phone = "(832) 555-0123"
+        await db.flush()
+        [retry] = await _send_now(applicant_id)
+
+        assert (retry.id, retry.status) == (first.id, "sent_to_provider")
+        assert wired["sms"].call_args.args[0] == "+18325550123"
+        [row] = await _sends(db)
+        assert (row.attempt, row.recipient_phone_hash) == (2, phone_lookup_hash("+18325550123"))
+
+    @pytest.mark.asyncio
+    async def test_a_number_that_cant_be_texted_keeps_no_code(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        applicant = await db.get(Applicant, applicant_id)
+        applicant.contact_phone = "555-01"
+        await db.flush()
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, email_enabled=False, sms_enabled=True)
+
+        await dispatch.run_due_reminders(SATURDAY_EVENING)
+        [row] = await _sends(db)
+        assert (row.status, row.error_code, row.recipient_phone_hash) == ("failed", "invalid_phone", None)
+        wired["sms"].assert_not_called()
+
+
 class TestWebhookTries:
     """A retry reuses the row, so Twilio's news is matched to the try it's about."""
 
@@ -1675,7 +1745,8 @@ class TestRaces:
         await dispatch._deliver(
             ReminderOutbound(
                 send_id=row.id, attempt=1, channel="sms", subject="", body=row.message_body,
-                tenant_email=None, tenant_phone="(713) 555-0100", operator_email="jason@example.com",
+                recipients=ReminderRecipients.for_tenant(email=None, phone="(713) 555-0100"),
+                operator_email="jason@example.com",
                 owner_may_text=True,
             ),
         )

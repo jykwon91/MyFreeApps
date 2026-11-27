@@ -1,4 +1,4 @@
-"""Verify and read Twilio webhooks (message status callbacks).
+"""Verify and read Twilio webhooks (message status callbacks and incoming messages).
 
 Twilio signs every webhook with ``X-Twilio-Signature``: HMAC-SHA1, keyed by the
 account's auth token, over the full URL it called followed by every POSTed
@@ -22,18 +22,19 @@ Usage:
         params=params,
         signature=signature,
     )
-    event = parse_twilio_status_callback(params)
+    event = parse_twilio_status_callback(params)  # or parse_twilio_inbound_message
 
 Imports ``twilio`` at module load, so only apps that depend on it import this.
 """
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
 
 from twilio.request_validator import RequestValidator
 
-from platform_shared.core.sms_constants import TWILIO_CALLBACK_MEDIA_TYPE
+from platform_shared.core.sms_constants import TWILIO_CALLBACK_MEDIA_TYPE, TWILIO_MAX_MEDIA
+from platform_shared.services.twilio_inbound_message import TwilioInboundMessage
+from platform_shared.services.twilio_status_event import TwilioStatusEvent
 
 
 class TwilioWebhookAuthError(ValueError):
@@ -78,17 +79,6 @@ def verify_twilio_signature(
         raise TwilioWebhookAuthError("invalid X-Twilio-Signature")
 
 
-@dataclass(frozen=True)
-class TwilioStatusEvent:
-    """The parts of a message status callback a sender acts on."""
-
-    message_sid: str | None
-    status: str
-    # Twilio's numeric error code as sent (e.g. ``"30007"``); only on
-    # ``undelivered`` / ``failed``.
-    error_code: str | None
-
-
 def parse_twilio_status_callback(params: Mapping[str, str]) -> TwilioStatusEvent:
     """Read the routing fields from a status callback's form parameters.
 
@@ -103,3 +93,33 @@ def parse_twilio_status_callback(params: Mapping[str, str]) -> TwilioStatusEvent
         status=status,
         error_code=error_code or None,
     )
+
+
+def parse_twilio_inbound_message(params: Mapping[str, str]) -> TwilioInboundMessage:
+    """Read an incoming-message webhook's form parameters.
+
+    ``MediaUrl{N}`` is never read (see ``TwilioInboundMessage``). A missing or
+    unreadable ``NumMedia`` counts as no attachments, and the count is capped
+    at Twilio's limit, so a forged one can't make the caller loop.
+    """
+    media_count = _media_count(params.get("NumMedia"))
+    return TwilioInboundMessage(
+        message_sid=(params.get("MessageSid") or params.get("SmsSid") or "").strip() or None,
+        account_sid=(params.get("AccountSid") or "").strip() or None,
+        from_number=params.get("From") or None,
+        to_number=params.get("To") or None,
+        body=params.get("Body") or "",
+        media_content_types=tuple(
+            (params.get(f"MediaContentType{index}") or "").strip().lower()
+            for index in range(media_count)
+        ),
+        opt_out_type=(params.get("OptOutType") or "").strip() or None,
+    )
+
+
+def _media_count(raw: str | None) -> int:
+    text = (raw or "").strip()
+    # ASCII digits only: str.isdigit() also accepts fullwidth and superscript digits.
+    if not text.isascii() or not text.isdigit():
+        return 0
+    return min(int(text), TWILIO_MAX_MEDIA)

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from app.core.rent_reminder_channel import RentReminderChannel
 
+from app.services.rent.rent_reminder_recipients import ReminderRecipients
+
 
 @dataclass(frozen=True)
 class ReminderOutbound:
@@ -17,8 +19,7 @@ class ReminderOutbound:
     channel: RentReminderChannel
     subject: str
     body: str
-    tenant_email: str | None
-    tenant_phone: str | None
+    recipients: ReminderRecipients
     operator_email: str | None
     # Whether the plan's owner may send texts (``rent_reminder_sms_permission``).
     owner_may_text: bool

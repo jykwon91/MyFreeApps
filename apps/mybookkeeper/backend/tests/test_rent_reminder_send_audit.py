@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from platform_shared.core.audit_actor import audit_actor
+from platform_shared.core.audit_erasure_constants import MASKED_AUDIT_VALUE
 from platform_shared.db.models.audit_log import AuditLog
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -193,6 +194,50 @@ async def test_requeue_is_audited(db: AsyncSession) -> None:
     assert changes["error_code"] == ("send_interrupted", None)
     assert changes["amount"] == ("1500.00", "1600.00")
     assert await _actors(db, row) == {str(owner)}
+
+
+async def test_a_texts_lookup_code_is_masked_when_claimed(db: AsyncSession) -> None:
+    """The code isn't the number, but anyone with the key can test a guessed number against it."""
+    owner = uuid.uuid4()
+    with audit_actor(owner):
+        row = await repo.claim(
+            db, plan_id=uuid.uuid4(), applicant_id=uuid.uuid4(), organization_id=uuid.uuid4(),
+            user_id=owner, due_date=_dt.date(2026, 11, 1), channel="sms", amount=Decimal("1500.00"),
+            message_body="Rent is due", recipient_phone_hash="a" * 64,
+        )
+        await db.flush()  # the listener's INSERT audit rows are written on the next flush
+
+    result = await db.execute(
+        select(AuditLog.old_value, AuditLog.new_value).where(
+            AuditLog.table_name == TABLE,
+            AuditLog.record_id == str(row.id),
+            AuditLog.operation == "INSERT",
+            AuditLog.field_name == "recipient_phone_hash",
+        ),
+    )
+    assert result.all() == [(None, MASKED_AUDIT_VALUE)]
+
+
+@pytest.mark.parametrize(
+    ("new_code", "expected"),
+    [("b" * 64, (MASKED_AUDIT_VALUE, MASKED_AUDIT_VALUE)), (None, (MASKED_AUDIT_VALUE, None))],
+    ids=["new_number", "number_no_longer_textable"],
+)
+async def test_a_texts_lookup_code_is_masked_when_requeued(
+    db: AsyncSession, new_code: str | None, expected: tuple[str | None, str | None],
+) -> None:
+    owner = uuid.uuid4()
+    row = await _send(
+        db, owner=owner, status="failed", error_code="send_interrupted", recipient_phone_hash="a" * 64,
+    )
+
+    with audit_actor(owner):
+        await repo.requeue(
+            db, row=row, seen_attempt=1, seen_error_code="send_interrupted",
+            amount=Decimal("1500.00"), message_body="Rent is due", recipient_phone_hash=new_code,
+        )
+
+    assert (await _updates(db, row))["recipient_phone_hash"] == expected
 
 
 async def test_claim_and_release_operator_alert_are_audited(db: AsyncSession) -> None:

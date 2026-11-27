@@ -5,8 +5,8 @@ Thin wrapper over ``platform_shared.services.sms_service`` (mirrors how
 *available* only when ``SMS_BACKEND=twilio`` and the account SID, auth token
 and sending number are all set (the lifespan's ``sms_optional`` boot guard
 refuses to start with only some of them). The auth token is also what
-verifies Twilio's status callbacks, which are the only way a text is ever
-confirmed.
+verifies Twilio's webhooks: the status callbacks, which are the only way a
+text is ever confirmed, and the texts tenants send back.
 
 There is no console fallback on purpose: an unconfigured deployment reports
 SMS as unavailable (the UI says so and the API refuses to enable it) rather
@@ -17,11 +17,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 from urllib.parse import urlencode
 
+from platform_shared.services.phone_number import parse_e164, to_e164
 from platform_shared.services.sms_service import SmsService
-from platform_shared.services.twilio_webhook import verify_twilio_signature
+from platform_shared.services.twilio_webhook import (
+    TwilioWebhookAuthError,
+    verify_twilio_signature,
+)
 
 from app.core.config import settings
 from app.core.rent_reminder_constants import (
+    SMS_INBOUND_PUBLIC_PATH,
     SMS_WEBHOOK_PUBLIC_PATH,
     SMS_WEBHOOK_REQUEST_ID_PARAM,
 )
@@ -44,25 +49,36 @@ def from_number() -> str | None:
     return settings.twilio_from_number
 
 
-def _webhook_url() -> str:
-    return f"{settings.frontend_url.rstrip('/')}{SMS_WEBHOOK_PUBLIC_PATH}"
+def is_sending_number(number: str | None) -> bool:
+    """Whether ``number``, exactly as Twilio reports it, is the number reminders go out from."""
+    sending = from_number()
+    received = parse_e164(number)
+    if sending is None or received is None:
+        return False
+    return received == to_e164(sending)
+
+
+def _webhook_url(path: str) -> str:
+    return f"{settings.frontend_url.rstrip('/')}{path}"
 
 
 def status_callback_url(request_id: str) -> str:
     """The public URL Twilio reports this text's status to."""
-    return f"{_webhook_url()}?{urlencode({SMS_WEBHOOK_REQUEST_ID_PARAM: request_id})}"
+    return (
+        f"{_webhook_url(SMS_WEBHOOK_PUBLIC_PATH)}"
+        f"?{urlencode({SMS_WEBHOOK_REQUEST_ID_PARAM: request_id})}"
+    )
 
 
-def verify_status_callback(
-    *, query_string: str, params: Mapping[str, str], signature: str | None,
+def _verify(
+    path: str, *, query_string: str, params: Mapping[str, str], signature: str | None,
 ) -> None:
-    """Raise ``TwilioWebhookAuthError`` unless Twilio signed this callback.
+    """Raise ``TwilioWebhookAuthError`` unless Twilio signed this request to ``path``.
 
     Twilio signs the URL it was given, so it is rebuilt from the public origin
-    plus the request's raw query string (which carries the ``request_id`` we
-    put there, so it can't be moved onto another try).
+    plus the request's raw query string rather than read off the request.
     """
-    url = _webhook_url()
+    url = _webhook_url(path)
     if query_string:
         url = f"{url}?{query_string}"
     verify_twilio_signature(
@@ -71,6 +87,30 @@ def verify_status_callback(
         params=params,
         signature=signature,
     )
+
+
+def verify_status_callback(
+    *, query_string: str, params: Mapping[str, str], signature: str | None,
+) -> None:
+    """Raise ``TwilioWebhookAuthError`` unless Twilio signed this callback.
+
+    The query string carries the ``request_id`` we put there, so a signed
+    callback can't be moved onto another try.
+    """
+    _verify(SMS_WEBHOOK_PUBLIC_PATH, query_string=query_string, params=params, signature=signature)
+
+
+def verify_inbound_message(
+    *, query_string: str, params: Mapping[str, str], signature: str | None,
+) -> None:
+    """Raise ``TwilioWebhookAuthError`` unless this incoming text came from our Twilio account.
+
+    Besides the signature, the message must name our Account SID, so a request
+    signed for another account is never taken as one of ours.
+    """
+    _verify(SMS_INBOUND_PUBLIC_PATH, query_string=query_string, params=params, signature=signature)
+    if params.get("AccountSid") != settings.twilio_account_sid:
+        raise TwilioWebhookAuthError("incoming message is for another Twilio account")
 
 
 def _service() -> SmsService:
