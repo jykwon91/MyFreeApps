@@ -105,9 +105,19 @@ local function newBadge(i, canvas)
   return badge
 end
 
+-- The map shrinks its canvas to fit the window (often to about half), so a pin sized in canvas units drew
+-- at half size. Like Blizzard's own map pins, undo the canvas scale so pins keep their size on screen; the
+-- offset is then in the pin's units, so it is multiplied back by the canvas scale.
+local function canvasScale()
+  local scale = WorldMapFrame.GetCanvasScale and WorldMapFrame:GetCanvasScale()
+  return (type(scale) == "number" and scale > 0) and scale or 1
+end
+
 local function place(frame, canvas, x, y)
+  local scale = canvasScale()
+  frame:SetScale(1 / scale)
   frame:ClearAllPoints()
-  frame:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth(), -y * canvas:GetHeight())
+  frame:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth() * scale, -y * canvas:GetHeight() * scale)
   frame:Show()
 end
 
@@ -158,4 +168,6 @@ function M.HookWorldMap()
   if not hooksecurefunc then return end
   if WorldMapFrame.OnMapChanged then hooksecurefunc(WorldMapFrame, "OnMapChanged", M.DrawMapPins)
   elseif WorldMapFrame.SetMapID then hooksecurefunc(WorldMapFrame, "SetMapID", M.DrawMapPins) end
+  -- Zooming changes the canvas scale: redraw so the pins keep their size.
+  if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", M.DrawMapPins) end
 end
