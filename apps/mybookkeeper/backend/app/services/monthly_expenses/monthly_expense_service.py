@@ -18,6 +18,7 @@ from app.core.monthly_expense_constants import CARD_PAYMENT_MATCH_WINDOW_DAYS, M
 from app.db.session import unit_of_work
 from app.repositories.cash_flow import cash_basis
 from app.repositories.monthly_expenses import monthly_expense_repo
+from app.repositories.user import user_repo
 from app.schemas.monthly_expenses.monthly_expense_category_detail_response import (
     MonthlyExpenseCategoryDetailResponse,
 )
@@ -67,7 +68,7 @@ async def _counted(
         mortgage_parts = await monthly_expense_repo.list_mortgage_payment_parts(
             db, organization_id=organization_id,
         )
-        holder_names = await monthly_expense_repo.holder_names(
+        holder_names = await user_repo.holder_names(
             db, user_ids={row.account_user_id for row in rows if row.account_user_id is not None},
         )
 

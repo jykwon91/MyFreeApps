@@ -32,11 +32,6 @@ CARD_PAYMENT_MATCH_WINDOW_DAYS: Final = 5
 PFC_LOAN_PAYMENTS: Final = "LOAN_PAYMENTS"
 PFC_TRANSFER_OUT: Final = "TRANSFER_OUT"
 
-# A holder's name has to be at least this many words before a description
-# containing it is read as money sent to themselves: "Jason" alone would also
-# match "Jason's Deli".
-SELF_TRANSFER_MIN_NAME_WORDS: Final = 2
-
 LABEL_MORTGAGE: Final = "Mortgage"
 LABEL_LOANS: Final = "Car & other loans"
 LABEL_OTHER: Final = "Other"

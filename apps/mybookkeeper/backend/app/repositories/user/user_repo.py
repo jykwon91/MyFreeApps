@@ -1,5 +1,5 @@
 import uuid
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,3 +88,11 @@ async def holds_shared_records(db: AsyncSession, user_id: uuid.UUID) -> bool:
             if await db.scalar(select(exists().where(fk.parent == user_id))):
                 return True
     return False
+
+
+async def holder_names(db: AsyncSession, *, user_ids: Collection[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """The name each of ``user_ids`` goes by, for those who gave one."""
+    if not user_ids:
+        return {}
+    result = await db.execute(select(User.id, User.name).where(User.id.in_(list(user_ids)), User.name.is_not(None)))
+    return {user_id: name for user_id, name in result.all()}

@@ -36,13 +36,13 @@ from app.core.monthly_expense_constants import (
     PFC_LOAN_PAYMENTS,
     PFC_TO_EXPENSE_LABEL,
     PFC_TRANSFER_OUT,
-    SELF_TRANSFER_MIN_NAME_WORDS,
 )
 from app.core.tags import TRANSACTION_TYPE_TRANSFER
 from app.repositories.monthly_expenses.card_payment_arrival import CardPaymentArrival
 from app.repositories.monthly_expenses.expense_row import ExpenseRow
 from app.repositories.monthly_expenses.monthly_expense_repo import MortgagePaymentParts
 from app.services.monthly_expenses.expense_context import ExpenseContext
+from app.services.transactions.self_transfer import names_holder
 
 # Accounts that owe money on a loan. What is charged to them is interest, not
 # money out of pocket.
@@ -92,20 +92,11 @@ def card_payment_ids(rows: Sequence[ExpenseRow], arrivals: Sequence[CardPaymentA
     return frozenset(matched)
 
 
-def _words(text: str) -> str:
-    return " ".join(text.casefold().split())
-
-
 def _is_sent_to_self(row: ExpenseRow, holder_names: Mapping[uuid.UUID, str]) -> bool:
     """Money sent out under the account holder's own name ("Jason Kwon (Sent)")
     went to another of their accounts, not to someone else."""
     holder = holder_names.get(row.account_user_id) if row.account_user_id else None
-    if holder is None:
-        return False
-    name = _words(holder)
-    if len(name.split()) < SELF_TRANSFER_MIN_NAME_WORDS:
-        return False
-    return any(name in _words(text) for text in (row.description, row.vendor) if text)
+    return names_holder((row.description, row.vendor), holder)
 
 
 def category_label(row: ExpenseRow) -> str:

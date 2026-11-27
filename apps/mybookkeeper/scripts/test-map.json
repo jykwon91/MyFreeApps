@@ -2432,6 +2432,11 @@
         "backend/app/schemas/transactions/bank_row_classification.py",
         "backend/app/services/plaid/",
         "backend/app/services/transactions/bank_row_classifier.py",
+        "backend/app/core/self_transfer_constants.py",
+        "backend/app/repositories/transactions/self_transfer_repo.py",
+        "backend/app/repositories/transactions/transfer_leg.py",
+        "backend/app/services/transactions/self_transfer.py",
+        "backend/app/services/transactions/transfer_merge.py",
         "backend/alembic/versions/plaidsync261123_plaid_bank_sync.py",
         "frontend/src/app/features/financial-accounts/plaid/",
         "frontend/src/app/pages/PlaidOAuthReturn.tsx",
@@ -2464,7 +2469,10 @@
         "test_plaid_investments_consent.py",
         "test_plaid_rent_attribution.py",
         "test_plaid_copy_matcher.py",
-        "test_plaid_copy_reconciler.py"
+        "test_plaid_copy_reconciler.py",
+        "test_plaid_transfer_reconciler.py",
+        "test_self_transfer.py",
+        "test_monthly_expense_rules.py"
       ],
       "frontend_tests": [
         "ConnectedBanksSection.test.tsx",
