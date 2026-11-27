@@ -24,6 +24,11 @@ import TransactionPropertySplitSection from "@/app/features/transactions/Transac
 import type { TransactionPropertySplit } from "@mybookkeeper/api-client/types/transaction/TransactionPropertySplit";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
+import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
+import { canFilePayeeLikeThis } from "@/shared/utils/can-file-payee-like-this";
+import { useFilePayeeLikeThis } from "@/app/features/classification-rules/useFilePayeeLikeThis";
+import TransactionPayeeRuleOption from "@/app/features/classification-rules/TransactionPayeeRuleOption";
+import ApplyRuleToPastDialog from "@/app/features/classification-rules/ApplyRuleToPastDialog";
 
 export interface TransactionPanelProps {
   transaction: Transaction;
@@ -84,6 +89,9 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   // `transaction` is the row as it was opened; marking a personal transfer changes the status in place.
   const [status, setStatus] = useState<TransactionStatus>(transaction.status);
   const [splits, setSplits] = useState<TransactionPropertySplit[]>(transaction.property_splits);
+  const isAdmin = useIsOrgAdmin();
+  const [alwaysFileLikeThis, setAlwaysFileLikeThis] = useState(false);
+  const payeeRule = useFilePayeeLikeThis();
 
   const dupOther = duplicatePair
     ? duplicatePair.transaction_a.id === transaction.id
@@ -113,16 +121,21 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   /** Null once saved; otherwise what went wrong, already shown as a toast. */
   async function save(data: TransactionFormValues, extra: Record<string, unknown> = {}): Promise<string | null> {
     const payload = { ...buildPayload(data, dirtyFields), ...extra };
-    if (Object.keys(payload).length === 0) return null;
-    try {
-      const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
-      notifyVendorLearned(result as unknown as Record<string, unknown>, data);
-      return null;
-    } catch (err) {
-      const message = rejectedWriteDetail(err, MSG.couldntSave);
-      showError(message);
-      return message;
+    let saved: Transaction = { ...transaction, status, property_splits: splits };
+    if (Object.keys(payload).length > 0) {
+      try {
+        const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
+        saved = result;
+        // The payee rule's own message says what it learned.
+        if (!alwaysFileLikeThis) notifyVendorLearned(result as unknown as Record<string, unknown>, data);
+      } catch (err) {
+        const message = rejectedWriteDetail(err, MSG.couldntSave);
+        showError(message);
+        return message;
+      }
     }
+    if (alwaysFileLikeThis) await payeeRule.fileLikeThis(saved);
+    return null;
   }
 
   /** What a date moved into another year adds to the save, or null if the person went back to editing. */
@@ -216,6 +229,9 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
   }
 
   const isPending = status === "pending" || status === "needs_review";
+  const showPayeeRuleOption = isAdmin && canFilePayeeLikeThis(transaction.vendor, transaction.transaction_type);
+  const canSave = isDirty || (showPayeeRuleOption && alwaysFileLikeThis);
+  const isSavingAll = isSaving || payeeRule.isBusy;
 
   const content = (
     <>
@@ -280,6 +296,10 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
 
       <TransactionLoanPayeeSection transaction={{ ...transaction, status }} />
 
+      {showPayeeRuleOption && (
+        <TransactionPayeeRuleOption checked={alwaysFileLikeThis} disabled={isSavingAll} onChange={setAlwaysFileLikeThis} />
+      )}
+
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
         <div className="flex items-center gap-2">
           <button type="button" onClick={handleClose} className="text-sm text-muted-foreground hover:text-foreground">
@@ -299,7 +319,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
           {isPending && (
             <LoadingButton
               size="sm"
-              isLoading={isSaving}
+              isLoading={isSavingAll}
               loadingText="Approving..."
               onClick={handleSubmit(onApproveAndSave)}
               type="button"
@@ -307,11 +327,11 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
               {isDirty ? "Save & Approve" : "Approve"}
             </LoadingButton>
           )}
-          {isDirty && (
+          {canSave && (
             <LoadingButton
               size="sm"
               variant="primary"
-              isLoading={isSaving}
+              isLoading={isSavingAll}
               loadingText="Saving..."
               type="submit"
               form="transaction-panel-form"
@@ -337,6 +357,8 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
       />
 
       <TaxYearChangeDialog question={taxYearQuestion.question} onChoose={taxYearQuestion.answer} />
+
+      <ApplyRuleToPastDialog applyToPast={payeeRule.applyToPast} />
 
       <ConfirmDialog
         open={showDeleteDialog}

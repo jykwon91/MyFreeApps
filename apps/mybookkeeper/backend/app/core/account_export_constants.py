@@ -71,6 +71,7 @@ EXPORT_EXCLUDED_COLUMNS: Final[dict[str, dict[str, str]]] = {
     },
     "activities": {},
     "classification_rules": {},
+    "classification_rule_split_properties": {},
     "integrations": {
         "access_token_encrypted": "Ciphertext of the OAuth access token; a secret.",
         "refresh_token_encrypted": "Ciphertext of the OAuth refresh token; a secret.",

@@ -4,6 +4,8 @@ import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, TRANSFER_CATEGORY } from "./t
 /** Every type, in picker order. A transfer is money moved between your own accounts: neither income nor expense. */
 export const TRANSACTION_TYPES: readonly TransactionType[] = ["income", "expense", "transfer"];
 
+export const TRANSFER_TRANSACTION_TYPE: TransactionType = "transfer";
+
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: "Income",
   expense: "Expense",

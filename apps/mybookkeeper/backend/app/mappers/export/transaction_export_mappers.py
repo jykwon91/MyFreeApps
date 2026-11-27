@@ -86,6 +86,7 @@ TRANSACTIONS_EXPORT: Final = TableExportMapper(
         "external_category",
         "is_pending",
         "duplicate_reviewed_at",
+        "filed_by_person_at",
         "deleted_at",
         "created_at",
         "updated_at",

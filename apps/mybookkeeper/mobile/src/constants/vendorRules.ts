@@ -24,6 +24,7 @@ export const VENDOR_RULE_MESSAGES = {
   noProperty: "Any property",
   propertyPending: "Loading…",
   propertyMissing: "A property I can't find",
+  splitEvenly: (names: readonly string[]) => `Split evenly: ${names.join(", ")}`,
   propertyLoadFailed: "I couldn't load the property name.",
   loadingProperty: "Loading the property name",
   context: "Only when",

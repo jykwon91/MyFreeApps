@@ -24,15 +24,31 @@ export function vendorRuleFilterLabel(matchType: string | null): string {
   return matchType === null ? VENDOR_RULE_FILTER_MESSAGES.button : `${VENDOR_RULE_FILTER_MESSAGES.button}: ${matchTypeLabel(matchType)}`;
 }
 
-/** The name to show on a row: null while loading, on failure, or when the rule has no property. */
-export function listPropertyName(propertyId: string | null, names: ReadonlyMap<string, string>): string | null {
-  return propertyId === null ? null : (names.get(propertyId) ?? null);
+/** The properties a rule files payments under: the ones it splits across, or its one property. */
+export function rulePropertyIds(rule: ClassificationRule): string[] {
+  if (rule.split_property_ids.length > 1) return rule.split_property_ids;
+  return rule.property_id === null ? [] : [rule.property_id];
+}
+
+function splitText(rule: ClassificationRule, nameOf: (id: string) => string): string {
+  return VENDOR_RULE_MESSAGES.splitEvenly(rule.split_property_ids.map(nameOf));
+}
+
+/** The name(s) to show on a row: null while loading, on failure, or when the rule has no property. */
+export function listPropertyName(rule: ClassificationRule, names: ReadonlyMap<string, string>): string | null {
+  const ids = rulePropertyIds(rule);
+  if (ids.length === 0 || ids.some((id) => !names.has(id))) return null;
+  if (ids.length === 1) return names.get(ids[0]) ?? null;
+  return splitText(rule, (id) => names.get(id) ?? "");
 }
 
 /** The words for the property fact, for each state the lookup can be in. */
-export function propertyFactText(propertyId: string | null, state: VendorRulePropertyState, names: ReadonlyMap<string, string>): string {
-  if (propertyId === null) return VENDOR_RULE_MESSAGES.noProperty;
+export function propertyFactText(rule: ClassificationRule, state: VendorRulePropertyState, names: ReadonlyMap<string, string>): string {
+  const ids = rulePropertyIds(rule);
+  if (ids.length === 0) return VENDOR_RULE_MESSAGES.noProperty;
   if (state === "pending") return VENDOR_RULE_MESSAGES.propertyPending;
   if (state === "failed") return VENDOR_RULE_MESSAGES.propertyLoadFailed;
-  return names.get(propertyId) ?? VENDOR_RULE_MESSAGES.propertyMissing;
+  const nameOf = (id: string) => names.get(id) ?? VENDOR_RULE_MESSAGES.propertyMissing;
+  if (ids.length === 1) return nameOf(ids[0]);
+  return splitText(rule, nameOf);
 }

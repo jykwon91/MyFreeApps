@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.vendors import normalize_vendor
+from app.models.classification.classification_rule import ClassificationRule
 from app.repositories.classification import classification_rule_repo
 
 logger = logging.getLogger(__name__)
@@ -36,31 +37,12 @@ async def classify(
     if current_category not in OVERRIDABLE_CATEGORIES:
         return None
 
-    normalized_vendor = normalize_vendor(vendor) if vendor else None
-
-    if normalized_vendor and address:
-        rule = await classification_rule_repo.get_matching_rule(
-            db, organization_id, "vendor", vendor, context=address,
-        )
-        if rule:
-            await classification_rule_repo.increment_applied(db, rule)
-            logger.info(
-                "Classification rule matched: rule_id=%s kind=vendor+address -> %s",
-                rule.id, rule.category,
-            )
-            return rule.category, rule.property_id, rule.activity_id
-
-    if normalized_vendor:
-        rule = await classification_rule_repo.get_matching_rule(
-            db, organization_id, "vendor", vendor,
-        )
-        if rule:
-            await classification_rule_repo.increment_applied(db, rule)
-            logger.info(
-                "Classification rule matched: rule_id=%s kind=vendor -> %s",
-                rule.id, rule.category,
-            )
-            return rule.category, rule.property_id, rule.activity_id
+    rule = await find_vendor_rule(db, organization_id, vendor, address=address)
+    if rule:
+        await classification_rule_repo.increment_applied(db, rule)
+        kind = "vendor+address" if rule.match_context else "vendor"
+        logger.info("Classification rule matched: rule_id=%s kind=%s -> %s", rule.id, kind, rule.category)
+        return rule.category, rule.property_id, rule.activity_id
 
     if email_sender:
         rule = await classification_rule_repo.get_matching_rule(
@@ -87,3 +69,21 @@ async def classify(
             return rule.category, rule.property_id, rule.activity_id
 
     return None
+
+
+async def find_vendor_rule(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    vendor: str | None,
+    address: str | None = None,
+) -> ClassificationRule | None:
+    """The payee rule for this vendor: one for this vendor at this address first, then one for the vendor."""
+    if not vendor or not normalize_vendor(vendor):
+        return None
+    if address:
+        rule = await classification_rule_repo.get_matching_rule(
+            db, organization_id, "vendor", vendor, context=address,
+        )
+        if rule:
+            return rule
+    return await classification_rule_repo.get_matching_rule(db, organization_id, "vendor", vendor)

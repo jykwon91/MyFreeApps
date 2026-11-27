@@ -11,10 +11,12 @@ export interface ClassificationRulesPanelBodyProps {
   rules: readonly ClassificationRule[];
   propertyMap: ReadonlyMap<string, string>;
   deletingId: string | null;
+  checkingRuleId: string | null;
   canDelete: boolean;
   isRetrying: boolean;
   onRetry: () => void;
   onDeleteClick: (ruleId: string) => void;
+  onApplyToPastClick: (rule: ClassificationRule) => void;
 }
 
 export default function ClassificationRulesPanelBody({
@@ -22,10 +24,12 @@ export default function ClassificationRulesPanelBody({
   rules,
   propertyMap,
   deletingId,
+  checkingRuleId,
   canDelete,
   isRetrying,
   onRetry,
   onDeleteClick,
+  onApplyToPastClick,
 }: ClassificationRulesPanelBodyProps) {
   switch (mode) {
     case "loading":
@@ -44,8 +48,10 @@ export default function ClassificationRulesPanelBody({
           rules={rules}
           propertyMap={propertyMap}
           deletingId={deletingId}
+          checkingRuleId={checkingRuleId}
           canDelete={canDelete}
           onDeleteClick={onDeleteClick}
+          onApplyToPastClick={onApplyToPastClick}
         />
       );
   }

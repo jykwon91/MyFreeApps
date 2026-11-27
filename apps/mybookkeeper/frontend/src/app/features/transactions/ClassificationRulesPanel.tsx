@@ -12,6 +12,8 @@ import {
   CLASSIFICATION_RULE_DELETE_FAILURE_MESSAGES,
   CLASSIFICATION_RULE_MESSAGES,
 } from "@/shared/lib/classification-rule-messages";
+import { useApplyRuleToPast } from "@/app/features/classification-rules/useApplyRuleToPast";
+import ApplyRuleToPastDialog from "@/app/features/classification-rules/ApplyRuleToPastDialog";
 import { useClassificationRulesPanelMode } from "./useClassificationRulesPanelMode";
 import ClassificationRulesPanelBody from "./ClassificationRulesPanelBody";
 
@@ -27,6 +29,7 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
   const [deleteRule] = useDeleteClassificationRuleMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const applyToPast = useApplyRuleToPast();
 
   const propertyMap = new Map(properties.map((p) => [p.id, p.name]));
 
@@ -66,7 +69,7 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
             <h3 className="font-medium text-base">Classification Rules</h3>
           </PanelTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            I learn these from your corrections. When you change a category, I remember it for next time.
+            I learn these from your corrections, and from payees you tell me to always file one way.
           </p>
         </div>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded shrink-0 ml-2" aria-label="Close panel">
@@ -80,16 +83,20 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
           rules={rules}
           propertyMap={propertyMap}
           deletingId={deletingId}
+          checkingRuleId={applyToPast.checkingRuleId}
           canDelete={canDelete}
           isRetrying={isFetching}
           onRetry={() => void refetch()}
           onDeleteClick={setConfirmDeleteId}
+          onApplyToPastClick={(rule) => void applyToPast.offer(rule)}
         />
       </div>
 
       <div className="px-5 py-3 border-t text-xs text-muted-foreground">
         {rules.length} rule{rules.length === 1 ? "" : "s"} total
       </div>
+
+      <ApplyRuleToPastDialog applyToPast={applyToPast} />
 
       <ConfirmDialog
         open={!!confirmDeleteId}

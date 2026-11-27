@@ -32,6 +32,8 @@ export function aRule(overrides: Partial<ClassificationRule> = {}): Classificati
     category: "maintenance",
     property_id: null,
     activity_id: null,
+    transaction_scope: null,
+    split_property_ids: [],
     source: "user_correction",
     priority: 0,
     times_applied: 3,

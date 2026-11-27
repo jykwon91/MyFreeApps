@@ -34,6 +34,7 @@ from app.models.budgets.spending_budget import SpendingBudget
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 from app.models.calendar.calendar_listing_blocklist import CalendarListingBlocklist
 from app.models.classification.classification_rule import ClassificationRule
+from app.models.classification.classification_rule_split_property import ClassificationRuleSplitProperty
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.financial_accounts.financial_account import FinancialAccount
@@ -130,6 +131,7 @@ ACCOUNT_EXPORT_SOURCES: Final[tuple[Source, ...]] = (
     Source(TaxpayerProfile, Scope.WORKSPACE, read_roles=_OWNER_OR_ADMIN),
     Source(Activity, Scope.WORKSPACE),
     Source(ClassificationRule, Scope.WORKSPACE),
+    Source(ClassificationRuleSplitProperty, Scope.CHILD, ClassificationRule, "rule_id"),
     Source(Integration, Scope.WORKSPACE),
     Source(ExtractionPrompt, Scope.USER),
     # Properties

@@ -29,6 +29,8 @@ const rule = (id: string, match_pattern: string, category: string, times_applied
   category,
   property_id: null,
   activity_id: null,
+  transaction_scope: null,
+  split_property_ids: [],
   source: "user_correction",
   priority: 0,
   times_applied,
