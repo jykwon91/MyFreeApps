@@ -1,7 +1,6 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import sharedBindings from "../../addon/shared/Bindings.xml?raw";
-import sharedHub from "../../addon/shared/MGAHub.lua?raw";
+import { HUB_ADDON_FILES } from "@/games/wow-forever/data/hubAddon/hubAddonFiles";
 import { PROFESSIONS_ADDON_FILES } from "@/games/wow-forever/data/professionsAddon/professionsAddonFiles";
 import { buildProfessionsAddonData } from "@/games/wow-forever/lib/professionsAddon/buildProfessionsAddonData";
 import { luaValue } from "@/games/wow-forever/lib/addons/luaValue";
@@ -9,18 +8,19 @@ import { npcPlace } from "@/games/wow-forever/lib/professionsAddon/npcPlace";
 import { parseSkillSpan } from "@/games/wow-forever/lib/professionsAddon/parseSkillSpan";
 import { professionsAddonDataLua } from "@/games/wow-forever/lib/professionsAddon/professionsAddonDataLua";
 import { professionsAddonZip } from "@/games/wow-forever/lib/professionsAddon/professionsAddonZip";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_PROFESSION_STUBS } from "@/test/addonLua/wowProfessionStubs.lua";
 
 const files = PROFESSIONS_ADDON_FILES;
 const plain = (lines: string[]): string[] => lines.map((l) => l.replace(/\|c[0-9a-f]{8}|\|r/g, ""));
 
-/** Loads the addon the way its .toc does, then runs `scenario`; returns what the stubs recorded. */
+/** Loads MGA Hub, then the addon the way its .toc does, then runs `scenario`; returns what the stubs recorded. */
 function run(scenario: string): string[] {
   return plain(
     runAddonLua(
       [
-        ["MGAHub.lua", files["MGAHub.lua"]],
+        ["MGAHub/MGAHub.lua", HUB_ADDON_FILES["MGAHub.lua"]],
         ["Data.lua", files["Data.lua"]],
         ["Core.lua", files["Core.lua"]],
         ["Window.lua", files["Window.lua"]],
@@ -303,29 +303,27 @@ describe("MGA Professions in the game's menus and windows", () => {
 });
 
 describe("MGA Professions files", () => {
-  it("loads the hub first and lists every file in the .toc", () => {
+  it("loads after MGA Hub and lists every file in the .toc", () => {
     const toc = files["MGAProfessions.toc"];
     const listed = toc.split("\n").filter((l) => l.endsWith(".lua"));
-    expect(listed).toEqual(["MGAHub.lua", "Data.lua", "Core.lua", "Window.lua", "MGAProfessions.lua"]);
-    expect(toc).toContain("## SavedVariables: MGAHubSettings, MGAProfessionsSettings");
+    expect(listed).toEqual(["Data.lua", "Core.lua", "Window.lua", "MGAProfessions.lua"]);
+    expect(toc).toContain("## Dependencies: MGAHub\n");
+    expect(toc).toContain("## SavedVariables: MGAProfessionsSettings\n");
   });
 
-  it("keeps the shared hub's two bindings and adds its own", () => {
-    const blocks = sharedBindings.match(/<Binding [\s\S]*?<\/Binding>/g) ?? [];
-    expect(blocks).toHaveLength(2);
-    for (const block of blocks) expect(files["Bindings.xml"]).toContain(block);
+  it("declares only its own binding (the hub's two live in MGAHub/Bindings.xml)", () => {
+    const names = [...files["Bindings.xml"].matchAll(/<Binding name="([^"]+)"/g)].map((m) => m[1]);
+    expect(names).toEqual(["MGA_PROFESSIONS"]);
     expect(files["Bindings.xml"]).toContain('<Binding name="MGA_PROFESSIONS" category="MGA">');
     expect(files["Bindings.xml"]).toContain("MGAProfessions.Toggle()");
     expect(files["MGAProfessions.lua"]).toContain('BINDING_NAME_MGA_PROFESSIONS = "Open MGA Professions"');
   });
 
-  it("ships the shared hub byte for byte", () => {
-    expect(files["MGAHub.lua"]).toBe(sharedHub);
-  });
-
-  it("zips the addon inside its folder", () => {
+  it("zips the addon inside its folder, MGA Hub beside it", () => {
     const zip = unzipSync(professionsAddonZip());
-    expect(Object.keys(zip).filter((name) => !name.endsWith("/")).sort()).toEqual(Object.keys(files).map((name) => `MGAProfessions/${name}`).sort());
+    expect(Object.keys(zip).filter((name) => !name.endsWith("/")).sort()).toEqual(
+      [...Object.keys(files).map((name) => `MGAProfessions/${name}`), ...HUB_ZIP_PATHS.filter((name) => !name.endsWith("/"))].sort(),
+    );
     expect(strFromU8(zip["MGAProfessions/MGAProfessions.toc"])).toContain("## Title: MGA Professions");
   });
 });

@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: MGA Hub
+## Notes: The MGA minimap button, menu, key bindings and settings page that every MyGamingAssistant addon shares. The other MGA addons need it.
+## Author: MyGamingAssistant
+## Version: 1.0.0
+## SavedVariables: MGAHubSettings
+## IconTexture: Interface\Icons\INV_Misc_Map_01
+
+MGAHub.lua

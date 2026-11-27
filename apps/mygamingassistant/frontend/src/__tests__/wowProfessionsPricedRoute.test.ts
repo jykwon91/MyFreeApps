@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HUB_ADDON_FILES } from "@/games/wow-forever/data/hubAddon/hubAddonFiles";
 import { PROFESSIONS_ADDON_FILES } from "@/games/wow-forever/data/professionsAddon/professionsAddonFiles";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_PROFESSION_STUBS } from "@/test/addonLua/wowProfessionStubs.lua";
@@ -10,7 +11,7 @@ function run(scenario: string): string[] {
   return plain(
     runAddonLua(
       [
-        ["MGAHub.lua", files["MGAHub.lua"]],
+        ["MGAHub/MGAHub.lua", HUB_ADDON_FILES["MGAHub.lua"]],
         ["Data.lua", files["Data.lua"]],
         ["Core.lua", files["Core.lua"]],
         ["Window.lua", files["Window.lua"]],

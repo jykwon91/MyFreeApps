@@ -1,5 +1,5 @@
 /**
- * The frame side of the WoW client for the MGA hub (addon/shared/MGAHub.lua), in two parts.
+ * The frame side of the WoW client for the MGA hub (addon/MGAHub/MGAHub.lua), in two parts.
  *
  * WOW_HUB_FRAME_STUBS: a complete, permissive frame engine (`CreateFrame` returns a frame that
  * stores its scripts, events, text, checked state and points, and ignores any method it doesn't

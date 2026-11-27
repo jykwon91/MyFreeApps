@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Install the MGA WoW addons from a git ref (default origin/main) into the
-# game's AddOns folder. Writes only files that differ, never deletes, and keeps
-# the installed MGAPrices/Data.lua (the hourly updater owns it). Says whether a
-# /reload is enough or the game needs a full restart (a new .toc).
+# game's AddOns folder. Writes only files that differ, and keeps the installed
+# MGAPrices/Data.lua (the hourly updater owns it). Deletes only files the repo
+# once shipped in that addon folder and has since removed (a stale Bindings.xml
+# keeps loading otherwise); anything else in the folder is left alone. Says
+# whether a /reload is enough or the game needs a full restart (a new .toc or a
+# removed file).
 #
 #   scripts/agent/install-wow-addons.sh [Addon ...]        (default: every addon)
 #   WOW_ADDONS=<AddOns dir>  REF=<git ref>  to override.
@@ -26,7 +29,7 @@ changed=0
 restart=0
 for a in "${names[@]}"; do
   files="$(git -C "$root" ls-tree --name-only "$ref" "$src/$a/" | sed "s|.*/||")"
-  # Only a folder with a .toc is an addon; addon/shared is source copied into each one.
+  # Only a folder with a .toc is an addon.
   printf '%s\n' "$files" | grep -q '\.toc$' || continue
   mkdir -p "$addons_dir/$a"
   for f in $files; do
@@ -38,9 +41,20 @@ for a in "${names[@]}"; do
     echo "updated $a/$f"
     changed=$((changed + 1))
   done
+  # Files this folder shipped once and no longer does.
+  while IFS= read -r gone; do
+    f="${gone##*/}"
+    [ -n "$f" ] && [ "$a/$f" != "MGAPrices/Data.lua" ] || continue
+    printf '%s\n' "$files" | grep -qxF "$f" && continue
+    [ -f "$addons_dir/$a/$f" ] || continue
+    rm -- "$addons_dir/$a/$f"
+    echo "removed $a/$f"
+    changed=$((changed + 1))
+    restart=1
+  done < <(git -C "$root" log --format= --name-only --diff-filter=D "$ref" -- "$src/$a/" | sort -u)
 done
 
 if [ "$changed" = 0 ]; then echo "addons already up to date"
-elif [ "$restart" = 1 ]; then echo "$changed files updated; a new .toc means a full game restart"
+elif [ "$restart" = 1 ]; then echo "$changed files updated; a new .toc or a removed file means a full game restart"
 else echo "$changed files updated; /reload in game"
 fi

@@ -2,9 +2,9 @@
 ## Title: MGA Buffs
 ## Notes: Reminds you, out of combat, when your armor, Soulstone, Healthstone, Warlock weapon stone, Well Fed or group buffs are missing or about to run out, and who in your party needs a buff you can cast.
 ## Author: MyGamingAssistant
-## Version: 1.4.0
-## SavedVariables: MGAHubSettings, MGABuffsSettings
+## Version: 1.5.0
+## Dependencies: MGAHub
+## SavedVariables: MGABuffsSettings
 ## IconTexture: Interface\Icons\Spell_Shadow_SoulGem
 
-MGAHub.lua
 MGABuffs.lua

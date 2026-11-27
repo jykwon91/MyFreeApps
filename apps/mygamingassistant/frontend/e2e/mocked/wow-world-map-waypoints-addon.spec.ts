@@ -22,8 +22,8 @@ test("the World Map page downloads the MGA Waypoints addon", async ({ page }) =>
   const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("waypoints-addon-download").click()]);
   expect(download.suggestedFilename()).toBe("MGAWaypoints.zip");
   const files = unzipSync(readFileSync(await download.path()));
-  expect(Object.keys(files)).toContain("MGAWaypoints/Data.lua");
-  expect(strFromU8(files["MGAWaypoints/MGAWaypoints.toc"])).toContain("## SavedVariables: MGAHubSettings, MGAWaypointsSettings");
+  expect(Object.keys(files)).toEqual(expect.arrayContaining(["MGAWaypoints/Data.lua", "MGAHub/MGAHub.toc", "MGAHub/Bindings.xml"]));
+  expect(strFromU8(files["MGAWaypoints/MGAWaypoints.toc"])).toContain("## Dependencies: MGAHub\n## SavedVariables: MGAWaypointsSettings\n");
   expect(strFromU8(files["MGAWaypoints/MGAWaypoints.lua"])).toContain('SLASH_MGAWAYPOINTS1 = "/mgawp"');
 });
 

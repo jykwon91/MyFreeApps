@@ -1,12 +1,8 @@
 -- MGA hub: the one minimap button, menu and settings window every MGA addon shares.
 --
--- SOURCE OF TRUTH. This file is copied, byte for byte, into every MGA addon folder
--- (addon/<Addon>/MGAHub.lua) and listed FIRST in each .toc, because the addons install
--- on their own and the hub has to work with any of them, with no extra addon to install.
--- A test fails when a copy differs: edit this file, then copy it over the others.
---
--- Whichever addon loads first defines the global MGAHub; a later copy only replaces it
--- when its VERSION is higher (keeping what was registered). Each addon then calls
+-- Its own addon (MGAHub), because a key binding may be declared by only one loaded addon:
+-- every other MGA addon lists `## Dependencies: MGAHub`, so the client loads this file first
+-- and each addon then calls
 --
 --   MGAHub.Register({
 --     name = "Loot",                      -- the menu heading and settings section title
@@ -21,21 +17,11 @@
 -- Button, Dropdown) so every section looks the same.
 --
 -- Saved: MGAHubSettings (angle = where the button sits on the minimap ring, hidden).
--- Every addon's .toc lists it, so it is saved whichever addons are installed.
 --
 -- Written for the WoW Forever client (Classic Era interface 16001). The key bindings
--- (Bindings.xml, in every addon folder) call MGAHub.OpenMenu and MGAHub.OpenSettings.
+-- (this addon's Bindings.xml) call MGAHub.OpenMenu and MGAHub.OpenSettings.
 
-local VERSION = 2
-
-local previous = _G.MGAHub
-if previous and previous.version >= VERSION then return end
-
-local Hub = { version = VERSION, addons = {} }
-if previous then
-  for _, spec in ipairs(previous.addons) do table.insert(Hub.addons, spec) end
-  if previous.events then previous.events:SetScript("OnEvent", nil) end
-end
+local Hub = { addons = {} }
 _G.MGAHub = Hub
 
 local TITLE = "MGA"
@@ -456,7 +442,6 @@ end
 
 -- Everything is built at login: by then every addon has loaded and registered.
 local events = CreateFrame("Frame")
-Hub.events = events
 events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function()
   settings()

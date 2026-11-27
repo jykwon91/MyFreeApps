@@ -1,5 +1,5 @@
-<!-- Key bindings for the MGA hub (MGAHub.lua). SOURCE OF TRUTH: copied byte for byte into every
-     MGA addon folder, like MGAHub.lua; the client loads a folder's Bindings.xml by itself. -->
+<!-- Key bindings for the MGA hub (MGAHub.lua). Only this addon declares them: the client loads every
+     installed addon's Bindings.xml, and a binding name declared twice is an error at load. -->
 <Bindings>
   <Binding name="MGA_MENU" header="MGA" category="MGA">
     if MGAHub then MGAHub.OpenMenu() end

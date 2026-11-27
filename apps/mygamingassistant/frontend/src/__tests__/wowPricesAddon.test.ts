@@ -2,7 +2,7 @@ import { loadDisenchantTables } from "@/games/wow-forever/lib/auctionHouse/loadD
 import { describe, expect, it } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGAPrices/MGAPrices.lua?raw";
-import hubLua from "../../addon/MGAPrices/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonToc from "../../addon/MGAPrices/MGAPrices.toc?raw";
 import emptyData from "../../addon/MGAPrices/Data.lua?raw";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
@@ -13,6 +13,7 @@ import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { DisenchantTables } from "@/games/wow-forever/types/auctionHouse/disenchantTables";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 
 const COLUMNS = ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"];
@@ -88,17 +89,21 @@ describe("the reload reminder", () => {
 });
 
 describe("the download", () => {
-  it("is the addon folder with today's prices in Data.lua", () => {
+  it("is the addon folder with today's prices in Data.lua, MGA Hub beside it", () => {
     const files = unzipSync(pricesAddonZip(HOUSES, NO_CRAFTING));
-    expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual(["MGAPrices/Bindings.xml", "MGAPrices/Data.lua", "MGAPrices/MGAHub.lua", "MGAPrices/MGAPrices.lua", "MGAPrices/MGAPrices.toc"]);
+    expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual(
+      ["MGAPrices/Data.lua", "MGAPrices/MGAPrices.lua", "MGAPrices/MGAPrices.toc", ...HUB_ZIP_PATHS.filter((name) => !name.endsWith("/"))].sort(),
+    );
     expect(strFromU8(files["MGAPrices/Data.lua"])).toBe(DATA);
     expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toBe(addonToc);
   });
 
-  it("loads every file named in the .toc, for the Forever client", () => {
+  it("loads every file named in the .toc, for the Forever client, after MGA Hub", () => {
     expect(addonToc).toMatch(/^## Interface: 16001$/m);
+    expect(addonToc).toMatch(/^## Dependencies: MGAHub$/m);
+    expect(addonToc).toMatch(/^## SavedVariables: MGAPricesSettings$/m);
     const listed = addonToc.split(/\r?\n/).filter((l) => l && !l.startsWith("#"));
-    expect(listed).toEqual(["MGAHub.lua", "Data.lua", "MGAPrices.lua"]);
+    expect(listed).toEqual(["Data.lua", "MGAPrices.lua"]);
   });
 });
 

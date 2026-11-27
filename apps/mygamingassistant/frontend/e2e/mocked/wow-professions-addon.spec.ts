@@ -22,8 +22,8 @@ test("the Professions page downloads the MGA Professions addon", async ({ page }
   const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("professions-addon-download").click()]);
   expect(download.suggestedFilename()).toBe("MGAProfessions.zip");
   const files = unzipSync(readFileSync(await download.path()));
-  expect(Object.keys(files)).toContain("MGAProfessions/Data.lua");
-  expect(strFromU8(files["MGAProfessions/MGAProfessions.toc"])).toContain("## SavedVariables: MGAHubSettings, MGAProfessionsSettings");
+  expect(Object.keys(files)).toEqual(expect.arrayContaining(["MGAProfessions/Data.lua", "MGAHub/MGAHub.toc", "MGAHub/Bindings.xml"]));
+  expect(strFromU8(files["MGAProfessions/MGAProfessions.toc"])).toContain("## Dependencies: MGAHub\n## SavedVariables: MGAProfessionsSettings\n");
   expect(strFromU8(files["MGAProfessions/MGAProfessions.lua"])).toContain('BINDING_NAME_MGA_PROFESSIONS = "Open MGA Professions"');
 });
 

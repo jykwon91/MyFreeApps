@@ -1,12 +1,13 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import coreLua from "../../addon/MGAPvPLog/Core.lua?raw";
-import hubLua from "../../addon/MGAPvPLog/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonLua from "../../addon/MGAPvPLog/MGAPvPLog.lua?raw";
 import addonToc from "../../addon/MGAPvPLog/MGAPvPLog.toc?raw";
 import trackLua from "../../addon/MGAPvPLog/Track.lua?raw";
 import windowLua from "../../addon/MGAPvPLog/Window.lua?raw";
 import { pvpLogAddonZip } from "@/games/wow-forever/lib/pvpLogAddon/pvpLogAddonZip";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_PVPLOG_STUBS } from "@/test/addonLua/wowPvPLogStubs.lua";
 
@@ -48,29 +49,29 @@ const code = (source: string): string =>
 describe("MGA PvP Log files", () => {
   it("loads from its toc on the Forever interface, with a per-character log", () => {
     expect(addonToc).toContain("## Interface: 16001");
-    expect(addonToc).toContain("## SavedVariables: MGAHubSettings");
+    expect(addonToc).toContain("## Dependencies: MGAHub");
+    expect(addonToc).not.toContain("## SavedVariables:");
     expect(addonToc).toContain("## SavedVariablesPerCharacter: MGAPvPLogDB");
-    expect(addonToc.trim().split(/\r?\n/).slice(-5)).toEqual(["MGAHub.lua", "Core.lua", "Track.lua", "Window.lua", "MGAPvPLog.lua"]);
+    expect(addonToc.trim().split(/\r?\n/).slice(-4)).toEqual(["Core.lua", "Track.lua", "Window.lua", "MGAPvPLog.lua"]);
   });
 
-  it("zips the addon inside its folder", () => {
+  it("zips the addon inside its folder, MGA Hub beside it", () => {
     const files = unzipSync(pvpLogAddonZip());
     expect(Object.keys(files).sort()).toEqual([
       "MGAPvPLog/",
-      "MGAPvPLog/Bindings.xml",
       "MGAPvPLog/Core.lua",
-      "MGAPvPLog/MGAHub.lua",
       "MGAPvPLog/MGAPvPLog.lua",
       "MGAPvPLog/MGAPvPLog.toc",
       "MGAPvPLog/Track.lua",
       "MGAPvPLog/Window.lua",
-    ]);
+      ...HUB_ZIP_PATHS,
+    ].sort());
     expect(strFromU8(files["MGAPvPLog/Core.lua"])).toBe(coreLua);
   });
 });
 
 describe("MGA PvP Log never touches the combat log", () => {
-  it("has no combat log event, function or flag in any file it ships", () => {
+  it("has no combat log event, function or flag in any file it ships, the MGA Hub beside it included", () => {
     for (const source of [hubLua, coreLua, trackLua, windowLua, addonLua]) {
       expect(code(source)).not.toMatch(/COMBAT_LOG|CombatLog|COMBATLOG/);
     }

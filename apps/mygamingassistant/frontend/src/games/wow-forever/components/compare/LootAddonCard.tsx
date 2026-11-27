@@ -28,12 +28,10 @@ export default function LootAddonCard() {
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon.</li>
           <li>
-            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have an{" "}
-            <code>AddOns\MGALoot</code> folder.
+            Unzip it into <code className="break-all">World of Warcraft\_forever_\Interface\AddOns</code>, so you have{" "}
+            <code>AddOns\MGALoot</code> and <code>AddOns\MGAHub</code> folders (MGA Hub is the minimap button and settings every MGA addon shares).
           </li>
-          <li>
-            Restart the game, or type <code>/reload</code>.
-          </li>
+          <li>Restart the game (a new addon folder needs it; <code>/reload</code> is not enough).</li>
           <li>
             If the spec it picks is wrong, set yours in the MGA settings (the round map button on your minimap, right-click).{" "}
             <code>/mgaloot check</code> and an item link shows the verdict for any item.

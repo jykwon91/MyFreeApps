@@ -1,9 +1,10 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGABuffs/MGABuffs.lua?raw";
-import hubLua from "../../addon/MGABuffs/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonToc from "../../addon/MGABuffs/MGABuffs.toc?raw";
 import { buffsAddonZip } from "@/games/wow-forever/lib/buffsAddon/buffsAddonZip";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_BUFF_STUBS } from "@/test/addonLua/wowBuffStubs.lua";
 
@@ -31,15 +32,17 @@ function run(setup: string, then = ""): string[] {
 const rows = (lines: string[]): string[] => lines.filter((l) => l.startsWith("row: ")).map((l) => l.slice(5));
 
 describe("MGA Buffs files", () => {
-  it("loads the addon from its toc, on the Forever interface", () => {
+  it("loads the addon from its toc, on the Forever interface, after MGA Hub", () => {
     expect(addonToc).toContain("## Interface: 16001");
-    expect(addonToc).toContain("## SavedVariables: MGAHubSettings, MGABuffsSettings");
-    expect(addonToc.trim().split(/\r?\n/).slice(-2)).toEqual(["MGAHub.lua", "MGABuffs.lua"]);
+    expect(addonToc).toContain("## Dependencies: MGAHub");
+    expect(addonToc).toContain("## SavedVariables: MGABuffsSettings");
+    expect(addonToc.trim().split(/\r?\n/).slice(-1)).toEqual(["MGABuffs.lua"]);
+    expect(addonToc).not.toContain("MGAHub.lua");
   });
 
-  it("zips the addon inside its folder", () => {
+  it("zips the addon inside its folder, MGA Hub beside it", () => {
     const files = unzipSync(buffsAddonZip());
-    expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/Bindings.xml", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc", "MGABuffs/MGAHub.lua"]);
+    expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc", ...HUB_ZIP_PATHS].sort());
     expect(strFromU8(files["MGABuffs/MGABuffs.lua"])).toBe(addonLua);
   });
 });

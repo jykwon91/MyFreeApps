@@ -1,16 +1,16 @@
 import { strFromU8, unzipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import addonBindings from "../../addon/MGAWaypoints/Bindings.xml?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonCore from "../../addon/MGAWaypoints/Core.lua?raw";
 import addonData from "../../addon/MGAWaypoints/Data.lua?raw";
 import addonDisplay from "../../addon/MGAWaypoints/Display.lua?raw";
-import addonHub from "../../addon/MGAWaypoints/MGAHub.lua?raw";
 import addonMain from "../../addon/MGAWaypoints/MGAWaypoints.lua?raw";
 import addonToc from "../../addon/MGAWaypoints/MGAWaypoints.toc?raw";
 import addonPicker from "../../addon/MGAWaypoints/Picker.lua?raw";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
 import { waypointsAddonDataLua } from "@/games/wow-forever/lib/waypointsAddon/waypointsAddonDataLua";
 import { waypointsAddonZip } from "@/games/wow-forever/lib/waypointsAddon/waypointsAddonZip";
+import { HUB_ZIP_PATHS } from "@/test/addonLua/hubZipPaths";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_WAYPOINT_STUBS } from "@/test/addonLua/wowWaypointStubs.lua";
 
@@ -27,11 +27,11 @@ function say(v) table.insert(out, tostring(v)) end
 function names(list) local n = {} for i, p in ipairs(list) do n[i] = p.name end return table.concat(n, "|") end
 `;
 
-/** Loads the addon (login included), runs `scenario`, and returns what it printed. */
+/** Loads MGA Hub, then the addon (login included), runs `scenario`, and returns what it printed. */
 function run(scenario: string): string[] {
   return runAddonLua(
     [
-      ["MGAHub.lua", addonHub],
+      ["MGAHub/MGAHub.lua", hubLua],
       ["Data.lua", addonData],
       ["Core.lua", addonCore],
       ["Display.lua", addonDisplay],
@@ -65,27 +65,26 @@ describe("MGA Waypoints files", () => {
     expect(kinds.slice(-1)).toEqual(["all placed"]);
   });
 
-  it("loads from its toc on the Forever interface, hub first", () => {
+  it("loads from its toc on the Forever interface, after MGA Hub", () => {
     expect(addonToc).toContain("## Interface: 16001");
-    expect(addonToc).toContain("## SavedVariables: MGAHubSettings, MGAWaypointsSettings");
-    expect(addonToc.trim().split(/\r?\n/).slice(-6)).toEqual(["MGAHub.lua", "Data.lua", "Core.lua", "Display.lua", "Picker.lua", "MGAWaypoints.lua"]);
+    expect(addonToc).toContain("## Dependencies: MGAHub");
+    expect(addonToc).toContain("## SavedVariables: MGAWaypointsSettings");
+    expect(addonToc.trim().split(/\r?\n/).slice(-5)).toEqual(["Data.lua", "Core.lua", "Display.lua", "Picker.lua", "MGAWaypoints.lua"]);
   });
 
-  it("zips the addon inside its folder", () => {
+  it("zips the addon inside its folder, MGA Hub beside it", () => {
     const files = unzipSync(waypointsAddonZip());
     expect(Object.keys(files).sort()).toEqual([
       "MGAWaypoints/",
-      "MGAWaypoints/Bindings.xml",
       "MGAWaypoints/Core.lua",
       "MGAWaypoints/Data.lua",
       "MGAWaypoints/Display.lua",
-      "MGAWaypoints/MGAHub.lua",
       "MGAWaypoints/MGAWaypoints.lua",
       "MGAWaypoints/MGAWaypoints.toc",
       "MGAWaypoints/Picker.lua",
-    ]);
+      ...HUB_ZIP_PATHS,
+    ].sort());
     expect(strFromU8(files["MGAWaypoints/Core.lua"])).toBe(addonCore);
-    expect(addonBindings).toContain("MGA_MENU");
   });
 });
 

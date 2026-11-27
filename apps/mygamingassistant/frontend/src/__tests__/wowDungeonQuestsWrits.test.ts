@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import addonLua from "../../addon/MGADungeonQuests/MGADungeonQuests.lua?raw";
-import hubLua from "../../addon/MGADungeonQuests/MGAHub.lua?raw";
+import hubLua from "../../addon/MGAHub/MGAHub.lua?raw";
 import addonData from "../../addon/MGADungeonQuests/Data.lua?raw";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DUNGEON_QUEST_STUBS } from "@/test/addonLua/wowDungeonQuestStubs.lua";
