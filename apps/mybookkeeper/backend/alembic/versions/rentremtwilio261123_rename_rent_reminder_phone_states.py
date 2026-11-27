@@ -16,7 +16,7 @@ The detail after ``phone_failed:`` is kept as it was, so history still says
 what the phone reported.
 
 Revision ID: rentremtwilio261123
-Revises: holdings261124
+Revises: perstransfer261125
 Create Date: 2026-11-23 00:00:00.000000
 """
 from collections.abc import Sequence
@@ -26,7 +26,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "rentremtwilio261123"
-down_revision: str | None = "holdings261124"
+down_revision: str | None = "perstransfer261125"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
