@@ -1,5 +1,5 @@
 -- MGA Explorer on the World Map (setting mapPins, on by default): the map shows where to go to discover.
---   * A zone map: a round orange marker on every area the zone still needs (setting areaBoxes, off by default, adds a
+--   * A zone map: an orange circle on a dark disc on every area the zone still needs (setting areaBoxes, off by default, adds a
 --     faint box over the patch of map the area covers). Hover names it; a click guides you there.
 --   * A continent map: a round badge on every zone with areas left, showing how many, at the middle of those areas.
 --     Hover names the zone; a click guides you to its nearest area.
@@ -8,10 +8,12 @@
 local M = MGAExplorer
 local W = MGAWaypoints
 
--- A round orange marker (the raid "circle" icon), big enough to spot among quest marks; Interface\COMMON\Indicator-Yellow
--- at 12 was too small to see in game. It grows on hover.
+-- The raid "circle" icon on a dark round backing: on its own the orange washes out on the yellow map.
+-- It grows on hover.
 local PIN_TEXTURE = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_2"
 local PIN_SIZE, PIN_HOVER_SIZE = 20, 26
+local PIN_BACK_ALPHA = 0.85
+local PIN_ICON_INSET = 3
 local BADGE_TEXTURE = "Interface\\Minimap\\UI-Minimap-Background"
 local BADGE_SIZE = 22
 -- Gold, the World Map's own colour for names; the box is faint so the map reads through it.
@@ -42,8 +44,13 @@ end
 local function newPin(i, canvas)
   local pin = onCanvas("Button", "MGAExplorerMapPin" .. i, canvas, LEVEL_PIN)
   pin:SetSize(PIN_SIZE, PIN_SIZE)
+  pin.back = pin:CreateTexture(nil, "BACKGROUND")
+  pin.back:SetAllPoints()
+  pin.back:SetTexture(BADGE_TEXTURE)
+  pin.back:SetAlpha(PIN_BACK_ALPHA)
   pin.texture = pin:CreateTexture(nil, "OVERLAY")
-  pin.texture:SetAllPoints()
+  pin.texture:SetPoint("TOPLEFT", pin, "TOPLEFT", PIN_ICON_INSET, -PIN_ICON_INSET)
+  pin.texture:SetPoint("BOTTOMRIGHT", pin, "BOTTOMRIGHT", -PIN_ICON_INSET, PIN_ICON_INSET)
   pin.texture:SetTexture(PIN_TEXTURE)
   pin:RegisterForClicks("LeftButtonUp")
   pin:SetScript("OnEnter", function(self)
@@ -98,9 +105,19 @@ local function newBadge(i, canvas)
   return badge
 end
 
+-- The map shrinks its canvas to fit the window (often to about half), so a pin sized in canvas units drew
+-- at half size. Like Blizzard's own map pins, undo the canvas scale so pins keep their size on screen; the
+-- offset is then in the pin's units, so it is multiplied back by the canvas scale.
+local function canvasScale()
+  local scale = WorldMapFrame.GetCanvasScale and WorldMapFrame:GetCanvasScale()
+  return (type(scale) == "number" and scale > 0) and scale or 1
+end
+
 local function place(frame, canvas, x, y)
+  local scale = canvasScale()
+  frame:SetScale(1 / scale)
   frame:ClearAllPoints()
-  frame:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth(), -y * canvas:GetHeight())
+  frame:SetPoint("CENTER", canvas, "TOPLEFT", x * canvas:GetWidth() * scale, -y * canvas:GetHeight() * scale)
   frame:Show()
 end
 
@@ -151,4 +168,6 @@ function M.HookWorldMap()
   if not hooksecurefunc then return end
   if WorldMapFrame.OnMapChanged then hooksecurefunc(WorldMapFrame, "OnMapChanged", M.DrawMapPins)
   elseif WorldMapFrame.SetMapID then hooksecurefunc(WorldMapFrame, "SetMapID", M.DrawMapPins) end
+  -- Zooming changes the canvas scale: redraw so the pins keep their size.
+  if WorldMapFrame.OnCanvasScaleChanged then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", M.DrawMapPins) end
 end

@@ -438,6 +438,19 @@ describe("MGA Explorer on the World Map", () => {
     expect(withoutChat(lines)).toEqual(["Agamand Mills", "explore", "11", "0", "11", "0"]);
   });
 
+  // The map shrinks its canvas to fit the window; pins sized in canvas units drew at half size in game.
+  it("undoes the canvas scale so pins keep their size on screen, and still land on their area", () => {
+    const lines = run(`${MAP_HELPERS}
+      function WorldMapFrame:GetCanvasScale() return 0.5 end
+      M.Refresh()
+      showMap(${TIRISFAL})
+      local pin = MGAExplorerMapPin1
+      say(string.format("%g", pin.scale))
+      say(string.format("%.3f %.3f", pin.point[4] / (1000 * 0.5) - pin.area.x / 100, -pin.point[5] / (500 * 0.5) - pin.area.y / 100))
+    `);
+    expect(withoutChat(lines)).toEqual(["2", "0.000 0.000"]);
+  });
+
   it("hovering a pin grows it and names the area; leaving shrinks it back", () => {
     const lines = run(`${MAP_HELPERS}
       M.Refresh()

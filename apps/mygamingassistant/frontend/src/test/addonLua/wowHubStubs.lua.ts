@@ -44,6 +44,7 @@ function methods:SetSize(w, h)
   self.width, self.height = w, h
 end
 function methods:SetWidth(w) self.width = w end
+function methods:SetScale(scale) self.scale = scale end
 function methods:GetWidth() return self.width or 140 end
 function methods:GetHeight() return self.height or 100 end
 function methods:GetCenter() return self.cx or 500, self.cy or 400 end
