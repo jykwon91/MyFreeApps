@@ -33,6 +33,9 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="delete-account" options={{ title: "Delete account", headerBackTitle: "Settings" }} />
             <Stack.Screen name="sign-in" options={{ presentation: "modal", title: "" }} />
+            {/* Opened from sign-in, so they push inside its modal and go back to it. */}
+            <Stack.Screen name="register" options={{ title: "", headerBackTitle: "Sign in" }} />
+            <Stack.Screen name="forgot-password" options={{ title: "", headerBackTitle: "Sign in" }} />
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
           </Stack>
           <AccountNotice />

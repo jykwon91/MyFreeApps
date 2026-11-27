@@ -9,12 +9,16 @@ import SecurityRoute from "../app/security/index";
 import SecurityTurnOnRoute from "../app/security/turn-on";
 import NotFoundRoute from "../app/+not-found";
 import SignInRoute from "../app/sign-in";
+import RegisterRoute from "../app/register";
+import ForgotPasswordRoute from "../app/forgot-password";
 
 /** The app's layouts and its account screens, as expo-router would find them under app/. The recipe and cook screens have tests of their own. */
 export const APP_ROUTES = {
   _layout: RootLayout,
   "+not-found": NotFoundRoute,
   "sign-in": SignInRoute,
+  register: RegisterRoute,
+  "forgot-password": ForgotPasswordRoute,
   "delete-account": DeleteAccountRoute,
   "security/index": SecurityRoute,
   "security/turn-on": SecurityTurnOnRoute,

@@ -7,5 +7,5 @@
     "noEmit": true,
     "types": ["jest"]
   },
-  "include": ["src", "test-support"]
+  "include": ["src", "test-support", "captcha.ts"]
 }

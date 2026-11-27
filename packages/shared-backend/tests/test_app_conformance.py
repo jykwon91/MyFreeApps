@@ -121,6 +121,12 @@ def _mobile_manifests() -> list[Path]:
     ]
 
 
+def _optional_mobile_peers() -> set[str]:
+    """The peers of @platform/mobile its package.json marks optional."""
+    meta = json.loads(_read("packages", "shared-mobile", "package.json")).get("peerDependenciesMeta", {})
+    return {name for name, flags in meta.items() if flags.get("optional")}
+
+
 def _mobile_react_native_versions() -> set[str]:
     versions: set[str] = set()
     for manifest in _mobile_manifests():
@@ -1142,8 +1148,14 @@ class TestReactVersionAlignment:
     def test_mobile_manifest_declares_every_platform_mobile_peer(self, manifest: Path) -> None:
         """Expo autolinks native modules only from the app's own dependencies, so a peer
         of @platform/mobile that an app doesn't list is missing at launch even though
-        the shared barrel imports it. Every app and the scaffold must list all of them."""
-        peers = json.loads(_read("packages", "shared-mobile", "package.json"))["peerDependencies"]
+        the shared barrel imports it. Every app and the scaffold must list all of them,
+        except the optional ones, which only a separate entry imports (see below)."""
+        optional = _optional_mobile_peers()
+        peers = {
+            name: version
+            for name, version in json.loads(_read("packages", "shared-mobile", "package.json"))["peerDependencies"].items()
+            if name not in optional
+        }
         data = json.loads(manifest.read_text(encoding="utf-8"))
         declared = data.get("dependencies", {})
         rel = manifest.relative_to(_REPO_ROOT).as_posix()
@@ -1194,6 +1206,87 @@ class TestReactVersionAlignment:
                     f"{rel} declares react-dom {section['react-dom']!r}; it must be exactly "
                     f"{root['overrides']['react-dom']}, the root override."
                 )
+
+
+class TestOptionalMobilePeersStayOffTheBarrel:
+    """An optional peer of @platform/mobile (react-native-webview) is a native module that
+    breaks an app at launch when imported without it. So only a separate entry, such as
+    @platform/mobile/captcha, may import it, never anything the main entry reaches; and an
+    app that imports such an entry has to list the peer itself."""
+
+    _SHARED = _REPO_ROOT / "packages" / "shared-mobile"
+    _RELATIVE_IMPORT = re.compile(r"""\bfrom\s+["'](\.{1,2}/[^"']+)["']""")
+    _ENTRIES = {"@platform/mobile/captcha": "captcha.ts"}
+
+    def _resolve(self, importer: Path, spec: str) -> Path | None:
+        base = (importer.parent / spec).resolve()
+        for candidate in (base.with_name(base.name + ".ts"), base.with_name(base.name + ".tsx"), base / "index.ts"):
+            if candidate.is_file():
+                return candidate
+        return None
+
+    def _reached_from(self, entry: Path) -> set[Path]:
+        reached: set[Path] = set()
+        pending = [entry]
+        while pending:
+            path = pending.pop()
+            if path in reached:
+                continue
+            reached.add(path)
+            for spec in self._RELATIVE_IMPORT.findall(path.read_text(encoding="utf-8")):
+                target = self._resolve(path, spec)
+                if target is not None:
+                    pending.append(target)
+        return reached
+
+    def test_there_are_optional_peers_to_check(self) -> None:
+        assert _optional_mobile_peers(), "No optional peers, so the checks below would pass on nothing."
+
+    @pytest.mark.parametrize("peer", sorted(_optional_mobile_peers()))
+    def test_main_entry_never_reaches_an_optional_peer(self, peer: str) -> None:
+        reached = self._reached_from(self._SHARED / "src" / "index.ts")
+        importing = re.compile(rf"""\bfrom\s+["']{re.escape(peer)}(?:/[^"']*)?["']""")
+        offenders = sorted(
+            path.relative_to(_REPO_ROOT).as_posix()
+            for path in reached
+            if importing.search(path.read_text(encoding="utf-8"))
+        )
+        assert not offenders, (
+            f"packages/shared-mobile/src/index.ts reaches {peer}, an optional peer, through {offenders}. "
+            f"Export those from a separate entry (like captcha.ts) instead, or every app needs {peer}."
+        )
+
+    @pytest.mark.parametrize("entry", sorted(_ENTRIES))
+    def test_an_entry_reaches_the_optional_peers_it_declares(self, entry: str) -> None:
+        """Proves the walk above follows imports: the captcha entry must reach the WebView."""
+        reached = self._reached_from(self._SHARED / self._ENTRIES[entry])
+        assert any("react-native-webview" in path.read_text(encoding="utf-8") for path in reached)
+
+    @pytest.mark.parametrize(
+        "manifest", _mobile_manifests(), ids=lambda path: path.relative_to(_REPO_ROOT).as_posix()
+    )
+    def test_app_using_a_separate_entry_lists_its_peers(self, manifest: Path) -> None:
+        if manifest.parent.name == "shared-mobile":
+            pytest.skip("The package itself lists them as peers.")
+        root = manifest.parent
+        sources = [
+            path
+            for folder in ("app", "src")
+            if (root / folder).is_dir()
+            for path in (root / folder).rglob("*.ts*")
+        ]
+        uses_entry = any(
+            entry in path.read_text(encoding="utf-8") for path in sources for entry in self._ENTRIES
+        )
+        if not uses_entry:
+            return
+        peers = json.loads(_read("packages", "shared-mobile", "package.json"))["peerDependencies"]
+        declared = json.loads(manifest.read_text(encoding="utf-8")).get("dependencies", {})
+        missing = {name: peers[name] for name in _optional_mobile_peers() if declared.get(name) != peers[name]}
+        assert not missing, (
+            f"{manifest.relative_to(_REPO_ROOT).as_posix()} imports a @platform/mobile entry that needs "
+            f"{missing}; add them to dependencies at those versions and rebuild the development build."
+        )
 
 
 class TestMobileRootTracksTheKeyboard:
