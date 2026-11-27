@@ -5,6 +5,7 @@ import FinancialAccountTotalTile from "@/app/features/financial-accounts/Financi
 import EmptyState from "@/shared/components/ui/EmptyState";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { CASH_FLOW_MESSAGES as MSG } from "@/shared/lib/cash-flow-messages";
+import CashBasisNote from "./CashBasisNote";
 import CashFlowChart from "./CashFlowChart";
 import CashFlowSkeleton from "./CashFlowSkeleton";
 
@@ -26,6 +27,7 @@ export default function CashFlowBody({ data, isLoading, isError, isRetrying, onR
 
   return (
     <div className="space-y-6">
+      <CashBasisNote bankHistoryStart={data.bank_history_start} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="cash-flow-totals">
         <FinancialAccountTotalTile label={MSG.moneyIn} value={money(totals.money_in_cents)} testId="cash-flow-total-in" />
         <FinancialAccountTotalTile label={MSG.moneyOut} value={money(totals.money_out_cents)} testId="cash-flow-total-out" />

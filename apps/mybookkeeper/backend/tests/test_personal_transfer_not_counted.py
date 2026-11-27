@@ -67,7 +67,7 @@ async def test_cash_flow(db: AsyncSession, ids) -> None:
     await _pair(db, **ids, transaction_type="income", category="rental_revenue")
     totals = await cash_flow_repo.totals_by_month(
         db, organization_id=ids["organization_id"], start=_START, end=_END,
-        transaction_scope=None, account_id=None,
+        transaction_scope=None, account_id=None, bank_history_start=None,
     )
     assert [Decimal(str(t[-1])) for t in totals] == [Decimal("100.00")]
 
@@ -116,5 +116,6 @@ async def test_monthly_expenses(db: AsyncSession, ids) -> None:
     counted, _ = await _pair(db, **ids, transaction_type="expense", category="maintenance")
     rows = await monthly_expense_repo.list_outflows(
         db, organization_id=ids["organization_id"], start=_START, end=_END, transaction_scope=None,
+        bank_history_start=None,
     )
     assert [r.id for r in rows] == [counted.id]

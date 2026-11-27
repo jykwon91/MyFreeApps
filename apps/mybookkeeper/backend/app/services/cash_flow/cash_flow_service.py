@@ -1,7 +1,7 @@
-"""Cash flow: money in vs out per month over a range.
+"""Cash flow: money in vs out per month over a range, on a cash basis.
 
-Orchestration only — the query is in ``cash_flow_repo``, the counting rules
-in ``cash_flow_months``.
+Orchestration only — the query is in ``cash_flow_repo``, which rows count in
+``cash_basis``, the per-month sums in ``cash_flow_months``.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import uuid
 from app.core.budget_constants import BUDGET_CURRENCY, CASH_FLOW_SCOPES, RANGE_MONTHS, SCOPE_ALL
 from app.core.month_text import month_end
 from app.db.session import unit_of_work
-from app.repositories.cash_flow import cash_flow_repo
+from app.repositories.cash_flow import cash_basis, cash_flow_repo
 from app.schemas.cash_flow.cash_flow_response import CashFlowResponse
 from app.services.cash_flow import cash_flow_months
 
@@ -38,6 +38,7 @@ async def get_cash_flow(
         raise InvalidCashFlowScopeError(scope)
     months = cash_flow_months.range_months(range_key, today)
     async with unit_of_work() as db:
+        history_start = await cash_basis.bank_history_start(db, organization_id=organization_id)
         totals = await cash_flow_repo.totals_by_month(
             db,
             organization_id=organization_id,
@@ -45,6 +46,7 @@ async def get_cash_flow(
             end=month_end(months[-1]),
             transaction_scope=None if scope == SCOPE_ALL else scope,
             account_id=account_id,
+            bank_history_start=history_start,
         )
     rows, sums = cash_flow_months.build_months(months, totals)
     return CashFlowResponse(
@@ -52,6 +54,7 @@ async def get_cash_flow(
         scope=scope,
         account_id=account_id,
         currency=BUDGET_CURRENCY,
+        bank_history_start=history_start,
         months=rows,
         totals=sums,
     )

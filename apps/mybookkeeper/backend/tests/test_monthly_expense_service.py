@@ -4,15 +4,16 @@ The ledger is shaped like a real one with every bank connected: card
 purchases, a mortgage the bank calls a loan payment, two mortgages paid by
 plain bank transfers the bank can't pair with the loan, a car loan, a card
 payment with both its sides, moves between your own accounts, money sent to
-yourself and to someone else, a lender's interest on the loan account, and an
-emailed receipt the bank has also sent.
+yourself and to someone else, a lender's interest on the loan account, and
+emailed receipts with no account.
 
 Pinned: only the full months before this one count, averaged over every month
 in the range; loan and mortgage payments count under their own headings; card
 payments, own-account moves, money sent to yourself and loan interest never
-count; an emailed row the bank also sent counts once, while two different
-payments of the same amount both count; deleted and duplicate rows never
-count; the scope filter narrows; another workspace's rows never show.
+count; once the bank history covers a day, a row with no account doesn't
+count (the bank's row is that money) while a hand-typed row filed on an
+account does; deleted and duplicate rows never count; the scope filter
+narrows; another workspace's rows never show.
 """
 from __future__ import annotations
 
@@ -128,7 +129,8 @@ async def _ledger(db: AsyncSession, org: Organization, user: User) -> None:
     # Spending.
     await book.txn("200.00", 3, account_id=card.id, spending_category_id=groceries.id, external_category="FOOD_AND_DRINK")
     await book.txn("50.00", 4, account_id=card.id, external_category="FOOD_AND_DRINK")
-    await book.txn("150.00", 6, bank=False, category="maintenance", transaction_scope="rental")
+    # Typed in by hand, but filed on an account: it counts.
+    await book.txn("150.00", 6, bank=False, category="maintenance", transaction_scope="rental", **on_checking)
     await book.txn(
         "120.00", 7, vendor="Zelle payment to Maria Lopez", description="Zelle payment to Maria Lopez",
         external_category="TRANSFER_OUT", **on_checking,
@@ -153,17 +155,15 @@ async def _ledger(db: AsyncSession, org: Organization, user: User) -> None:
     await book.txn("800.00", 15, account_id=tdecu_loan.id, external_category="LOAN_PAYMENTS")
     await book.txn("9.00", 16, deleted_at=_dt.datetime(2026, 10, 20, tzinfo=_dt.timezone.utc), **on_checking)
     await book.txn("8.00", 16, status="duplicate", **on_checking)
-    # The same payment from an email and from the bank counts once.
+    # The bank history covers these days, so an emailed row with no account
+    # never counts: the bank's row is the money.
     await book.txn("60.00", 12, bank=False)
     await book.txn("60.00", 14, account_id=card.id, external_category="FOOD_AND_DRINK")
-    # Two different $40 payments the bank sent, one also emailed: both count, once each.
     await book.txn("40.00", 20, bank=False)
     await book.txn("40.00", 20, **on_checking)
     await book.txn("40.00", 21, **on_checking)
-    # Two different $25 emailed payments, only one sent by the bank yet: both count.
     await book.txn("25.00", 5, bank=False)
-    await book.txn("25.00", 6, bank=False)
-    await book.txn("25.00", 6, **on_checking)
+    await book.txn("75.00", 6, bank=False, category="maintenance")
     # Outside the six full months: this month, and April.
     await book.txn("7000.00", 2, month=11, **on_checking)
     await book.txn("7000.00", 15, month=4, **on_checking)
@@ -184,21 +184,22 @@ async def test_averages_every_account_over_the_full_months(
         )
 
     assert [m.month for m in result.months] == ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"]
-    assert [m.total_cents for m in result.months] == [0, 0, 0, 0, 0, 10_442_15]
-    assert result.total_cents == 10_442_15
-    assert result.average_cents == 1_740_36
+    assert [m.total_cents for m in result.months] == [0, 0, 0, 0, 0, 10_392_15]
+    assert result.total_cents == 10_392_15
+    assert result.average_cents == 1_732_03
+    assert result.bank_history_start == _dt.date(2026, 4, 15)
     assert [(c.label, c.total_cents) for c in result.categories] == [
         ("Mortgage", 9_082_15),
         ("Car & other loans", 650_00),
         ("Groceries", 200_00),
         ("Repairs & maintenance", 150_00),
-        ("Other", 130_00),
         ("Money sent to people", 120_00),
         ("Food & dining", 110_00),
+        ("Other", 80_00),
     ]
     mortgage = result.categories[0]
     assert mortgage.average_cents == 1_513_69
-    assert mortgage.share_percent == 87.0
+    assert mortgage.share_percent == 87.4
 
 
 async def test_a_headings_payments_are_exactly_the_ones_it_counts(
@@ -228,7 +229,7 @@ async def test_a_headings_payments_are_exactly_the_ones_it_counts(
     assert [(t.payee, t.account_name, t.account_institution, t.account_mask) for t in sent] == [
         ("Maria Lopez", "TDECU Checking", "TDECU", "4821"),
     ]
-    # The emailed copy of the $60 receipt is not listed beside the bank's.
+    # The emailed $60 receipt is not listed beside the bank's.
     assert [t.amount_cents for t in details["Food & dining"].transactions] == [60_00, 50_00]
     assert [t.account_name for t in details["Food & dining"].transactions] == ["Chase Sapphire", "Chase Sapphire"]
 

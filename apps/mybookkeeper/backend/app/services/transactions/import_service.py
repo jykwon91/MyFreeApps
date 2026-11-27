@@ -1,6 +1,7 @@
 """Bank CSV import business logic."""
 import uuid
 
+from app.core.bank_feed_sources import BANK_CSV_EXTERNAL_SOURCE
 from app.core.context import RequestContext
 from app.db.session import unit_of_work
 from app.repositories.transactions import transaction_repo
@@ -79,7 +80,7 @@ async def import_bank_csv_file(
             },
         )
         existing_ids = await transaction_repo.get_existing_external_ids(
-            db, ctx.organization_id, "bank_csv", external_ids,
+            db, ctx.organization_id, BANK_CSV_EXTERNAL_SOURCE, external_ids,
         )
 
         for txn, keys in zip(parsed, row_keys):

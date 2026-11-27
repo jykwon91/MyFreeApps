@@ -1,6 +1,7 @@
 import { LoadingRegion, Skeleton } from "@platform/ui";
 import { MONTHLY_EXPENSE_RANGES } from "@mybookkeeper/api-client/constants/monthlyExpenses";
 import type { MonthlyExpenseRange } from "@mybookkeeper/api-client/types/monthly-expenses/monthly-expense-range";
+import CashBasisNoteSkeleton from "@/app/features/cash-flow/CashBasisNoteSkeleton";
 import { MONTHLY_EXPENSES_MESSAGES as MSG } from "@/shared/lib/monthly-expenses-messages";
 import { MONTHLY_EXPENSE_SKELETON_CATEGORIES } from "@/shared/lib/monthly-expenses-pages";
 
@@ -10,11 +11,12 @@ export interface MonthlyExpensesSkeletonProps {
   range: MonthlyExpenseRange;
 }
 
-/** Same shape as the loaded view: two totals, then the breakdown beside one row per month. */
+/** Same shape as the loaded view: what it counts, two totals, then the breakdown beside one row per month. */
 export default function MonthlyExpensesSkeleton({ range }: MonthlyExpensesSkeletonProps) {
   const monthCount = MONTHLY_EXPENSE_RANGES.find((option) => option.key === range)?.months ?? 0;
   return (
     <LoadingRegion label={MSG.loading} className="space-y-6" data-testid="monthly-expenses-skeleton">
+      <CashBasisNoteSkeleton />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {Array.from({ length: TOTAL_TILES }, (_, i) => (
           <div key={i} className="border rounded-lg px-4 py-3 space-y-2" data-testid="monthly-expenses-skeleton-tile">
