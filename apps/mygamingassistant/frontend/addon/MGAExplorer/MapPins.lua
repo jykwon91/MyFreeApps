@@ -8,9 +8,11 @@
 local M = MGAExplorer
 local W = MGAWaypoints
 
-local PIN_TEXTURE = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3"
-local PIN_SIZE = 16
-local BADGE_SIZE = 26
+-- A small gold dot, the World Map's colour for names, so the pins read as part of the map; it grows on hover.
+local PIN_TEXTURE = "Interface\\COMMON\\Indicator-Yellow"
+local PIN_SIZE, PIN_HOVER_SIZE = 12, 16
+local BADGE_TEXTURE = "Interface\\Minimap\\UI-Minimap-Background"
+local BADGE_SIZE = 22
 -- Gold, the World Map's own colour for names; the box is faint so the map reads through it.
 local BOX_R, BOX_G, BOX_B, BOX_FILL_ALPHA, BOX_EDGE_ALPHA = 1, 0.82, 0, 0.10, 0.55
 local BADGE_ALPHA = 0.8
