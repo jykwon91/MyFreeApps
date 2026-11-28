@@ -33,6 +33,10 @@ beforeEach(() => {
   webViewMounts.count = 0;
 });
 
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe("TurnstileChallenge", () => {
   it("shows nothing without a site key, as in development and tests", async () => {
     await renderChallenge("");
@@ -80,6 +84,7 @@ describe("TurnstileChallenge", () => {
 
   it("explains a widget that couldn't load, and tries again", async () => {
     const { onExpire } = await renderChallenge();
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
     await postFromChallenge({ type: "error", code: "script_load_failed" });
     expect(screen.getByText(TURNSTILE_COPY.failed, SHOWN)).toBeTruthy();
     expect(onExpire).toHaveBeenCalledTimes(1);
@@ -88,6 +93,58 @@ describe("TurnstileChallenge", () => {
     expect(webViewMounts.count).toBe(2);
     await passChallenge("token-2");
     expect(screen.queryByText(TURNSTILE_COPY.failed, SHOWN)).toBeNull();
+  });
+
+  it("lets the widget get past a failed automatic check, as it shows its checkbox and tries again", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { onExpire, onToken } = await renderChallenge();
+    await postFromChallenge({ type: "ready" });
+    await postFromChallenge({ type: "error", code: "600010" });
+    expect(screen.queryByText(TURNSTILE_COPY.failed, SHOWN)).toBeNull();
+    expect(screen.queryByRole("button", { name: TURNSTILE_COPY.retry })).toBeNull();
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("Turnstile error 600010");
+    await passChallenge("token-after-retry");
+    expect(onToken).toHaveBeenCalledWith("token-after-retry");
+    expect(webViewMounts.count).toBe(1);
+  });
+
+  it("drops a token the widget had already given when its check then fails, keeping the widget", async () => {
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { onExpire } = await renderChallenge();
+    await passChallenge("token-1");
+    expect(onExpire).not.toHaveBeenCalled();
+    await postFromChallenge({ type: "error", code: "300030" });
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(TURNSTILE_COPY.failed, SHOWN)).toBeNull();
+    expect(webViewMounts.count).toBe(1);
+  });
+
+  it("explains a frame that couldn't load, as nothing would show, and offers a retry", async () => {
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    await renderChallenge();
+    await postFromChallenge({ type: "ready" });
+    await postFromChallenge({ type: "error", code: "200500" });
+    expect(screen.getByText(TURNSTILE_COPY.failed, SHOWN)).toBeTruthy();
+    expect(screen.getByRole("button", { name: TURNSTILE_COPY.retry })).toBeTruthy();
+  });
+
+  it("asks to fix the phone's clock when Cloudflare refuses it, and tries again", async () => {
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    await renderChallenge();
+    await postFromChallenge({ type: "error", code: "200100" });
+    expect(screen.getByText(TURNSTILE_COPY.clockWrong, SHOWN)).toBeTruthy();
+    expect(screen.queryByText(TURNSTILE_COPY.failed, SHOWN)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: TURNSTILE_COPY.retry }));
+    expect(webViewMounts.count).toBe(2);
+  });
+
+  it("explains an error the widget can't get past, such as an unauthorized hostname, and logs its code", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    await renderChallenge();
+    await postFromChallenge({ type: "error", code: "110200" });
+    expect(screen.getByText(TURNSTILE_COPY.failed, SHOWN)).toBeTruthy();
+    expect(warn).toHaveBeenCalledWith("Turnstile error 110200");
   });
 
   it("treats a page that couldn't load as a failed widget", async () => {

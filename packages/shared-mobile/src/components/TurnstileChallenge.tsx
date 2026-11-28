@@ -2,12 +2,13 @@ import { useCallback, useImperativeHandle, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import WebView, { type WebViewMessageEvent } from "react-native-webview";
 import type { ShouldStartLoadRequest, WebViewOpenWindowEvent } from "react-native-webview/lib/WebViewTypes";
-import { TURNSTILE_COPY, TURNSTILE_FRAME_HEIGHT, TURNSTILE_FRAME_WIDTH } from "../constants/turnstile";
+import { TURNSTILE_CLOCK_ERROR_CODE, TURNSTILE_COPY, TURNSTILE_FRAME_HEIGHT, TURNSTILE_FRAME_WIDTH } from "../constants/turnstile";
 import { useOpenLink } from "../hooks/useOpenLink";
 import { useTheme } from "../theme/useTheme";
 import type { TurnstileChallengeProps } from "../types/TurnstileChallengeProps";
 import type { TurnstileStatus } from "../types/TurnstileStatus";
 import { isHttpsUrl } from "../utils/isHttpsUrl";
+import { isSelfRetryingTurnstileError } from "../utils/isSelfRetryingTurnstileError";
 import { parseTurnstileMessage } from "../utils/parseTurnstileMessage";
 import { turnstileHtml } from "../utils/turnstileHtml";
 import { turnstileNavigation } from "../utils/turnstileNavigation";
@@ -57,7 +58,13 @@ export default function TurnstileChallenge({ siteKey, baseUrl, onToken, onExpire
       onToken(message.token);
     }
     if (message.type === "expired") onExpire();
-    if (message.type === "error") lose("failed");
+    if (message.type === "error") {
+      // The code is the only clue to why a check failed; Cloudflare documents each one.
+      console.warn(`Turnstile error ${message.code}`);
+      // The widget is still there and tries again, so only any earlier token is gone.
+      if (isSelfRetryingTurnstileError(message.code)) onExpire();
+      else lose(message.code === TURNSTILE_CLOCK_ERROR_CODE ? "clockWrong" : "failed");
+    }
   }
 
   function allowLoad({ url, isTopFrame }: ShouldStartLoadRequest): boolean {
@@ -111,9 +118,9 @@ export default function TurnstileChallenge({ siteKey, baseUrl, onToken, onExpire
           </LoadingRegion>
         ) : null}
       </View>
-      {status === "failed" ? (
+      {status === "failed" || status === "clockWrong" ? (
         <>
-          <FieldError message={TURNSTILE_COPY.failed} name={TURNSTILE_COPY.label} />
+          <FieldError message={TURNSTILE_COPY[status]} name={TURNSTILE_COPY.label} />
           <LoadingButton onPress={restart} variant="secondary">
             {TURNSTILE_COPY.retry}
           </LoadingButton>
