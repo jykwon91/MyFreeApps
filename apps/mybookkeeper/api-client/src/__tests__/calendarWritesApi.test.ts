@@ -77,7 +77,7 @@ describe("calendarApi writes and review queue", () => {
   });
 
   it("dismisses a queue item", async () => {
-    await newStore().dispatch(calendarApi.endpoints.dismissQueueItem.initiate("q1"));
+    await newStore().dispatch(calendarApi.endpoints.dismissReviewQueueItem.initiate("q1"));
     expect(seen[0]).toMatchObject({ method: "delete", url: "/calendar/review-queue/q1" });
   });
 });

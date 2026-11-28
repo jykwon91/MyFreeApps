@@ -52,7 +52,7 @@ export const integrationsApi = baseApi.enhanceEndpoints({
       query: () => ({ url: "/integrations/gmail/extract", method: "POST" }),
       invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
-    dismissQueueItem: builder.mutation<void, string>({
+    dismissEmailQueueItem: builder.mutation<void, string>({
       query: (id) => ({ url: `/integrations/gmail/queue/${id}`, method: "DELETE" }),
       invalidatesTags: ["Integration"],
     }),
@@ -81,7 +81,7 @@ export const {
   useCancelGmailSyncMutation,
   useGetEmailQueueQuery,
   useExtractAllMutation,
-  useDismissQueueItemMutation,
+  useDismissEmailQueueItemMutation,
   useRetryQueueItemMutation,
   useRetryAllFailedMutation,
   useUpdateGmailLabelMutation,

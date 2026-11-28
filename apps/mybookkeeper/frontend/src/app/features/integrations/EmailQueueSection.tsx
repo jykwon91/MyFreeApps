@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   useGetEmailQueueQuery,
   useExtractAllMutation,
-  useDismissQueueItemMutation,
+  useDismissEmailQueueItemMutation,
   useRetryQueueItemMutation,
   useRetryAllFailedMutation,
 } from "@mybookkeeper/api-client/store/integrationsApi";
@@ -22,7 +22,7 @@ export default function EmailQueueSection() {
     POLLING_OPTIONS,
   );
   const [extractAll] = useExtractAllMutation();
-  const [dismissItem] = useDismissQueueItemMutation();
+  const [dismissItem] = useDismissEmailQueueItemMutation();
   const [retryItem] = useRetryQueueItemMutation();
   const [retryAllFailed, { isLoading: isRetrying }] =
     useRetryAllFailedMutation();

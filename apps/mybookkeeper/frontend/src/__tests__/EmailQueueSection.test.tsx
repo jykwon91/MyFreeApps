@@ -17,7 +17,7 @@ const mockRetryAllFailed = makeMutationFn();
 vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetEmailQueueQuery: vi.fn(),
   useExtractAllMutation: vi.fn(),
-  useDismissQueueItemMutation: vi.fn(),
+  useDismissEmailQueueItemMutation: vi.fn(),
   useRetryQueueItemMutation: vi.fn(),
   useRetryAllFailedMutation: vi.fn(),
 }));
@@ -25,7 +25,7 @@ vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
 import {
   useGetEmailQueueQuery,
   useExtractAllMutation,
-  useDismissQueueItemMutation,
+  useDismissEmailQueueItemMutation,
   useRetryQueueItemMutation,
   useRetryAllFailedMutation,
 } from "@mybookkeeper/api-client/store/integrationsApi";
@@ -57,10 +57,10 @@ function setupMocks(
     { isLoading: opts.isExtracting ?? false },
   ] as unknown as ReturnType<typeof useExtractAllMutation>);
 
-  vi.mocked(useDismissQueueItemMutation).mockReturnValue([
+  vi.mocked(useDismissEmailQueueItemMutation).mockReturnValue([
     mockDismissItem,
     { isLoading: false },
-  ] as unknown as ReturnType<typeof useDismissQueueItemMutation>);
+  ] as unknown as ReturnType<typeof useDismissEmailQueueItemMutation>);
 
   vi.mocked(useRetryQueueItemMutation).mockReturnValue([
     mockRetryItem,

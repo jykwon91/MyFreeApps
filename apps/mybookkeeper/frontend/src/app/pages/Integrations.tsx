@@ -1,6 +1,6 @@
 import { formatCount } from "@/shared/utils/count";
 import { useCallback, useId, useMemo, useState } from "react";
-import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
+import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissEmailQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { timeSince } from "@platform/core/utils/timeSince";
@@ -39,7 +39,7 @@ export default function Integrations() {
   // useGmailSyncWatcher() in Layout, so it keeps working after you navigate away.
 
   const [extractAll] = useExtractAllMutation();
-  const [dismissItem] = useDismissQueueItemMutation();
+  const [dismissItem] = useDismissEmailQueueItemMutation();
   const [retryItem] = useRetryQueueItemMutation();
   const [retryAllFailed, { isLoading: isRetrying }] = useRetryAllFailedMutation();
 

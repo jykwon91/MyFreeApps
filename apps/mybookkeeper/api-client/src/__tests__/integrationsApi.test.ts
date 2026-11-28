@@ -54,7 +54,7 @@ describe("integrationsApi writes", () => {
     await store.dispatch(integrationsApi.endpoints.extractAll.initiate());
     await store.dispatch(integrationsApi.endpoints.retryAllFailed.initiate());
     await store.dispatch(integrationsApi.endpoints.retryQueueItem.initiate("q1"));
-    await store.dispatch(integrationsApi.endpoints.dismissQueueItem.initiate("q1"));
+    await store.dispatch(integrationsApi.endpoints.dismissEmailQueueItem.initiate("q1"));
     await store.dispatch(integrationsApi.endpoints.disconnectGmail.initiate());
     expect(seen.map((request) => `${request.method} ${request.url}`)).toEqual([
       "post /integrations/gmail/sync",
