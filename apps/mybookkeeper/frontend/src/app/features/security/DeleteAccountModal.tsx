@@ -2,7 +2,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
 import { Button, extractErrorMessage, showError } from "@platform/ui";
-import { useDeleteAccountMutation } from "@/shared/store/accountApi";
+import { useDeleteAccountMutation } from "@platform/ui/store/accountApi";
 import { useGetTotpStatusQuery } from "@platform/ui/store/totpApi";
 import { logout } from "@/shared/lib/auth";
 

@@ -103,7 +103,7 @@
         "frontend/src/app/pages/InviteAccept.tsx",
         "frontend/src/app/pages/VerifyEmail.tsx",
         "frontend/src/app/pages/Security.tsx",
-        "frontend/src/shared/store/accountApi.ts",
+        "../../packages/shared-frontend/src/store/accountApi.ts",
         "frontend/src/app/features/security/DeleteAccountModal.tsx",
         "frontend/src/shared/types/security/",
         "mobile/app/(app)/security/",
@@ -195,6 +195,16 @@
       ],
       "frontend_tests": [],
       "e2e_specs": []
+    },
+    "store_endpoints": {
+      "source_paths": [
+        "frontend/src/shared/store/",
+        "api-client/src/store/",
+        "../../packages/shared-core/src/utils/findEndpointNameClashes.ts"
+      ],
+      "frontend_tests": [
+        "endpointNamesUnique.test.ts"
+      ]
     },
     "demo": {
       "source_paths": [
