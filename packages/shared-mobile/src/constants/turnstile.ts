@@ -24,6 +24,20 @@ export const TURNSTILE_COPY = {
   label: "Security check",
   loading: "Loading the security check",
   failed: "The security check couldn't load. Check your connection, then try again.",
+  clockWrong: "The security check failed because this phone's date or time is off. Set them automatically in Settings, then try again.",
   retry: "Try the check again",
   required: "Complete the security check first.",
 } as const;
+
+/**
+ * Client-side error codes the widget gets past on screen (Cloudflare marks them "Retry: Yes"; the widget's default
+ * `retry: "auto"` tries again or falls back to its checkbox). The iframe failing to load (200500) is left out: the
+ * frame would sit empty with nothing said, so the app explains it and offers its own retry. Every other code, such
+ * as a wrong or disabled site key or an unauthorized hostname, leaves the widget stuck.
+ * https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/
+ */
+export const TURNSTILE_SELF_RETRYING_ERROR_CODES: readonly string[] = ["110600", "110620"];
+export const TURNSTILE_SELF_RETRYING_ERROR_PREFIXES: readonly string[] = ["300", "600"];
+
+/** The phone's clock is wrong, which only the person can fix. */
+export const TURNSTILE_CLOCK_ERROR_CODE = "200100";
