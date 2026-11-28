@@ -5,7 +5,7 @@ import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 
 // Mock RTK Query hooks — top-level so Vitest can hoist them
 const mockDeleteAccount = vi.fn();
-vi.mock("@/shared/store/accountApi", () => ({
+vi.mock("@platform/ui/store/accountApi", () => ({
   useDeleteAccountMutation: () => [mockDeleteAccount, { isLoading: false }],
 }));
 
