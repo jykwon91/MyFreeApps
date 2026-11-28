@@ -6,7 +6,7 @@ import ListingSelect from "@/app/features/listings/ListingSelect";
 import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
-  useDismissQueueItemMutation,
+  useDismissReviewQueueItemMutation,
 } from "@mybookkeeper/api-client/store/calendarApi";
 import { reviewQueueChannelLabel } from "@mybookkeeper/api-client/constants/reviewQueueChannels";
 import ReviewQueueChannelBadge from "@/app/features/calendar/ReviewQueueChannelBadge";
@@ -47,7 +47,7 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
 
   const [resolveItem, { isLoading: isResolving }] = useResolveQueueItemMutation();
   const [ignoreItem, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
-  const [dismissItem, { isLoading: isDismissing }] = useDismissQueueItemMutation();
+  const [dismissItem, { isLoading: isDismissing }] = useDismissReviewQueueItemMutation();
   const { showSuccess, showError } = useToast();
   const canWrite = useCanWrite();
 

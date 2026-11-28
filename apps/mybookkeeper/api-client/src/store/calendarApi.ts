@@ -117,7 +117,7 @@ export const calendarApi = baseApi.enhanceEndpoints({
       ],
     }),
 
-    dismissQueueItem: builder.mutation<void, string>({
+    dismissReviewQueueItem: builder.mutation<void, string>({
       query: (itemId) => ({
         url: `/calendar/review-queue/${itemId}`,
         method: "DELETE",
@@ -141,5 +141,5 @@ export const {
   useGetReviewQueueQuery,
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
-  useDismissQueueItemMutation,
+  useDismissReviewQueueItemMutation,
 } = calendarApi;

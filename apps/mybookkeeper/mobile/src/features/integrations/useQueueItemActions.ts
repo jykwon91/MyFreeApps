@@ -1,4 +1,4 @@
-import { useDismissQueueItemMutation, useRetryQueueItemMutation } from "@mybookkeeper/api-client/store/integrationsApi";
+import { useDismissEmailQueueItemMutation, useRetryQueueItemMutation } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useToast } from "@platform/mobile";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import { useWrite } from "../../lib/useWrite";
@@ -12,7 +12,7 @@ const DISMISS_COPY = actionFailureCopy("dismiss that email", "safe", { gone: "Th
 export function useQueueItemActions(itemId: string): QueueItemActions {
   const { showToast } = useToast();
   const [retryItem] = useRetryQueueItemMutation();
-  const [dismissItem] = useDismissQueueItemMutation();
+  const [dismissItem] = useDismissEmailQueueItemMutation();
   const retry = useWrite();
   const dismiss = useWrite();
 

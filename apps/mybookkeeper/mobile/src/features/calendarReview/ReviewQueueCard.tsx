@@ -1,5 +1,5 @@
 import {
-  useDismissQueueItemMutation,
+  useDismissReviewQueueItemMutation,
   useIgnoreQueueItemMutation,
   useResolveQueueItemMutation,
 } from "@mybookkeeper/api-client/store/calendarApi";
@@ -27,7 +27,7 @@ export default function ReviewQueueCard({ item, canWrite }: ReviewQueueCardProps
   const listingSheet = useAfterSheetCloses(() => setIsChoosing(false));
   const [resolve, { isLoading: isAdding }] = useResolveQueueItemMutation();
   const [ignore, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
-  const [dismiss, { isLoading: isDismissing }] = useDismissQueueItemMutation();
+  const [dismiss, { isLoading: isDismissing }] = useDismissReviewQueueItemMutation();
   const isBusy = isAdding || isIgnoring || isDismissing;
 
   async function add(listingId: string): Promise<void> {

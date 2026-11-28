@@ -106,7 +106,7 @@ vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
   useGetReviewQueueQuery: vi.fn(() => ({ data: [], isLoading: false, isError: false })),
   useResolveQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useIgnoreQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useDismissQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDismissReviewQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({

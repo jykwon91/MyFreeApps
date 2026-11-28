@@ -75,7 +75,7 @@ vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
     mockIgnore,
     { isLoading: false },
   ]),
-  useDismissQueueItemMutation: vi.fn(() => [
+  useDismissReviewQueueItemMutation: vi.fn(() => [
     mockDismiss,
     { isLoading: false },
   ]),
@@ -98,7 +98,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
 import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
-  useDismissQueueItemMutation,
+  useDismissReviewQueueItemMutation,
 } from "@mybookkeeper/api-client/store/calendarApi";
 
 function renderItem(item = mockItem) {
@@ -124,9 +124,9 @@ describe("ReviewQueueItem", () => {
       mockIgnore,
       { isLoading: false } as unknown as ReturnType<typeof useIgnoreQueueItemMutation>[1],
     ]);
-    vi.mocked(useDismissQueueItemMutation).mockReturnValue([
+    vi.mocked(useDismissReviewQueueItemMutation).mockReturnValue([
       mockDismiss,
-      { isLoading: false } as unknown as ReturnType<typeof useDismissQueueItemMutation>[1],
+      { isLoading: false } as unknown as ReturnType<typeof useDismissReviewQueueItemMutation>[1],
     ]);
     mockResolve.mockClear();
     mockIgnore.mockClear();
